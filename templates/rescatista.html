@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="w-full">
+  <nav class="flex overflow-x-auto border-b border-slate-200 text-sm font-medium mb-6 bg-white rounded-t-xl shadow-sm scroll-hide">
+    <button onclick="switchTab('rescatista', 'inicio')" class="tab-btn-rescatista px-6 py-4 border-b-2 flex items-center gap-2 active" data-tab="inicio"><i data-lucide="bell-ring" class="w-4 h-4"></i> Alertas</button>
+    <button onclick="switchTab('rescatista', 'nuevo')" class="tab-btn-rescatista px-6 py-4 border-b-2 flex items-center gap-2" data-tab="nuevo"><i data-lucide="plus-circle" class="w-4 h-4"></i> Nuevo Rescate</button>
+    <button onclick="switchTab('rescatista', 'mis-rescates')" class="tab-btn-rescatista px-6 py-4 border-b-2 flex items-center gap-2" data-tab="mis-rescates"><i data-lucide="folder-check" class="w-4 h-4"></i> Mis Rescates</button>
+    <button onclick="switchTab('rescatista', 'perfil')" class="tab-btn-rescatista px-6 py-4 border-b-2 flex items-center gap-2" data-tab="perfil"><i data-lucide="user" class="w-4 h-4"></i> Mi Perfil</button>
+  </nav>
+
+  <div id="rescatista-inicio" class="tab-content tab-content-rescatista active">
+    <div class="bg-white rounded-xl shadow-sm p-6"><h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="siren" class="text-red-500"></i> Alertas Ciudadanas Pendientes</h3><div id="lista-alertas-rescatista" class="grid md:grid-cols-2 gap-4"></div></div>
+  </div>
+
+  <div id="rescatista-nuevo" class="tab-content tab-content-rescatista">
+    <div class="bg-white rounded-xl shadow-sm p-6 max-w-3xl mx-auto border-t-4 border-indigo-600">
+      <div class="flex justify-between items-center mb-6 border-b pb-4"><h2 class="text-xl font-bold">Registrar Nuevo Rescate</h2><div class="bg-indigo-50 text-indigo-800 px-4 py-2 rounded-lg font-mono text-sm border border-indigo-200">ID Asignado: <strong id="res-id-asignado"></strong></div></div>
+      <form onsubmit="guardarNuevoRescate(event)" class="space-y-5">
+        <div><label class="block text-sm font-semibold mb-1">Evidencia Fotográfica</label><input type="file" id="res-fotos" multiple accept="image/*" class="w-full border p-2.5 rounded-lg bg-slate-50"></div>
+        <div><label class="block text-sm font-semibold mb-1">Dirección del rescate</label><textarea id="res-direccion" required rows="2" class="w-full border rounded-lg p-2.5"></textarea></div>
+        <div class="grid grid-cols-2 gap-4">
+          <div><label class="block text-sm font-semibold mb-1">Especie</label><div class="flex gap-2"><select id="res-especie-select" onchange="toggleNuevaEspecie()" class="w-full border rounded-lg p-2.5 bg-white"></select><input type="text" id="res-especie-nueva" placeholder="Especifique..." class="w-full border rounded-lg p-2.5 hidden"></div></div>
+          <div><label class="block text-sm font-semibold mb-1">Sexo</label><select id="res-sexo" class="w-full border rounded-lg p-2.5"><option>Macho</option><option>Hembra</option><option>Desconocido</option></select></div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div><label class="block text-sm font-semibold mb-1">Gravedad</label><select id="res-gravedad" class="w-full border rounded-lg p-2.5"><option>Baja</option><option>Media</option><option>Grave</option></select></div>
+          <div><label class="block text-sm font-semibold mb-1">Color / Marcas</label><input type="text" id="res-color" required class="w-full border rounded-lg p-2.5"></div>
+        </div>
+        <div><label class="block text-sm font-semibold mb-1">Descripción del caso</label><textarea id="res-desc" required rows="2" class="w-full border rounded-lg p-2.5"></textarea></div>
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-md transition">Generar Ficha de Rescate</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="rescatista-mis-rescates" class="tab-content tab-content-rescatista"><div class="bg-white rounded-xl shadow-sm p-6"><h3 class="text-lg font-bold mb-4">Registro de Mis Rescates</h3><div id="lista-mis-rescates" class="grid gap-4"></div></div></div>
+  <div id="rescatista-perfil" class="tab-content tab-content-rescatista profile-container"></div>
+</div>
+
+<script>
+  // Inicializador exclusivo para esta página
+  window.onload = () => {
+    DB.sesionActual.rol = 'rescatista';
+    DB.sesionActual.nombre = 'Carlos G.';
+    generarFormulariosPerfil();
+    renderRescatista();
+    switchTab('rescatista', 'inicio');
+    lucide.createIcons();
+  };
+</script>
+{% endblock %}

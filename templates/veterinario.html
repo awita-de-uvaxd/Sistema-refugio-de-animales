@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="w-full">
+  <nav class="flex overflow-x-auto border-b border-slate-200 text-sm font-medium mb-6 bg-white rounded-t-xl shadow-sm scroll-hide">
+    <button onclick="switchTab('veterinario', 'inicio')" class="tab-btn-veterinario px-5 py-4 border-b-2 flex items-center gap-2 active" data-tab="inicio"><i data-lucide="activity" class="w-4 h-4"></i> Panel de Control</button>
+    <button onclick="prepararNuevaConsultaDirecta()" class="tab-btn-veterinario px-5 py-4 border-b-2 flex items-center gap-2" data-tab="nueva"><i data-lucide="stethoscope" class="w-4 h-4"></i> Nueva Consulta</button>
+    <button onclick="switchTab('veterinario', 'buscar')" class="tab-btn-veterinario px-5 py-4 border-b-2 flex items-center gap-2" data-tab="buscar"><i data-lucide="search" class="w-4 h-4"></i> Buscar Paciente</button>
+    <button onclick="switchTab('veterinario', 'citas')" class="tab-btn-veterinario px-5 py-4 border-b-2 flex items-center gap-2" data-tab="citas"><i data-lucide="calendar" class="w-4 h-4"></i> Citas Agendadas</button>
+    <button onclick="switchTab('veterinario', 'perfil')" class="tab-btn-veterinario px-5 py-4 border-b-2 flex items-center gap-2" data-tab="perfil"><i data-lucide="user" class="w-4 h-4"></i> Mi Perfil</button>
+  </nav>
+
+  <div id="veterinario-inicio" class="tab-content tab-content-veterinario active">
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-amber-500">
+        <div class="flex justify-between items-center mb-4 border-b pb-2">
+          <h3 class="font-bold text-lg flex items-center gap-2"><i data-lucide="clock" class="text-amber-500"></i> Citas Programadas</h3>
+          <select id="filtro-citas-inicio" onchange="renderCitasInicio()" class="bg-slate-50 border rounded-lg p-1.5 text-xs font-bold text-slate-700 outline-none">
+            <option value="hoy">Hoy</option><option value="semana">Esta Semana</option><option value="quincena">Estas 2 Semanas</option><option value="mes">Este Mes</option>
+          </select>
+        </div>
+        <div id="lista-citas-hoy" class="space-y-3"></div>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-indigo-600">
+        <h3 class="font-bold text-lg mb-4 flex items-center gap-2 border-b pb-2"><i data-lucide="alert-circle" class="text-indigo-600"></i> Rescates Pendientes</h3>
+        <div id="lista-ingresos-rescate" class="space-y-3"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="veterinario-nueva" class="tab-content tab-content-veterinario">
+    <div class="bg-white rounded-xl shadow-sm p-6 max-w-5xl mx-auto">
+      <div class="flex justify-between items-center mb-6 border-b pb-4">
+        <div><h2 class="text-2xl font-black text-indigo-950" id="titulo-consulta"></h2><p id="subtitulo-consulta" class="text-sm font-bold text-emerald-600 mt-1"></p></div>
+        <div class="flex items-center gap-4">
+          <div class="bg-indigo-50 text-indigo-800 px-4 py-2 rounded-lg font-mono text-sm border border-indigo-200">ID Asignado: <strong id="vet-id-asignado" class="text-lg"></strong></div>
+          <button type="button" onclick="switchTab('veterinario', 'inicio')" class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-300">Cancelar</button>
+        </div>
+      </div>
+      <form onsubmit="guardarConsultaMedica(event)" class="space-y-6">
+        <input type="hidden" id="vet-paciente-id"><input type="hidden" id="vet-es-privado" value="false">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+          <div class="md:col-span-4 space-y-4 bg-slate-50 p-5 rounded-xl border border-slate-200 h-fit">
+            <h4 class="font-bold text-sm text-indigo-700 uppercase tracking-wide">1. Perfil del Paciente</h4>
+            <div><label class="block text-xs font-bold mb-1">Nombre</label><input type="text" id="vet-nombre" required class="w-full border rounded-lg p-2.5 bg-white"></div>
+            <div><label class="block text-xs font-bold mb-1">Especie</label><input type="text" id="vet-especie" required class="w-full border rounded-lg p-2.5 bg-slate-100" readonly></div>
+            <div><label class="block text-xs font-bold mb-1">Sexo</label><select id="vet-sexo" class="w-full border rounded-lg p-2.5 bg-white"><option>Macho</option><option>Hembra</option></select></div>
+            <div>
+              <label class="block text-xs font-bold mb-1 text-indigo-900">Foto de Perfil (Actual)</label>
+              <img id="vet-current-photo" src="https://via.placeholder.com/150" class="w-full h-40 object-cover rounded-lg border-2 border-indigo-200 mb-2 shadow-sm">
+              <label class="block text-xs font-bold mb-1 text-slate-500">Actualizar Fotografía:</label>
+              <input type="file" id="vet-foto" accept="image/*" onchange="previewVetFoto(this)" class="w-full border rounded p-1.5 text-xs bg-white">
+            </div>
+          </div>
+          <div class="md:col-span-8 space-y-5">
+            <h4 class="font-bold text-sm text-indigo-700 uppercase tracking-wide">2. Evaluación Clínica Actual</h4>
+            <div class="grid grid-cols-3 gap-4">
+              <div><label class="block text-xs font-bold mb-1">Temp (°C)</label><input type="text" id="vet-temp" class="w-full border rounded-lg p-2"></div>
+              <div><label class="block text-xs font-bold mb-1">Peso (Kg)</label><input type="text" id="vet-peso" class="w-full border rounded-lg p-2"></div>
+              <div><label class="block text-xs font-bold mb-1">Evidencia (Fotos del caso)</label><input type="file" id="vet-fotos-consulta" multiple accept="image/*" class="w-full border rounded-lg p-1.5 text-xs bg-white"></div>
+            </div>
+            <div>
+              <label class="block text-xs font-bold mb-1">Síntomas Visualizados</label>
+              <div class="flex gap-2 mb-3">
+                <input type="text" id="input-sintoma" class="flex-grow border rounded-lg p-2.5" placeholder="Ej. Cojera, fiebre...">
+                <button type="button" onclick="agregarSintoma()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 rounded-lg font-bold text-sm transition">Añadir</button>
+              </div>
+              <div id="lista-sintomas-tags" class="flex flex-wrap gap-2"></div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div><label class="block text-xs font-bold mb-1">Diagnóstico</label><textarea id="vet-diag" rows="3" class="w-full border rounded-lg p-2.5"></textarea></div>
+              <div><label class="block text-xs font-bold mb-1">Tratamiento / Receta</label><textarea id="vet-trat" rows="3" class="w-full border rounded-lg p-2.5"></textarea></div>
+            </div>
+            <div class="bg-emerald-50/50 p-5 rounded-xl border border-emerald-100">
+              <h4 class="block text-sm font-bold mb-3 text-emerald-800 border-b border-emerald-200 pb-1">Sistema de Vacunación</h4>
+              <div id="box-vacunas-historicas" class="hidden mb-4 bg-white p-3 rounded-lg border border-emerald-200 text-sm">
+                <p class="font-bold text-slate-700 mb-2 text-xs uppercase">Historial de Vacunas Aplicadas:</p>
+                <ul id="lista-vacunas-historicas" class="space-y-2"></ul>
+              </div>
+              <div class="flex gap-2 mb-3 items-end">
+                <div class="w-1/3"><label class="text-[10px] text-slate-500 font-bold uppercase">Nombre Vacuna</label><input type="text" id="vac-nombre" class="w-full border rounded p-2 text-sm bg-white"></div>
+                <div class="w-1/3">
+                  <label class="text-[10px] text-slate-500 font-bold uppercase">Frecuencia</label>
+                  <select id="vac-freq-select" onchange="toggleVacFreq()" class="w-full border rounded p-2 text-sm bg-white">
+                    <option>Anual</option><option>Mensual</option><option>Trimestral</option><option>Semestral</option><option value="Personalizado">Personalizado...</option>
+                  </select>
+                  <input type="text" id="vac-freq-custom" placeholder="Especificar..." class="w-full border rounded p-2 text-sm hidden mt-1 bg-white">
+                </div>
+                <button type="button" onclick="agregarVacuna()" class="bg-emerald-600 hover:bg-emerald-700 transition text-white px-5 py-2 rounded-lg font-bold text-sm h-[38px]">+</button>
+              </div>
+              <ul id="lista-vacunas-aplicadas" class="text-sm space-y-1"></ul>
+            </div>
+            <div id="box-adopcion" class="bg-amber-50 p-4 rounded-xl border border-amber-200">
+              <label class="block text-xs font-bold text-amber-800">¿Liberar para Adopción Pública?</label>
+              <select id="vet-adopcion" class="w-full border rounded-lg p-2.5 mt-2 bg-white font-bold text-slate-700"><option value="No">Aún no (En tratamiento / Observación)</option><option value="Si">Sí, listo para adopción</option></select>
+            </div>
+          </div>
+        </div>
+        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg transition text-lg mt-6">Guardar Expediente Clínico</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="veterinario-buscar" class="tab-content tab-content-veterinario">
+    <div class="bg-white rounded-xl shadow-sm p-6">
+      <input type="text" id="search-vet-id" oninput="filtrarPacientesVet()" placeholder="🔍 Buscar paciente por ID o Nombre..." class="w-full border-2 border-indigo-100 focus:border-indigo-500 outline-none rounded-xl px-5 py-4 text-lg mb-6 bg-slate-50">
+      <div id="lista-busqueda-vet" class="space-y-4"></div>
+    </div>
+  </div>
+
+  <div id="veterinario-citas" class="tab-content tab-content-veterinario">
+    <div class="bg-white rounded-xl shadow-sm p-6">
+      <div class="flex justify-between items-center mb-6 border-b pb-4">
+        <h3 class="font-bold text-xl">Agenda General de Citas</h3>
+        <select id="filtro-citas-general" onchange="renderCitasGeneral()" class="bg-slate-50 border rounded-lg p-2 text-sm font-bold text-slate-700 outline-none">
+          <option value="hoy">Hoy</option><option value="semana">Esta Semana</option><option value="quincena">Estas 2 Semanas</option><option value="mes">Este Mes</option><option value="todas">Todas Históricas</option>
+        </select>
+      </div>
+      <div id="todas-citas-vet" class="space-y-3"></div>
+    </div>
+  </div>
+
+  <div id="veterinario-perfil" class="tab-content tab-content-veterinario profile-container"></div>
+</div>
+
+<script>
+  window.onload = () => {
+    DB.sesionActual.rol = 'veterinario';
+    DB.sesionActual.nombre = 'Dra. María';
+    generarFormulariosPerfil();
+    renderVeterinario();
+    switchTab('veterinario', 'inicio');
+    lucide.createIcons();
+  };
+</script>
+{% endblock %}
