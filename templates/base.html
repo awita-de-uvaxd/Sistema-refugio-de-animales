@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Huellitas de Amor - Sistema Modular</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .scroll-hide::-webkit-scrollbar { display: none; }
+    .custom-scroll::-webkit-scrollbar { width: 8px; }
+    .custom-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+    .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    
+    /* Estilos base para formularios extensos */
+    .form-extenso fieldset { border: 1px solid #dcdfe6; border-radius: 8px; padding: 20px; margin-bottom: 20px; background: #fafafa; }
+    .form-extenso legend { font-weight: bold; color: #4f46e5; padding: 0 10px; font-size: 1.1em; }
+    .form-extenso label { display: block; margin-top: 12px; font-weight: 600; font-size: 0.9em; color: #334155; }
+    .form-extenso input[type="text"], .form-extenso input[type="tel"], .form-extenso input[type="email"], .form-extenso input[type="number"], .form-extenso input[type="date"], .form-extenso select, .form-extenso textarea { width: 100%; padding: 10px; margin-top: 6px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9em; background-color: #fff; outline: none; }
+    .form-extenso .options-group { margin-top: 8px; }
+    .form-extenso .options-group label { display: block; font-weight: normal; margin-top: 6px; cursor: pointer; color: #475569; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+
+  <!-- MODAL GLOBAL -->
+  <div id="global-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative custom-scroll">
+      <button onclick="document.getElementById('global-modal').classList.add('hidden')" class="sticky top-4 left-[calc(100%-3rem)] bg-slate-100 hover:bg-slate-200 p-2 rounded-full text-slate-600 transition z-50">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+      <div id="modal-content" class="p-6 pt-2"></div>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header class="bg-indigo-950 text-white shadow-lg sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+      <div class="flex items-center gap-3">
+        <div class="bg-amber-400 p-2 rounded-xl text-indigo-950"><i data-lucide="paw-print" class="w-6 h-6"></i></div>
+        <div>
+          <h1 class="font-bold text-xl leading-none tracking-tight">Huellitas de Amor</h1>
+          <span class="text-xs text-indigo-300">Plataforma Modular v4.0</span>
+        </div>
+      </div>
+      <!-- RUTAS DE FLASK EN LUGAR DE JAVASCRIPT -->
+      <div class="flex items-center gap-1 bg-indigo-900/50 p-1.5 rounded-lg border border-indigo-800 flex-wrap justify-center">
+        <a href="{{ url_for('rescatista') }}" class="px-4 py-1.5 text-xs font-semibold rounded-md text-indigo-300 hover:text-white hover:bg-indigo-800 transition">Rescatista</a>
+        <a href="{{ url_for('veterinario') }}" class="px-4 py-1.5 text-xs font-semibold rounded-md text-indigo-300 hover:text-white hover:bg-indigo-800 transition">Veterinario</a>
+        <a href="{{ url_for('usuario') }}" class="px-4 py-1.5 text-xs font-semibold rounded-md text-indigo-300 hover:text-white hover:bg-indigo-800 transition">Usuario</a>
+        <a href="{{ url_for('admin') }}" class="px-4 py-1.5 text-xs font-semibold rounded-md text-indigo-300 hover:text-white hover:bg-indigo-800 transition">Admin</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENEDOR PRINCIPAL DINÁMICO -->
+  <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
+    
+    <!-- AQUÍ SE INYECTARÁ EL CÓDIGO DE CADA PANTALLA -->
+    {% block content %}
+    {% endblock %}
+
+  </main>
+
+  <script>
+    // Inicializar iconos en todas las páginas
+    lucide.createIcons();
+  </script>
+</body>
+</html>
