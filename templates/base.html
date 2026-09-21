@@ -61,9 +61,12 @@
   <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
     
     <!-- NOTA DE ADVERTENCIA PARA EL PROTOTIPO -->
-    <div class="bg-amber-100 border-l-4 border-amber-500 text-amber-700 p-4 mb-4 text-xs rounded shadow-sm">
-      <p class="font-bold">Modo de Pruebas (Memoria RAM):</p>
-      <p>Dado que Flask reinicia la memoria del navegador al cambiar de ruta, los cambios que hagas en una pantalla se perderán si navegas a otra ruta usando el menú superior. En producción, el objeto 'DB' de Javascript se reemplazará por una Base de Datos SQLite en Python.</p>
+    <div class="bg-indigo-50 border-l-4 border-indigo-500 text-indigo-800 p-4 mb-4 text-xs rounded shadow-sm flex justify-between items-center">
+      <div>
+        <p class="font-bold">Modo de Memoria Local Activado:</p>
+        <p>Los datos ahora se guardan en el navegador. Si pasas de una pestaña a otra, la información no se perderá.</p>
+      </div>
+      <button onclick="limpiarMemoria()" class="bg-indigo-200 hover:bg-indigo-300 text-indigo-900 px-3 py-1.5 rounded font-bold shadow-sm transition">Restaurar Valores de Fábrica</button>
     </div>
 
     <!-- AQUÍ SE INYECTARÁ EL CÓDIGO DE CADA PANTALLA -->
@@ -112,24 +115,21 @@
 
   <!-- LÓGICA GIGANTE DE LA BASE DE DATOS Y FUNCIONES JS -->
   <script>
-    // ================= ESTADO COMPARTIDO (BASE DE DATOS EN MEMORIA) =================
+    // ================= ESTADO COMPARTIDO (BASE DE DATOS EN MEMORIA LOCAL) =================
     const today = new Date();
     const isoHoy = today.toISOString().split('T')[0];
     const localHoy = today.toLocaleDateString();
 
-    // Como navegamos por Flask, declaramos la DB globalmente para que todas las vistas tengan datos al recargar
-    const DB = {
+    const DB_INICIAL = {
       sesionActual: { rol: 'rescatista', nombre: 'Carlos G.', correo: 'carlos@huellitas.com' },
       idCounter: 1005,
       especies: ['Perro', 'Gato', 'Ave', 'Conejo', 'Caballo'],
-      
       cmsDonaciones: { titulo: "Apoya la Causa", sub: "Aceptamos donaciones monetarias o insumos físicos (alimentos, cobijas, juguetes).", banco: "Banco Nacional: Cuenta Monetaria #000-123456-7", nombre: "A Nombre De: Asociación Huellitas de Amor", sede: "Sede Recepción Comida: Calle Principal 12-45 Zona 10" },
       cmsVoluntariado: [
         { id: 'temporal', titulo: '1. Hogar Temporal de Socialización', sub: 'Mantén un perrito del albergue en tu casa temporalmente.', texto: "Al ser hogar temporal ayudas a evaluar el comportamiento del animal en un ambiente familiar, lo cual facilita encontrarle la familia perfecta.", fotos: [] },
         { id: 'cafe', titulo: '2. Convivencia y Terapia', sub: 'Visita instalaciones para compartir tiempo y jugar.', texto: "Pasa tiempo de calidad jugando y acariciando a los animalitos. Esto reduce su estrés.", fotos: [] },
         { id: 'refugio', titulo: '3. Apoyo Directo en Refugio', sub: 'Ayuda operacional (Apto tareas ligeras jóvenes/niños).', texto: "Ideal para trabajo físico. Nos ayudas a limpiar recintos, preparar dietas y paseos rutinarios.", fotos: [] }
       ],
-
       alertas: [], 
       rescates: [
         { id: 1001, direccion: "Zona 1", especie: "Perro", sexo: "Macho", gravedad: "Grave", color: "Negro", desc: "Atropellado", fotos: ["https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200"], estado: "Atendido", rescatista: "Carlos G." },
@@ -140,18 +140,30 @@
           consultas: [{ fecha: localHoy, temp: "38.5", peso: "12", sintomas: ["vomitos y diarrea"], diag: "Fractura leve e indigestión", trat: "trimetroprin cada 8 horas", fotos: ["https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=200"], vacunas: [{nom: "Rabia", freq: "Anual"}], veterinario: "Dra. María" }] },
         { id: 1002, nombre: "Rescatado #1002", especie: "Gato", sexo: "Hembra", foto: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=200", duenoActual: null, disponibleAdopcion: "Si", consultas: [] }
       ],
-      citas: [
-        { pId: 1001, rawDate: isoHoy, fecha: localHoy, motivo: "Revisión General" } 
-      ],
+      citas: [ { pId: 1001, rawDate: isoHoy, fecha: localHoy, motivo: "Revisión General" } ],
       shop: [{ id: 1, nom: "Collar Rojo Especial", precio: 45, desc: "Collar ajustable reforzado", foto: "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=200" }],
       pedidos: [],
       solicitudesAdopcion: [{ idReq: 1, pId: 1002, usuario: "Ana L.", form: { ocu: "Maestra", sue: "Q5,000", esp: "Casa con patio", tie: "2 horas", exp: "Tuve perros antes", vet: "Dr. Perez", fotos: ["https://images.unsplash.com/photo-1588880331179-bc9b93a8cb65?w=100"], fullData: { "ocupacion": "Maestra", "sueldo": "Q5,000" } } }],
       solicitudesReclamo: [], 
       solicitudesVoluntariado: [],
       formBaseAdoptante: null,
-      
       staff: { rescatistas: [{nombre: 'Carlos G.'}, {nombre: 'Luis F.'}], veterinarios: [{nombre: 'Dra. María'}, {nombre: 'Dr. Juan'}] }
     };
+
+    // MAGIA: CARGAR DATOS DEL NAVEGADOR
+    let DB = JSON.parse(localStorage.getItem('HUELLITAS_DB')) || DB_INICIAL;
+
+    // MAGIA: FUNCION PARA GUARDAR CAMBIOS
+    function sincronizarDB() {
+      localStorage.setItem('HUELLITAS_DB', JSON.stringify(DB));
+    }
+
+    // Botón para resetear si la base de datos se traba
+    function limpiarMemoria() {
+      localStorage.removeItem('HUELLITAS_DB');
+      alert("Memoria borrada. La página se recargará con los datos de fábrica.");
+      location.reload();
+    }
 
     let sintomasTemp = [], vacunasTemp = [];
 
@@ -252,10 +264,16 @@
       const a = DB.alertas[idx];
       switchTab('rescatista', 'nuevo');
       getEl('res-direccion').value = a.dir; getEl('res-desc').value = a.desc;
-      DB.alertas.splice(idx, 1); closeMod(); renderRescatista();
+      DB.alertas.splice(idx, 1); 
+      sincronizarDB(); 
+      closeMod(); renderRescatista();
     }
     
-    function descartarAlerta(idx) { DB.alertas.splice(idx, 1); closeMod(); renderRescatista(); }
+    function descartarAlerta(idx) { 
+      DB.alertas.splice(idx, 1); 
+      sincronizarDB(); 
+      closeMod(); renderRescatista(); 
+    }
 
     async function guardarNuevoRescate(e) {
       e.preventDefault();
@@ -265,6 +283,8 @@
       const fotos = await getUrls(getEl('res-fotos').files);
       const r = { id: DB.idCounter++, direccion: getEl('res-direccion').value, especie: especieFinal, sexo: getEl('res-sexo').value, gravedad: getEl('res-gravedad').value, color: getEl('res-color').value, desc: getEl('res-desc').value, fotos, estado: 'Pendiente', rescatista: DB.sesionActual.nombre };
       DB.rescates.push(r);
+      
+      sincronizarDB();
       alert(`Ficha #${r.id} generada y enviada a Veterinaria.`);
       e.target.reset(); getEl('res-especie-nueva').classList.add('hidden'); renderRescatista();
     }
@@ -440,6 +460,7 @@
 
       DB.citas = DB.citas.filter(cita => cita.pId !== id);
 
+      sincronizarDB();
       alert(`Expediente guardado con éxito. ID Asignado/Actualizado: #${id}`);
       switchTab('veterinario', 'buscar'); renderVeterinario();
     }
@@ -499,6 +520,8 @@
       const rawD = getEl('c-f').value;
       const p = rawD.split('-'); 
       DB.citas.push({ pId: id, rawDate: rawD, fecha: new Date(p[0], p[1]-1, p[2]).toLocaleDateString(), motivo: getEl('c-m').value }); 
+      
+      sincronizarDB();
       closeMod(); renderVeterinario(); alert("Cita agendada exitosamente en el calendario."); 
     }
 
@@ -582,6 +605,8 @@
       if(!nuevo) return;
       const p = DB.pacientes.find(x => x.id === id);
       p.nombre = nuevo;
+      
+      sincronizarDB();
       alert(`Nombre actualizado a "${nuevo}" exitosamente.`);
       renderUsuario();
     }
@@ -613,6 +638,8 @@
       e.preventDefault();
       const s = DB.shop.find(x => x.id === id);
       DB.pedidos.push({ id: Date.now(), usuario: DB.sesionActual.nombre, item: s.nom, fecha: localHoy });
+      
+      sincronizarDB();
       closeMod();
       alert(`¡Compra exitosa! Has adquirido: ${s.nom}. El administrador procesará y enviará tu pedido pronto. ¡Gracias por apoyar la causa!`);
     }
@@ -645,6 +672,8 @@
     function enviarVoluntariadoReal(e, id) {
       e.preventDefault();
       DB.solicitudesVoluntariado.push({ id: Date.now(), tipo: id, usuario: DB.sesionActual.nombre, fecha: localHoy });
+      
+      sincronizarDB();
       alert('¡Gracias! Tus respuestas detalladas han sido enviadas exitosamente. El administrador evaluará tu perfil para este rol y te contactará.');
       closeModal();
     }
@@ -716,6 +745,8 @@
       e.preventDefault();
       const fotos = await getUrls(getEl('rec-fotos').files);
       DB.solicitudesReclamo.push({ id: Date.now(), pId: id, usuario: DB.sesionActual.nombre, nombreResp: getEl('rec-nom').value, marcas: getEl('rec-marcas').value, fotos: fotos });
+      
+      sincronizarDB();
       alert('Evidencia recibida exitosamente. Su reclamo ha sido enviado al departamento de revisión legal y pronto lo verá el Administrador.');
       closeModal();
     }
@@ -723,6 +754,8 @@
     function solicitarAdopcion(id) {
       if(!DB.formBaseAdoptante) { alert("¡Atención! Debes llenar tu 'Formulario de Adoptante (Extendido)' en tu pestaña 'Mi Perfil' antes de solicitar una mascota."); closeMod(); switchTab('usuario','perfil'); return; }
       DB.solicitudesAdopcion.push({ idReq: Date.now(), pId: id, usuario: DB.sesionActual.nombre, form: DB.formBaseAdoptante });
+      
+      sincronizarDB();
       alert("Solicitud de adopción enviada con éxito. Será rigurosamente evaluada por el Administrador."); closeMod();
     }
 
@@ -733,6 +766,8 @@
       const urls = await getUrls(files);
       const fd = new FormData(e.target);
       DB.alertas.push({ dir: fd.get('direccion'), desc: fd.get('descripcion_caso') + ' | Especie: ' + fd.get('especie_cantidad'), fotos: urls });
+      
+      sincronizarDB();
       alert("Alerta de emergencia enviada de inmediato a todos los Rescatistas."); e.target.reset();
     }
 
@@ -746,6 +781,8 @@
         tie: fd.get('horas_solo'), exp: fd.get('mascotas_anteriores'),
         vet: "N/A", fotos: fotosHogar, fullData: Object.fromEntries(fd)
       };
+      
+      sincronizarDB();
       getEl('fb-status').classList.remove('hidden');
       alert("Formulario Base (Extenso) guardado exitosamente. Ahora tu perfil está listo para solicitar adopciones oficiales.");
     }
@@ -774,7 +811,7 @@
               </div>
               <div class="w-full md:w-1/3 flex flex-col justify-center gap-3" id="action-btns-${i}" style="display: none;">
                 <button onclick="aceptarAdopcion(${i})" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-6 rounded-xl shadow-md transition text-lg">Aprobar Adopción</button>
-                <button onclick="DB.solicitudesAdopcion.splice(${i},1); renderAdmin();" class="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-6 rounded-xl shadow-md transition text-lg">Rechazar Solicitud</button>
+                <button onclick="DB.solicitudesAdopcion.splice(${i},1); sincronizarDB(); renderAdmin();" class="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-6 rounded-xl shadow-md transition text-lg">Rechazar Solicitud</button>
               </div>
               <div class="w-full md:w-1/3 flex flex-col justify-center gap-3 text-center" id="pending-msg-${i}"><p class="text-slate-400 italic text-sm border p-4 rounded-xl">Debes revisar la solicitud completa antes de tomar una decisión.</p></div>
             </div>
@@ -797,7 +834,7 @@
               </div>
               <div class="flex flex-col justify-center gap-3 md:w-1/4">
                 <button onclick="aceptarReclamo(${i})" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-6 rounded-xl shadow-md transition">Aprobar Reclamo (Devolver)</button>
-                <button onclick="DB.solicitudesReclamo.splice(${i},1); renderAdmin();" class="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-6 rounded-xl shadow-md transition">Rechazar Reclamo</button>
+                <button onclick="DB.solicitudesReclamo.splice(${i},1); sincronizarDB(); renderAdmin();" class="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-6 rounded-xl shadow-md transition">Rechazar Reclamo</button>
               </div>
             </div>
           `;
@@ -806,7 +843,7 @@
         const volHtml = DB.solicitudesVoluntariado.map((v, i) => `
           <div class="bg-white border rounded-xl p-4 mb-3 flex justify-between items-center shadow-sm">
             <div><p class="font-bold text-indigo-900">Voluntariado: ${v.tipo.toUpperCase()}</p><p class="text-sm text-slate-600">Postulante: ${v.usuario} - ${v.fecha}</p></div>
-            <button onclick="DB.solicitudesVoluntariado.splice(${i},1); alert('Aprobado y notificado.'); renderAdmin();" class="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold text-sm">Aprobar Postulante</button>
+            <button onclick="DB.solicitudesVoluntariado.splice(${i},1); sincronizarDB(); alert('Aprobado y notificado.'); renderAdmin();" class="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold text-sm">Aprobar Postulante</button>
           </div>
         `).join('');
 
@@ -821,7 +858,7 @@
       if(shopEl) shopEl.innerHTML = DB.shop.map((s, i) => `
         <div class="flex justify-between items-center bg-white p-3 rounded-lg border shadow-sm">
           <div class="flex items-center gap-3"><img src="${s.foto}" class="w-12 h-12 rounded-lg object-cover border"> <div><p class="font-bold text-sm text-slate-800">${s.nom}</p><p class="text-xs text-indigo-600 font-bold">Q${s.precio}</p></div></div>
-          <button onclick="DB.shop.splice(${i},1); renderAdmin();" class="text-red-500 hover:bg-red-100 p-2 rounded transition"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+          <button onclick="DB.shop.splice(${i},1); sincronizarDB(); renderAdmin();" class="text-red-500 hover:bg-red-100 p-2 rounded transition"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
         </div>
       `).join('') || '<p class="text-sm text-slate-500">No hay artículos.</p>';
       
@@ -873,18 +910,26 @@
     function aceptarAdopcion(idx) {
       const s = DB.solicitudesAdopcion[idx]; const p = DB.pacientes.find(x => x.id === s.pId);
       if(p) { p.duenoActual = s.usuario; p.disponibleAdopcion = "No"; }
-      DB.solicitudesAdopcion.splice(idx,1); alert(`Adopción aprobada exitosamente. La mascota ha sido transferida a ${s.usuario}.`); renderAdmin();
+      DB.solicitudesAdopcion.splice(idx,1); 
+      
+      sincronizarDB();
+      alert(`Adopción aprobada exitosamente. La mascota ha sido transferida a ${s.usuario}.`); renderAdmin();
     }
 
     function aceptarReclamo(idx) {
       const r = DB.solicitudesReclamo[idx]; const p = DB.pacientes.find(x => x.id === r.pId);
       if(p) { p.duenoActual = r.usuario; p.disponibleAdopcion = "No"; }
-      DB.solicitudesReclamo.splice(idx,1); alert(`Reclamo de propiedad aprobado exitosamente. La mascota ha sido devuelta al perfil de ${r.usuario}.`); renderAdmin();
+      DB.solicitudesReclamo.splice(idx,1); 
+      
+      sincronizarDB();
+      alert(`Reclamo de propiedad aprobado exitosamente. La mascota ha sido devuelta al perfil de ${r.usuario}.`); renderAdmin();
     }
 
     function adminGuardarDonaciones(e) {
       e.preventDefault();
       DB.cmsDonaciones = { titulo: getEl('cms-don-titulo').value, sub: getEl('cms-don-sub').value, banco: getEl('cms-don-banco').value, nombre: getEl('cms-don-nombre').value, sede: getEl('cms-don-sede').value };
+      
+      sincronizarDB();
       alert("Sección Donaciones actualizada en tiempo real en la vista de Usuario.");
     }
 
@@ -895,6 +940,8 @@
       DB.cmsVoluntariado[idx].texto = getEl('cms-vol-texto').value;
       const files = getEl('cms-vol-fotos').files;
       if(files.length > 0) { const nuevasFotos = await getUrls(files); DB.cmsVoluntariado[idx].fotos.push(...nuevasFotos); }
+      
+      sincronizarDB();
       alert("Contenido de voluntariado actualizado. Fotos añadidas correctamente."); getEl('cms-vol-fotos').value = "";
     }
 
@@ -902,6 +949,8 @@
       e.preventDefault();
       const fotos = await getUrls(getEl('sh-foto').files);
       DB.shop.push({ id: Date.now(), nom: getEl('sh-nom').value, precio: getEl('sh-precio').value, desc: getEl('sh-desc').value, foto: fotos[0] });
+      
+      sincronizarDB();
       e.target.reset(); renderAdmin(); alert("Artículo agregado al catálogo general.");
     }
 
@@ -995,6 +1044,7 @@
       if(tipo === 'perfil') p.foto = "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200"; 
       else if(tipo === 'consulta') p.consultas[indexConsul].fotos.splice(indexFoto, 1);
       
+      sincronizarDB();
       alert("Fotografía eliminada del expediente por el Administrador.");
       verPerfilAdmin(pId);
     }
