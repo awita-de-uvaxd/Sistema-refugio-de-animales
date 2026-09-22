@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-xl border border-slate-200 mt-10">
+  <div class="text-center mb-8">
+    <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4"><i data-lucide="user-plus" class="w-8 h-8"></i></div>
+    <h2 class="text-2xl font-extrabold text-slate-800">Crea tu Cuenta</h2>
+    <p class="text-sm text-slate-500 mt-1">Únete para adoptar, donar o reportar.</p>
+  </div>
+  
+  <form action="{{ url_for('registro') }}" method="POST" class="space-y-5">
+    <div><label class="block text-sm font-bold mb-1 text-slate-700">Nombre Completo</label><input type="text" name="nombre" required class="w-full border rounded-lg p-3 bg-slate-50 outline-none focus:border-indigo-500 transition"></div>
+    <div><label class="block text-sm font-bold mb-1 text-slate-700">Correo Electrónico</label><input type="email" name="correo" required class="w-full border rounded-lg p-3 bg-slate-50 outline-none focus:border-indigo-500 transition"></div>
+    <div><label class="block text-sm font-bold mb-1 text-slate-700">Contraseña</label><input type="password" name="password" required class="w-full border rounded-lg p-3 bg-slate-50 outline-none focus:border-indigo-500 transition"></div>
+    
+    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-md transition">Registrarme</button>
+  </form>
+  
+  <p class="text-center text-sm text-slate-500 mt-6">¿Ya tienes cuenta? <a href="{{ url_for('login') }}" class="text-indigo-600 font-bold hover:underline">Inicia Sesión aquí</a></p>
+</div>
+{% endblock %}

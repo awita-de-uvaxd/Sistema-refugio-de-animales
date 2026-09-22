@@ -1,136 +1,431 @@
 {% extends "base.html" %}
-
 {% block content %}
 <div class="w-full">
   <nav class="flex overflow-x-auto border-b border-slate-200 text-sm font-medium mb-6 bg-white rounded-t-xl shadow-sm scroll-hide">
-    <button onclick="switchTab('veterinario', 'inicio')" class="tab-btn-veterinario px-5 py-4 border-b-2 flex items-center gap-2 active" data-tab="inicio"><i data-lucide="activity" class="w-4 h-4"></i> Panel de Control</button>
-    <button onclick="prepararNuevaConsultaDirecta()" class="tab-btn-veterinario px-5 py-4 border-b-2 flex items-center gap-2" data-tab="nueva"><i data-lucide="stethoscope" class="w-4 h-4"></i> Nueva Consulta</button>
-    <button onclick="switchTab('veterinario', 'buscar')" class="tab-btn-veterinario px-5 py-4 border-b-2 flex items-center gap-2" data-tab="buscar"><i data-lucide="search" class="w-4 h-4"></i> Buscar Paciente</button>
-    <button onclick="switchTab('veterinario', 'citas')" class="tab-btn-veterinario px-5 py-4 border-b-2 flex items-center gap-2" data-tab="citas"><i data-lucide="calendar" class="w-4 h-4"></i> Citas Agendadas</button>
-    <button onclick="switchTab('veterinario', 'perfil')" class="tab-btn-veterinario px-5 py-4 border-b-2 flex items-center gap-2" data-tab="perfil"><i data-lucide="user" class="w-4 h-4"></i> Mi Perfil</button>
+    <button onclick="switchTab('veterinario', 'inicio')" class="tab-btn-veterinario px-5 py-4 border-b-2 flex active" data-tab="inicio"><i data-lucide="activity" class="w-4 h-4 mr-2"></i> Panel de Control</button>
+    <button onclick="switchTab('veterinario', 'nueva')" class="tab-btn-veterinario px-5 py-4 border-b-2 flex" data-tab="nueva"><i data-lucide="stethoscope" class="w-4 h-4 mr-2"></i> Nueva Consulta</button>
+    <button onclick="switchTab('veterinario', 'buscar')" class="tab-btn-veterinario px-5 py-4 border-b-2 flex" data-tab="buscar"><i data-lucide="search" class="w-4 h-4 mr-2"></i> Buscar Paciente</button>
+    <button onclick="switchTab('veterinario', 'citas')" class="tab-btn-veterinario px-5 py-4 border-b-2 flex" data-tab="citas"><i data-lucide="calendar" class="w-4 h-4 mr-2"></i> Citas Agendadas</button>
   </nav>
 
+  <!-- PESTAÑA 1: PANEL DE CONTROL -->
   <div id="veterinario-inicio" class="tab-content tab-content-veterinario active">
     <div class="grid md:grid-cols-2 gap-6">
+      
+      <!-- CITAS PROGRAMADAS (FILTRABLE) -->
       <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-amber-500">
-        <div class="flex justify-between items-center mb-4 border-b pb-2">
+        <div class="flex justify-between items-center mb-6 border-b pb-4">
           <h3 class="font-bold text-lg flex items-center gap-2"><i data-lucide="clock" class="text-amber-500"></i> Citas Programadas</h3>
-          <select id="filtro-citas-inicio" onchange="renderCitasInicio()" class="bg-slate-50 border rounded-lg p-1.5 text-xs font-bold text-slate-700 outline-none">
-            <option value="hoy">Hoy</option><option value="semana">Esta Semana</option><option value="quincena">Estas 2 Semanas</option><option value="mes">Este Mes</option>
+          <select id="filtro-citas" onchange="filtrarCitas()" class="border rounded-lg text-sm px-2 py-1 outline-none focus:border-amber-500 bg-slate-50">
+            <option value="hoy">Hoy</option>
+            <option value="semana">Esta Semana</option>
+            <option value="quincena">Próximas 2 Semanas</option>
+            <option value="mes">Este Mes</option>
+            <option value="todas">Todas</option>
           </select>
         </div>
-        <div id="lista-citas-hoy" class="space-y-3"></div>
+        <div class="space-y-3 max-h-80 overflow-y-auto custom-scroll pr-2" id="lista-panel-citas">
+          {% if citas %}
+            {% for c in citas %}
+              <div class="cita-item border border-slate-200 p-4 rounded-xl shadow-sm flex justify-between items-center" data-fecha="{{ c.fecha }}">
+                <div>
+                  <p class="font-bold text-slate-800 text-sm">ID #{{ c.paciente_id }} <span class="text-xs text-slate-400 font-normal">({{ c.fecha }})</span></p>
+                  <p class="text-xs text-slate-600 mt-1">{{ c.motivo }}</p>
+                </div>
+                <!-- El botón Atender manda la cita directamente a Nueva Consulta (Seguimiento) -->
+                <button onclick="prepararConsulta('Seguimiento', null, '{{ c.paciente_obj.especie }}', '{{ c.paciente_obj.sexo }}', '{{ c.paciente_id }}', '{{ c.paciente_obj.nombre }}', '{{ c.id }}')" class="bg-amber-100 text-amber-700 hover:bg-amber-200 px-4 py-2 text-xs font-bold rounded-lg transition">Atender</button>
+              </div>
+            {% endfor %}
+          {% else %}
+            <p class="text-sm text-slate-500 italic p-4 text-center">No hay citas registradas.</p>
+          {% endif %}
+        </div>
       </div>
+
+      <!-- RESCATES PENDIENTES -->
       <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-indigo-600">
-        <h3 class="font-bold text-lg mb-4 flex items-center gap-2 border-b pb-2"><i data-lucide="alert-circle" class="text-indigo-600"></i> Rescates Pendientes</h3>
-        <div id="lista-ingresos-rescate" class="space-y-3"></div>
+        <h3 class="font-bold text-lg mb-6 flex items-center gap-2 border-b pb-4"><i data-lucide="alert-circle" class="text-indigo-600"></i> Rescates Pendientes de Expediente</h3>
+        <div class="space-y-4 max-h-80 overflow-y-auto custom-scroll pr-2">
+          {% if rescates %}
+            {% for r in rescates %}
+              <div class="border border-slate-200 pb-4 rounded-xl shadow-sm">
+                <div class="flex justify-between items-center text-sm p-4 border-b border-slate-100">
+                  <p class="font-bold text-indigo-900 text-base">Rescate #{{ r.id }} ({{ r.especie }})</p>
+                  <span class="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded font-bold uppercase">{{ r.gravedad }}</span>
+                </div>
+                <div class="px-4 py-2">
+                  <p class="text-xs text-slate-600 line-clamp-1 mb-4">{{ r.descripcion }}</p>
+                  <button onclick="prepararConsulta('Rescate', '{{ r.id }}', '{{ r.especie }}', '{{ r.sexo }}', null, null, null)" class="bg-indigo-600 text-white px-3 py-2.5 text-xs font-bold rounded-lg w-full hover:bg-indigo-700 transition shadow">Generar Expediente Clínico</button>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <p class="text-sm text-slate-500 italic border rounded bg-slate-50 text-center p-4">No hay ingresos nuevos.</p>
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>
 
+  <!-- PESTAÑA 2: NUEVA CONSULTA -->
   <div id="veterinario-nueva" class="tab-content tab-content-veterinario">
-    <div class="bg-white rounded-xl shadow-sm p-6 max-w-5xl mx-auto">
-      <div class="flex justify-between items-center mb-6 border-b pb-4">
-        <div><h2 class="text-2xl font-black text-indigo-950" id="titulo-consulta"></h2><p id="subtitulo-consulta" class="text-sm font-bold text-emerald-600 mt-1"></p></div>
+    <div class="bg-white rounded-xl shadow-sm p-8 max-w-6xl mx-auto">
+      <div class="flex justify-between items-center border-b pb-6 mb-6">
+        <div>
+          <h2 class="text-2xl font-black text-indigo-950 flex items-center gap-3">
+            <span id="titulo-consulta">Nuevo Animal Registrado</span>
+            <!-- SELECTOR BLOQUEADO (disabled) para que el veterinario no lo cambie -->
+            <select id="selector-ruta" disabled class="text-sm border-2 border-indigo-200 rounded-lg p-1 text-indigo-700 font-bold outline-none bg-indigo-50 cursor-not-allowed">
+              <option value="Externo">Externo (Con Dueño)</option>
+              <option value="Rescate">Rescatado (Refugio)</option>
+              <option value="Seguimiento">Cita de Seguimiento</option>
+            </select>
+          </h2>
+          <p id="subtitulo-consulta" class="text-emerald-600 font-semibold text-sm mt-1">Creando expediente en blanco para nuevo ingreso.</p>
+        </div>
         <div class="flex items-center gap-4">
-          <div class="bg-indigo-50 text-indigo-800 px-4 py-2 rounded-lg font-mono text-sm border border-indigo-200">ID Asignado: <strong id="vet-id-asignado" class="text-lg"></strong></div>
-          <button type="button" onclick="switchTab('veterinario', 'inicio')" class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-300">Cancelar</button>
+          <span class="text-indigo-700 bg-indigo-50 px-4 py-2 border border-indigo-100 rounded-lg text-sm font-mono">ID Asignado: <strong id="lbl-id">Automático</strong></span>
         </div>
       </div>
-      <form onsubmit="guardarConsultaMedica(event)" class="space-y-6">
-        <input type="hidden" id="vet-paciente-id"><input type="hidden" id="vet-es-privado" value="false">
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
-          <div class="md:col-span-4 space-y-4 bg-slate-50 p-5 rounded-xl border border-slate-200 h-fit">
-            <h4 class="font-bold text-sm text-indigo-700 uppercase tracking-wide">1. Perfil del Paciente</h4>
-            <div><label class="block text-xs font-bold mb-1">Nombre</label><input type="text" id="vet-nombre" required class="w-full border rounded-lg p-2.5 bg-white"></div>
-            <div><label class="block text-xs font-bold mb-1">Especie</label><input type="text" id="vet-especie" required class="w-full border rounded-lg p-2.5 bg-slate-100" readonly></div>
-            <div><label class="block text-xs font-bold mb-1">Sexo</label><select id="vet-sexo" class="w-full border rounded-lg p-2.5 bg-white"><option>Macho</option><option>Hembra</option></select></div>
-            <div>
-              <label class="block text-xs font-bold mb-1 text-indigo-900">Foto de Perfil (Actual)</label>
-              <img id="vet-current-photo" src="https://via.placeholder.com/150" class="w-full h-40 object-cover rounded-lg border-2 border-indigo-200 mb-2 shadow-sm">
-              <label class="block text-xs font-bold mb-1 text-slate-500">Actualizar Fotografía:</label>
-              <input type="file" id="vet-foto" accept="image/*" onchange="previewVetFoto(this)" class="w-full border rounded p-1.5 text-xs bg-white">
+      
+      <form action="{{ url_for('crear_consulta') }}" method="POST" onsubmit="prepararEnvio()">
+        <!-- CAMPOS OCULTOS PARA ENVIAR LA VERDADERA INFORMACIÓN -->
+        <input type="hidden" name="tipo_ingreso" id="form-tipo-ingreso" value="Externo">
+        <input type="hidden" name="rescate_id" id="form-rescate-id" value="">
+        <input type="hidden" name="paciente_existente_id" id="form-paciente-id" value="">
+        <input type="hidden" name="cita_id" id="form-cita-id" value="">
+        <input type="hidden" name="sintomas_ocultos" id="sintomas-hidden" value="">
+        <input type="hidden" name="vacunas_ocultas" id="vacunas-hidden" value="">
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
+          <!-- COLUMNA 1: PERFIL -->
+          <div class="md:col-span-4 space-y-5">
+            <h4 class="font-bold text-sm text-indigo-700 uppercase tracking-widest border-b border-indigo-100 pb-2 mb-4">1. Perfil del Paciente</h4>
+            <div><label class="block text-sm font-bold mb-1 text-slate-800">Nombre</label><input type="text" name="nombre_paciente" id="form-nombre" class="w-full border rounded-lg p-2.5 outline-none bg-slate-50"></div>
+            <div><label class="block text-sm font-bold mb-1 text-slate-800">Especie</label><input type="text" name="especie" id="form-especie" class="w-full border rounded-lg p-2.5 outline-none bg-slate-50"></div>
+            <div><label class="block text-sm font-bold mb-1 text-slate-800">Sexo</label>
+              <select name="sexo" id="form-sexo" class="w-full border rounded-lg p-2.5 outline-none bg-slate-50">
+                <option value="Macho">Macho</option><option value="Hembra">Hembra</option>
+              </select>
+            </div>
+            <div id="caja-adopcion" class="hidden mt-4 pt-4 border-t border-slate-200">
+              <label class="block text-sm font-bold mb-1 text-slate-800">Estado de Adopción</label>
+              <select name="adopcion_status" class="w-full border rounded-lg p-2.5 outline-none bg-emerald-50 text-emerald-800 font-bold">
+                <option value="En Observación">En Observación (Tratamiento)</option>
+                <option value="Listo para Adopción">Sano - Listo para Adopción</option>
+              </select>
             </div>
           </div>
-          <div class="md:col-span-8 space-y-5">
-            <h4 class="font-bold text-sm text-indigo-700 uppercase tracking-wide">2. Evaluación Clínica Actual</h4>
+          
+          <!-- COLUMNA 2: CLÍNICA -->
+          <div class="md:col-span-8 space-y-6">
+            <h4 class="font-bold text-sm text-indigo-700 uppercase tracking-widest border-b border-indigo-100 pb-2 mb-4">2. Evaluación Clínica Actual</h4>
             <div class="grid grid-cols-3 gap-4">
-              <div><label class="block text-xs font-bold mb-1">Temp (°C)</label><input type="text" id="vet-temp" class="w-full border rounded-lg p-2"></div>
-              <div><label class="block text-xs font-bold mb-1">Peso (Kg)</label><input type="text" id="vet-peso" class="w-full border rounded-lg p-2"></div>
-              <div><label class="block text-xs font-bold mb-1">Evidencia (Fotos del caso)</label><input type="file" id="vet-fotos-consulta" multiple accept="image/*" class="w-full border rounded-lg p-1.5 text-xs bg-white"></div>
+              <div><label class="block text-sm font-bold mb-1 text-slate-800">Temp (°C)</label><input type="text" name="temp" class="w-full border rounded-lg p-2.5 outline-none"></div>
+              <div><label class="block text-sm font-bold mb-1 text-slate-800">Peso (Kg)</label><input type="text" name="peso" class="w-full border rounded-lg p-2.5 outline-none"></div>
             </div>
+            
+            <!-- SÍNTOMAS -->
             <div>
-              <label class="block text-xs font-bold mb-1">Síntomas Visualizados</label>
-              <div class="flex gap-2 mb-3">
-                <input type="text" id="input-sintoma" class="flex-grow border rounded-lg p-2.5" placeholder="Ej. Cojera, fiebre...">
-                <button type="button" onclick="agregarSintoma()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 rounded-lg font-bold text-sm transition">Añadir</button>
+              <label class="block text-sm font-bold mb-1 text-slate-800">Síntomas Visualizados</label>
+              <div class="flex gap-2">
+                <input type="text" id="input-sintoma" placeholder="Ej. Cojera, fiebre..." class="w-full border rounded-lg p-2.5 outline-none" onkeypress="if(event.key === 'Enter') { event.preventDefault(); addSintoma(); }">
+                <button type="button" onclick="addSintoma()" class="bg-indigo-600 text-white font-bold px-6 rounded-lg">Añadir</button>
               </div>
-              <div id="lista-sintomas-tags" class="flex flex-wrap gap-2"></div>
+              <div id="contenedor-sintomas" class="flex flex-wrap gap-2 mt-3 min-h-[30px]"></div>
             </div>
+
             <div class="grid grid-cols-2 gap-4">
-              <div><label class="block text-xs font-bold mb-1">Diagnóstico</label><textarea id="vet-diag" rows="3" class="w-full border rounded-lg p-2.5"></textarea></div>
-              <div><label class="block text-xs font-bold mb-1">Tratamiento / Receta</label><textarea id="vet-trat" rows="3" class="w-full border rounded-lg p-2.5"></textarea></div>
+              <div><label class="block text-sm font-bold mb-1 text-slate-800">Diagnóstico</label><textarea name="diagnostico" rows="4" class="w-full border rounded-lg p-2.5 outline-none"></textarea></div>
+              <div><label class="block text-sm font-bold mb-1 text-slate-800">Tratamiento / Receta</label><textarea name="tratamiento" rows="4" class="w-full border rounded-lg p-2.5 outline-none"></textarea></div>
             </div>
-            <div class="bg-emerald-50/50 p-5 rounded-xl border border-emerald-100">
-              <h4 class="block text-sm font-bold mb-3 text-emerald-800 border-b border-emerald-200 pb-1">Sistema de Vacunación</h4>
-              <div id="box-vacunas-historicas" class="hidden mb-4 bg-white p-3 rounded-lg border border-emerald-200 text-sm">
-                <p class="font-bold text-slate-700 mb-2 text-xs uppercase">Historial de Vacunas Aplicadas:</p>
-                <ul id="lista-vacunas-historicas" class="space-y-2"></ul>
-              </div>
-              <div class="flex gap-2 mb-3 items-end">
-                <div class="w-1/3"><label class="text-[10px] text-slate-500 font-bold uppercase">Nombre Vacuna</label><input type="text" id="vac-nombre" class="w-full border rounded p-2 text-sm bg-white"></div>
-                <div class="w-1/3">
-                  <label class="text-[10px] text-slate-500 font-bold uppercase">Frecuencia</label>
-                  <select id="vac-freq-select" onchange="toggleVacFreq()" class="w-full border rounded p-2 text-sm bg-white">
-                    <option>Anual</option><option>Mensual</option><option>Trimestral</option><option>Semestral</option><option value="Personalizado">Personalizado...</option>
-                  </select>
-                  <input type="text" id="vac-freq-custom" placeholder="Especificar..." class="w-full border rounded p-2 text-sm hidden mt-1 bg-white">
+            
+            <!-- VACUNAS -->
+            <div class="border border-emerald-300 rounded-xl bg-emerald-50/30 overflow-hidden">
+              <h4 class="font-bold text-sm text-emerald-700 uppercase bg-emerald-100/50 px-5 py-3 border-b border-emerald-200">Sistema de Vacunación / Medicación</h4>
+              <div class="p-5">
+                <div class="grid grid-cols-12 gap-4 items-end">
+                  <div class="col-span-5"><label class="block text-xs font-bold mb-1">Nombre</label><input type="text" id="input-vacuna" class="w-full border rounded-lg p-2 outline-none"></div>
+                  <div class="col-span-5">
+                    <label class="block text-xs font-bold mb-1">Frecuencia</label>
+                    <select id="select-frecuencia" class="w-full border rounded-lg p-2 outline-none bg-white">
+                      <option>Semanal</option><option>Quincenal</option><option>Mensual</option><option>Anual</option>
+                    </select>
+                  </div>
+                  <div class="col-span-2"><button type="button" onclick="addVacuna()" class="w-full bg-emerald-600 text-white font-bold py-2 rounded-lg"><i data-lucide="plus" class="w-5 h-5 mx-auto"></i></button></div>
                 </div>
-                <button type="button" onclick="agregarVacuna()" class="bg-emerald-600 hover:bg-emerald-700 transition text-white px-5 py-2 rounded-lg font-bold text-sm h-[38px]">+</button>
+                <div id="lista-vacunas" class="mt-4 space-y-2"></div>
               </div>
-              <ul id="lista-vacunas-aplicadas" class="text-sm space-y-1"></ul>
             </div>
-            <div id="box-adopcion" class="bg-amber-50 p-4 rounded-xl border border-amber-200">
-              <label class="block text-xs font-bold text-amber-800">¿Liberar para Adopción Pública?</label>
-              <select id="vet-adopcion" class="w-full border rounded-lg p-2.5 mt-2 bg-white font-bold text-slate-700"><option value="No">Aún no (En tratamiento / Observación)</option><option value="Si">Sí, listo para adopción</option></select>
+
+            <div class="pt-4 flex justify-end">
+              <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-10 rounded-xl shadow-md transition text-lg">Guardar Expediente</button>
             </div>
           </div>
         </div>
-        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg transition text-lg mt-6">Guardar Expediente Clínico</button>
       </form>
     </div>
   </div>
 
+  <!-- PESTAÑA 3: BUSCAR PACIENTE -->
   <div id="veterinario-buscar" class="tab-content tab-content-veterinario">
-    <div class="bg-white rounded-xl shadow-sm p-6">
-      <input type="text" id="search-vet-id" oninput="filtrarPacientesVet()" placeholder="🔍 Buscar paciente por ID o Nombre..." class="w-full border-2 border-indigo-100 focus:border-indigo-500 outline-none rounded-xl px-5 py-4 text-lg mb-6 bg-slate-50">
-      <div id="lista-busqueda-vet" class="space-y-4"></div>
-    </div>
-  </div>
-
-  <div id="veterinario-citas" class="tab-content tab-content-veterinario">
-    <div class="bg-white rounded-xl shadow-sm p-6">
-      <div class="flex justify-between items-center mb-6 border-b pb-4">
-        <h3 class="font-bold text-xl">Agenda General de Citas</h3>
-        <select id="filtro-citas-general" onchange="renderCitasGeneral()" class="bg-slate-50 border rounded-lg p-2 text-sm font-bold text-slate-700 outline-none">
-          <option value="hoy">Hoy</option><option value="semana">Esta Semana</option><option value="quincena">Estas 2 Semanas</option><option value="mes">Este Mes</option><option value="todas">Todas Históricas</option>
-        </select>
+    <div class="bg-white rounded-xl shadow-sm p-8 max-w-5xl mx-auto">
+      <!-- Buscador -->
+      <div class="relative mb-6">
+        <i data-lucide="search" class="absolute left-4 top-3.5 text-indigo-400 w-5 h-5"></i>
+        <input type="text" id="buscador-paciente" onkeyup="buscarPacientes()" placeholder="Buscar paciente por ID o Nombre..." class="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-xl py-3.5 pl-12 pr-4 outline-none focus:border-indigo-500 focus:bg-white transition text-lg">
       </div>
-      <div id="todas-citas-vet" class="space-y-3"></div>
+
+      <!-- Lista de Pacientes -->
+      <div class="space-y-4" id="lista-pacientes-buscar">
+        {% if pacientes %}
+          {% for p in pacientes %}
+            <div class="paciente-card border border-slate-200 p-5 rounded-2xl flex justify-between items-center bg-white shadow-sm hover:shadow transition">
+              <div class="flex items-center gap-4">
+                <div class="w-14 h-14 bg-slate-200 rounded-full flex items-center justify-center text-slate-400 overflow-hidden border-2 border-indigo-100">
+                  {% if p.foto %}<img src="{{ url_for('static', filename='uploads/' ~ p.foto) }}" class="w-full h-full object-cover">{% else %}<i data-lucide="paw-print"></i>{% endif %}
+                </div>
+                <div>
+                  <h3 class="font-black text-indigo-950 text-lg paciente-nombre">#{{ p.id }} - {{ p.nombre }}</h3>
+                  <p class="text-sm text-slate-500">{{ p.especie }} | {{ p.sexo }}</p>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <button onclick="abrirExpediente('{{ p.id }}')" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-4 py-2 text-sm font-bold rounded-lg transition">Ver Expediente Clínico</button>
+                <button onclick="prepararConsulta('Seguimiento', null, '{{ p.especie }}', '{{ p.sexo }}', '{{ p.id }}', '{{ p.nombre }}', null)" class="bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-2 text-sm font-bold rounded-lg transition">Nueva Consulta</button>
+                <button onclick="abrirAgendarCita('{{ p.id }}', '{{ p.nombre }}')" class="bg-amber-500 text-white hover:bg-amber-600 px-4 py-2 text-sm font-bold rounded-lg transition">Agendar Cita</button>
+              </div>
+            </div>
+
+            <!-- CONTENIDO OCULTO DEL HISTORIAL CLÍNICO (PARA EL MODAL) -->
+            <div id="historial-paciente-{{ p.id }}" class="hidden">
+              <div class="flex items-center gap-4 border-b pb-4 mb-6">
+                <div class="w-16 h-16 bg-slate-200 rounded-full overflow-hidden border-2 border-indigo-100 flex items-center justify-center">
+                  {% if p.foto %}<img src="{{ url_for('static', filename='uploads/' ~ p.foto) }}" class="w-full h-full object-cover">{% else %}<i data-lucide="paw-print" class="text-slate-400"></i>{% endif %}
+                </div>
+                <h2 class="text-3xl font-black text-indigo-900">#{{ p.id }} - {{ p.nombre }}</h2>
+              </div>
+              <div class="space-y-4 max-h-[60vh] overflow-y-auto custom-scroll pr-2">
+                {% if p.consultas %}
+                  {% for consulta in p.consultas %}
+                    <div class="border border-slate-200 rounded-xl p-5 shadow-sm bg-slate-50 relative">
+                      <div class="flex justify-between items-center mb-4 border-b border-slate-200 pb-3">
+                        <p class="font-bold text-indigo-700 text-lg flex items-center gap-2"><i data-lucide="stethoscope" class="w-5 h-5"></i> {{ consulta.fecha.strftime('%d/%m/%Y') }} - {{ consulta.veterinario_obj.nombre }}</p>
+                        <div class="bg-white px-3 py-1 border rounded-lg text-sm font-bold text-slate-700">{{ consulta.temperatura }}°C | {{ consulta.peso }}kg</div>
+                      </div>
+                      <div class="space-y-2 text-sm text-slate-800">
+                        <p><strong>Síntomas:</strong> {% if consulta.sintomas %}{{ consulta.sintomas }}{% else %}<span class="text-slate-400">Ninguno</span>{% endif %}</p>
+                        <p><strong>Diagnóstico:</strong> {{ consulta.diagnostico }}</p>
+                        <p><strong>Tratamiento:</strong> {{ consulta.tratamiento }}</p>
+                        {% if consulta.vacunas %}
+                          <p><strong>Vacunas/Dosis:</strong> 
+                            {% for vac in consulta.vacunas %}<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-xs ml-1">{{ vac.nombre }}</span>{% endfor %}
+                          </p>
+                        {% endif %}
+                      </div>
+                      <!-- ZONA DE EVIDENCIA GRÁFICA -->
+                      <div class="mt-4 pt-3 border-t border-slate-200">
+                        <p class="text-xs font-bold text-slate-500 uppercase mb-2">Evidencia Gráfica</p>
+                        <div class="flex gap-2">
+                          <div class="w-20 h-20 bg-slate-200 rounded-lg flex items-center justify-center text-slate-400"><i data-lucide="image" class="w-6 h-6"></i></div>
+                        </div>
+                      </div>
+                    </div>
+                  {% endfor %}
+                {% else %}
+                  <p class="text-slate-500 italic text-center p-6 border rounded-xl bg-slate-50">Este paciente no tiene historial clínico registrado.</p>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-center text-slate-500 p-8 border rounded-xl bg-slate-50 italic">No hay pacientes registrados en el sistema.</p>
+        {% endif %}
+      </div>
     </div>
   </div>
 
-  <div id="veterinario-perfil" class="tab-content tab-content-veterinario profile-container"></div>
+  <!-- PESTAÑA 4: CITAS AGENDADAS -->
+  <div id="veterinario-citas" class="tab-content tab-content-veterinario">
+    <div class="bg-white rounded-xl shadow-sm p-8 max-w-5xl mx-auto">
+      <div class="flex justify-between items-center mb-6 border-b pb-4">
+        <h2 class="text-2xl font-black text-indigo-950">Agenda General de Citas</h2>
+      </div>
+      <div class="space-y-4">
+        {% if citas %}
+          {% for c in citas %}
+            <div class="border border-slate-200 p-5 rounded-2xl flex justify-between items-center bg-white shadow-sm hover:shadow transition">
+              <div>
+                <p class="font-black text-indigo-900 text-lg">Fecha: {{ c.fecha }} - Paciente #{{ c.paciente_id }} ({{ c.paciente_obj.nombre }})</p>
+                <p class="text-sm text-slate-500 flex items-center gap-1 mt-1"><i data-lucide="clipboard-list" class="w-4 h-4"></i> Motivo: {{ c.motivo }}</p>
+              </div>
+              <button onclick="abrirExpediente('{{ c.paciente_id }}')" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-6 py-3 text-sm font-bold rounded-lg transition border border-slate-200">Ver Expediente Clínico</button>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-center text-slate-500 p-8 border rounded-xl bg-slate-50 italic">No hay citas programadas.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
 </div>
 
+<!-- ==========================================
+      SCRIPTS Y FUNCIONES DE VETERINARIO 
+=========================================== -->
 <script>
-  window.onload = () => {
-    DB.sesionActual.rol = 'veterinario';
-    DB.sesionActual.nombre = 'Dra. María';
-    generarFormulariosPerfil();
-    renderVeterinario();
-    switchTab('veterinario', 'inicio');
+  let sintomas = [];
+  let vacunas = [];
+  const fechaHoy = "{{ hoy }}"; 
+
+  // --- SÍNTOMAS ---
+  function addSintoma() {
+    const input = document.getElementById('input-sintoma');
+    const valor = input.value.trim();
+    if(valor && !sintomas.includes(valor)) {
+      sintomas.push(valor);
+      input.value = '';
+      renderSintomas();
+    }
+  }
+  function removeSintoma(index) { sintomas.splice(index, 1); renderSintomas(); }
+  function renderSintomas() {
+    document.getElementById('contenedor-sintomas').innerHTML = sintomas.map((s, i) => `<span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1">${s} <i data-lucide="x" class="w-3 h-3 cursor-pointer hover:text-red-500" onclick="removeSintoma(${i})"></i></span>`).join('');
     lucide.createIcons();
-  };
+  }
+
+  // --- VACUNAS ---
+  function addVacuna() {
+    const nombre = document.getElementById('input-vacuna').value.trim();
+    const freq = document.getElementById('select-frecuencia').value;
+    if(nombre) {
+      vacunas.push({ nombre: nombre, frecuencia: freq, fecha: fechaHoy });
+      document.getElementById('input-vacuna').value = '';
+      renderVacunas();
+    }
+  }
+  function removeVacuna(index) { vacunas.splice(index, 1); renderVacunas(); }
+  function renderVacunas() {
+    document.getElementById('lista-vacunas').innerHTML = vacunas.map((v, i) => `<div class="flex justify-between items-center bg-white border border-emerald-100 p-2 rounded-lg text-sm"><div><span class="font-bold text-emerald-800">${v.nombre}</span><span class="text-xs text-slate-500 ml-2">Freq: ${v.frecuencia}</span></div><div class="flex gap-3"><span class="text-xs font-mono bg-slate-100 px-2 py-1 rounded">Fecha: ${v.fecha}</span><button type="button" onclick="removeVacuna(${i})" class="text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div></div>`).join('');
+    lucide.createIcons();
+  }
+
+  // --- FORMULARIO Y RUTAS BLOQUEADAS ---
+  function prepararEnvio() {
+    document.getElementById('sintomas-hidden').value = sintomas.join(', ');
+    document.getElementById('vacunas-hidden').value = JSON.stringify(vacunas);
+  }
+
+  function aplicarRuta(tipo) {
+    document.getElementById('form-tipo-ingreso').value = tipo;
+    document.getElementById('selector-ruta').value = tipo; // Visual
+    const cajaAdopcion = document.getElementById('caja-adopcion');
+    const subtitulo = document.getElementById('subtitulo-consulta');
+    
+    if(tipo === 'Rescate') {
+      subtitulo.textContent = "Expediente de animal rescatado (Propiedad del refugio).";
+      cajaAdopcion.classList.remove('hidden'); 
+    } else if (tipo === 'Seguimiento') {
+      subtitulo.textContent = "Actualizando datos y dosis de una ficha existente.";
+      cajaAdopcion.classList.add('hidden');
+    } else {
+      subtitulo.textContent = "Creando expediente en blanco para nuevo ingreso (Con dueño).";
+      cajaAdopcion.classList.add('hidden');
+    }
+  }
+
+  // Se activa al presionar "Generar Expediente" (Rescate) o "Nueva Consulta" / "Atender" (Seguimiento)
+  function prepararConsulta(tipo, rescateId, especie, sexo, pacienteId = null, pacienteNombre = null, citaId = null) {
+    switchTab('veterinario', 'nueva');
+    aplicarRuta(tipo);
+    
+    // Limpiamos todo
+    document.getElementById('form-rescate-id').value = '';
+    document.getElementById('form-paciente-id').value = '';
+    document.getElementById('form-cita-id').value = '';
+    
+    if(tipo === 'Rescate') {
+      document.getElementById('lbl-id').textContent = rescateId;
+      document.getElementById('form-rescate-id').value = rescateId;
+      document.getElementById('form-nombre').value = "Rescatado #" + rescateId;
+      document.getElementById('form-nombre').readOnly = false;
+      document.getElementById('form-especie').readOnly = false;
+    } else if (tipo === 'Seguimiento') {
+      document.getElementById('lbl-id').textContent = pacienteId;
+      document.getElementById('form-paciente-id').value = pacienteId;
+      document.getElementById('form-nombre').value = pacienteNombre;
+      document.getElementById('form-nombre').readOnly = true; // Bloquea editar nombre si ya existe
+      document.getElementById('form-especie').readOnly = true;
+      if (citaId) document.getElementById('form-cita-id').value = citaId; // Si viene de una cita, esto la borrará al guardar
+    }
+    
+    document.getElementById('form-especie').value = especie;
+    document.getElementById('form-sexo').value = sexo;
+  }
+
+  // --- BUSCADOR ---
+  function buscarPacientes() {
+    const input = document.getElementById('buscador-paciente').value.toLowerCase();
+    const cards = document.querySelectorAll('.paciente-card');
+    cards.forEach(card => {
+      const texto = card.querySelector('.paciente-nombre').innerText.toLowerCase();
+      card.style.display = texto.includes(input) ? '' : 'none';
+    });
+  }
+
+  // --- FILTRO DE CITAS DEL PANEL ---
+  function filtrarCitas() {
+    const filtro = document.getElementById('filtro-citas').value;
+    const items = document.querySelectorAll('.cita-item');
+    const hoy = new Date("{{ hoy }}");
+
+    items.forEach(item => {
+      const fechaCita = new Date(item.getAttribute('data-fecha'));
+      const diffTime = fechaCita - hoy;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      let mostrar = false;
+      if (filtro === 'todas') mostrar = true;
+      else if (filtro === 'hoy' && diffDays === 0) mostrar = true;
+      else if (filtro === 'semana' && diffDays >= 0 && diffDays <= 7) mostrar = true;
+      else if (filtro === 'quincena' && diffDays >= 0 && diffDays <= 14) mostrar = true;
+      else if (filtro === 'mes' && diffDays >= 0 && diffDays <= 30) mostrar = true;
+      
+      item.style.display = mostrar ? 'flex' : 'none';
+    });
+  }
+  // Ejecutar el filtro al cargar para que muestre "Hoy" por defecto
+  window.addEventListener('DOMContentLoaded', filtrarCitas);
+
+  // --- MODALES ---
+  function abrirExpediente(pacienteId) {
+    const contenidoHTML = document.getElementById('historial-paciente-' + pacienteId).innerHTML;
+    openModal(contenidoHTML);
+    lucide.createIcons();
+  }
+
+  function abrirAgendarCita(pacienteId, pacienteNombre) {
+    openModal(`
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-xl font-bold text-indigo-900 flex items-center gap-2"><i data-lucide="calendar-plus"></i> Agendar Cita (Paciente #${pacienteId})</h2>
+      </div>
+      <form action="{{ url_for('crear_cita') }}" method="POST" class="space-y-4">
+        <input type="hidden" name="paciente_id" value="${pacienteId}">
+        
+        <div>
+          <label class="block text-sm font-bold mb-1 text-slate-800">Fecha de la cita</label>
+          <input type="date" name="fecha" required class="w-full border rounded-lg p-3 outline-none text-slate-600 bg-slate-50">
+        </div>
+        
+        <div>
+          <label class="block text-sm font-bold mb-1 text-slate-800">Motivo de la visita</label>
+          <input type="text" name="motivo" required placeholder="Ej. Retiro de puntos, Vacunación..." class="w-full border rounded-lg p-3 outline-none">
+        </div>
+        
+        <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 rounded-xl shadow-md transition mt-4">Confirmar y Programar Cita</button>
+      </form>
+    `);
+    lucide.createIcons();
+  }
 </script>
 {% endblock %}

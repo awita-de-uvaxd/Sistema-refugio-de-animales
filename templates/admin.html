@@ -1,88 +1,74 @@
 {% extends "base.html" %}
-
 {% block content %}
 <div class="w-full">
+  <!-- Pestañas de Navegación -->
   <nav class="flex overflow-x-auto border-b border-slate-200 text-sm font-medium mb-6 bg-white rounded-t-xl shadow-sm scroll-hide">
-    <button onclick="switchTab('admin', 'adopciones')" class="tab-btn-admin px-5 py-4 border-b-2 flex active" data-tab="adopciones">Solicitudes & Reclamos</button>
-    <button onclick="switchTab('admin', 'contenido')" class="tab-btn-admin px-5 py-4 border-b-2 flex" data-tab="contenido">Edición Contenido Web</button>
-    <button onclick="switchTab('admin', 'shop')" class="tab-btn-admin px-5 py-4 border-b-2 flex" data-tab="shop">Gestión Shop & Pedidos</button>
-    <button onclick="switchTab('admin', 'logs')" class="tab-btn-admin px-5 py-4 border-b-2 flex" data-tab="logs">Auditoría / Gestión Perfiles</button>
-    <button onclick="switchTab('admin', 'perfil')" class="tab-btn-admin px-5 py-4 border-b-2 flex" data-tab="perfil">Mi Perfil</button>
+    <button onclick="switchTab('admin', 'adopciones')" class="tab-btn-admin px-5 py-4 border-b-2 flex active" data-tab="adopciones">Solicitudes</button>
+    <button onclick="switchTab('admin', 'logs')" class="tab-btn-admin px-5 py-4 border-b-2 flex" data-tab="logs">Auditoría Empleados</button>
   </nav>
 
+  <!-- Pestaña 1: Adopciones (Aún desconectada) -->
   <div id="admin-adopciones" class="tab-content tab-content-admin active bg-white p-6 rounded-xl shadow-sm">
     <h3 class="font-bold text-xl mb-6 text-indigo-900 border-b pb-2">Panel de Aprobaciones</h3>
-    <div id="lista-solicitudes-admin" class="space-y-6"></div>
+    <p class="text-slate-500 bg-slate-50 p-6 rounded-xl border text-center">Bandeja limpia. (Esperando conexión a BD)</p>
   </div>
 
-  <div id="admin-contenido" class="tab-content tab-content-admin bg-white p-6 rounded-xl shadow-sm">
-    <h3 class="font-bold text-xl mb-6">Gestor de Contenido (CMS)</h3>
+  <!-- Pestaña 2: Auditoría y Registro de Empleados (¡CONECTADA!) -->
+  <div id="admin-logs" class="tab-content tab-content-admin bg-white p-6 rounded-xl shadow-sm">
     <div class="grid md:grid-cols-2 gap-8">
-      <div class="border rounded-xl p-5 bg-slate-50">
-        <h4 class="font-bold text-indigo-900 mb-4 border-b pb-2">Sección: Donaciones</h4>
-        <form onsubmit="adminGuardarDonaciones(event)" class="space-y-4 text-sm">
-          <div><label class="font-bold">Título</label><input type="text" id="cms-don-titulo" class="w-full border p-2 rounded"></div>
-          <div><label class="font-bold">Subtítulo</label><textarea id="cms-don-sub" class="w-full border p-2 rounded" rows="2"></textarea></div>
-          <div><label class="font-bold">Info Bancaria (Línea 1)</label><input type="text" id="cms-don-banco" class="w-full border p-2 rounded"></div>
-          <div><label class="font-bold">Nombre De</label><input type="text" id="cms-don-nombre" class="w-full border p-2 rounded"></div>
-          <div><label class="font-bold">Sede Física</label><input type="text" id="cms-don-sede" class="w-full border p-2 rounded"></div>
-          <button type="submit" class="bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg w-full">Publicar Cambios Donaciones</button>
+      
+      <!-- Lado Izquierdo: Formulario para crear empleado -->
+      <div class="bg-slate-50 p-6 rounded-xl border border-slate-200">
+        <h3 class="font-bold text-lg mb-4 text-indigo-900 border-b pb-2"><i data-lucide="user-plus" class="inline w-5 h-5 mr-1"></i> Alta de Nuevo Empleado</h3>
+        <form action="{{ url_for('crear_empleado') }}" method="POST" class="space-y-4">
+          <div>
+            <label class="block text-sm font-bold mb-1">Nombre Completo</label>
+            <input type="text" name="nombre" required class="w-full border rounded-lg p-2.5 outline-none">
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-bold mb-1">Rol</label>
+              <select name="rol" class="w-full border rounded-lg p-2.5 outline-none">
+                <option value="rescatista">Rescatista</option>
+                <option value="veterinario">Veterinario</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-bold mb-1">Cód. Acceso</label>
+              <input type="text" name="codigo" required placeholder="Ej. RES-001" class="w-full border rounded-lg p-2.5 outline-none">
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-bold mb-1">Contraseña Temporal</label>
+            <input type="text" name="password" required class="w-full border rounded-lg p-2.5 outline-none">
+          </div>
+          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-md transition mt-2">Registrar Empleado</button>
         </form>
       </div>
-      <div class="border rounded-xl p-5 bg-slate-50">
-        <h4 class="font-bold text-indigo-900 mb-4 border-b pb-2">Sección: Voluntariado ("Conoce Más")</h4>
-        <div class="space-y-4 text-sm">
-          <select id="cms-vol-tipo" onchange="cargarAdminVoluntariado()" class="w-full border p-2 rounded font-bold"><option value="0">1. Hogar Temporal</option><option value="1">2. Convivencia (Café)</option><option value="2">3. Apoyo Refugio</option></select>
-          <div><label class="font-bold">Texto descriptivo extenso</label><textarea id="cms-vol-texto" rows="4" class="w-full border p-2 rounded"></textarea></div>
-          <div><label class="font-bold">Añadir Fotos (Se suman a las actuales)</label><input type="file" id="cms-vol-fotos" multiple accept="image/*" class="w-full border p-2 rounded bg-white"></div>
-          <button onclick="adminGuardarVoluntariado()" class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg w-full">Guardar y Añadir a Voluntariado</button>
+
+      <!-- Lado Derecho: Lista de empleados desde la Base de Datos -->
+      <div>
+        <h3 class="font-bold text-lg mb-4 text-indigo-900 border-b pb-2"><i data-lucide="users" class="inline w-5 h-5 mr-1"></i> Plantilla Activa</h3>
+        <div class="space-y-3 max-h-96 overflow-y-auto custom-scroll pr-2">
+          {% if empleados %}
+            {% for emp in empleados %}
+            <div class="bg-white border rounded-xl p-4 shadow-sm flex justify-between items-center">
+              <div>
+                <p class="font-bold text-slate-800">{{ emp.nombre }}</p>
+                <p class="text-xs text-slate-500 font-mono mt-1">Código: <strong class="text-indigo-600">{{ emp.codigo_empleado }}</strong></p>
+              </div>
+              <span class="text-xs font-bold uppercase px-3 py-1 rounded-full {% if emp.rol == 'veterinario' %}bg-amber-100 text-amber-700{% else %}bg-emerald-100 text-emerald-700{% endif %}">
+                {{ emp.rol }}
+              </span>
+            </div>
+            {% endfor %}
+          {% else %}
+            <p class="text-slate-500 bg-slate-50 p-6 rounded-xl border text-center text-sm">No hay empleados registrados en el sistema.</p>
+          {% endif %}
         </div>
       </div>
+      
     </div>
   </div>
-
-  <div id="admin-shop" class="tab-content tab-content-admin bg-white p-6 rounded-xl shadow-sm">
-    <div class="grid md:grid-cols-2 gap-8">
-      <div>
-        <h3 class="font-bold text-lg mb-4 border-b pb-2">Añadir Artículo a Shop</h3>
-        <form onsubmit="adminAgregarShop(event)" class="space-y-3 text-sm bg-slate-50 p-4 rounded-xl border">
-          <input type="text" id="sh-nom" placeholder="Nombre de Producto" required class="w-full border p-2.5 rounded-lg">
-          <input type="number" id="sh-precio" placeholder="Precio (Q)" required class="w-full border p-2.5 rounded-lg">
-          <textarea id="sh-desc" placeholder="Descripción" required class="w-full border p-2.5 rounded-lg"></textarea>
-          <input type="file" id="sh-foto" accept="image/*" required class="w-full border p-2.5 rounded-lg bg-white">
-          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 font-bold rounded-xl shadow transition">Añadir al Catálogo</button>
-        </form>
-        <div id="lista-admin-shop" class="mt-6 space-y-3"></div>
-      </div>
-      <div>
-        <h3 class="font-bold text-lg mb-4 border-b pb-2">Registro de Pedidos</h3>
-        <div id="lista-admin-pedidos" class="space-y-3"></div>
-      </div>
-    </div>
-  </div>
-
-  <div id="admin-logs" class="tab-content tab-content-admin bg-white p-6 rounded-xl shadow-sm">
-    <h3 class="font-bold text-xl mb-6">Auditoría de Staff y Gestión Médica</h3>
-    <div class="grid md:grid-cols-3 gap-6">
-      <div class="border rounded-xl p-4 bg-slate-50"><h4 class="font-bold mb-3 border-b pb-2">Rescatistas</h4><div id="audit-rescatistas" class="space-y-2"></div></div>
-      <div class="border rounded-xl p-4 bg-slate-50"><h4 class="font-bold mb-3 border-b pb-2">Veterinarios</h4><div id="audit-vets" class="space-y-2"></div></div>
-      <div class="border rounded-xl p-4 bg-indigo-50/50 flex flex-col justify-center" id="audit-detalle">
-        <p class="text-sm text-slate-500 text-center">Selecciona un empleado para ver su actividad detallada o gestionar el perfil del animal.</p>
-      </div>
-    </div>
-  </div>
-
-  <div id="admin-perfil" class="tab-content tab-content-admin profile-container"></div>
 </div>
-
-<script>
-  window.onload = () => {
-    DB.sesionActual.rol = 'admin';
-    DB.sesionActual.nombre = 'Admin Sys';
-    generarFormulariosPerfil();
-    renderAdmin();
-    switchTab('admin', 'adopciones');
-    lucide.createIcons();
-  };
-</script>
 {% endblock %}

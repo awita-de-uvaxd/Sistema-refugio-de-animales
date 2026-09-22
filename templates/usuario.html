@@ -1,130 +1,107 @@
 {% extends "base.html" %}
-
 {% block content %}
 <div class="w-full">
+  <!-- MENÚ COMPLETO ORIGINAL DEL USUARIO -->
   <nav class="flex overflow-x-auto border-b border-slate-200 text-sm font-medium mb-6 bg-white rounded-t-xl shadow-sm scroll-hide">
-    <button onclick="switchTab('usuario', 'adoptar')" class="tab-btn-usuario px-5 py-4 border-b-2 flex whitespace-nowrap gap-2 active" data-tab="adoptar"><i data-lucide="heart" class="w-4 h-4"></i> Adoptar</button>
-    <button onclick="switchTab('usuario', 'mis-mascotas')" class="tab-btn-usuario px-5 py-4 border-b-2 flex whitespace-nowrap gap-2" data-tab="mis-mascotas"><i data-lucide="dog" class="w-4 h-4"></i> Mis Mascotas</button>
-    <button onclick="switchTab('usuario', 'shop')" class="tab-btn-usuario px-5 py-4 border-b-2 flex whitespace-nowrap gap-2" data-tab="shop"><i data-lucide="shopping-bag" class="w-4 h-4"></i> Shop</button>
-    <button onclick="switchTab('usuario', 'donaciones')" class="tab-btn-usuario px-5 py-4 border-b-2 flex whitespace-nowrap gap-2" data-tab="donaciones"><i data-lucide="gift" class="w-4 h-4"></i> Donaciones</button>
-    <button onclick="switchTab('usuario', 'voluntariado')" class="tab-btn-usuario px-5 py-4 border-b-2 flex whitespace-nowrap gap-2" data-tab="voluntariado"><i data-lucide="users" class="w-4 h-4"></i> Voluntariado</button>
-    <button onclick="switchTab('usuario', 'alertas')" class="tab-btn-usuario px-5 py-4 border-b-2 flex whitespace-nowrap gap-2" data-tab="alertas"><i data-lucide="siren" class="w-4 h-4"></i> Alertas</button>
-    <button onclick="switchTab('usuario', 'perfil')" class="tab-btn-usuario px-5 py-4 border-b-2 flex whitespace-nowrap gap-2" data-tab="perfil"><i data-lucide="user" class="w-4 h-4"></i> Mi Perfil</button>
+    <button onclick="switchTab('usuario', 'adoptar')" class="tab-btn-usuario px-5 py-4 border-b-2 flex active" data-tab="adoptar"><i data-lucide="heart" class="w-4 h-4 mr-2"></i> Adoptar</button>
+    <button onclick="switchTab('usuario', 'alertas')" class="tab-btn-usuario px-5 py-4 border-b-2 flex" data-tab="alertas"><i data-lucide="siren" class="w-4 h-4 mr-2"></i> Alertas</button>
+    <button onclick="switchTab('usuario', 'mascotas')" class="tab-btn-usuario px-5 py-4 border-b-2 flex" data-tab="mascotas"><i data-lucide="dog" class="w-4 h-4 mr-2"></i> Mis Mascotas</button>
+    <button onclick="switchTab('usuario', 'donaciones')" class="tab-btn-usuario px-5 py-4 border-b-2 flex" data-tab="donaciones"><i data-lucide="gift" class="w-4 h-4 mr-2"></i> Donaciones</button>
+    <button onclick="switchTab('usuario', 'voluntariado')" class="tab-btn-usuario px-5 py-4 border-b-2 flex" data-tab="voluntariado"><i data-lucide="users" class="w-4 h-4 mr-2"></i> Voluntariado</button>
+    <button onclick="switchTab('usuario', 'shop')" class="tab-btn-usuario px-5 py-4 border-b-2 flex" data-tab="shop"><i data-lucide="shopping-bag" class="w-4 h-4 mr-2"></i> Shop</button>
+    <button onclick="switchTab('usuario', 'perfil')" class="tab-btn-usuario px-5 py-4 border-b-2 flex" data-tab="perfil"><i data-lucide="user" class="w-4 h-4 mr-2"></i> Mi Perfil</button>
   </nav>
 
-  <div id="usuario-adoptar" class="tab-content tab-content-usuario active"><div id="galeria-adopcion" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6"></div></div>
-
-  <div id="usuario-mis-mascotas" class="tab-content tab-content-usuario">
-    <div class="bg-white rounded-xl shadow-sm p-6"><h3 class="font-bold text-xl mb-6 border-b pb-2 text-indigo-950">Mis Mascotas (Historial Clínico Completo)</h3><div id="lista-mis-mascotas" class="space-y-6"></div></div>
+  <!-- PESTAÑA 1: ADOPTAR -->
+  <div id="usuario-adoptar" class="tab-content tab-content-usuario active">
+    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      {% if adopciones %}
+        {% for mascota in adopciones %}
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="h-48 bg-slate-200 flex items-center justify-center text-slate-400">
+            <i data-lucide="camera" class="w-8 h-8"></i>
+          </div>
+          <div class="p-4">
+            <h3 class="font-bold text-lg text-indigo-950">{{ mascota.nombre }}</h3>
+            <p class="text-sm text-slate-500">{{ mascota.especie }} - {{ mascota.sexo }}</p>
+            <button class="mt-4 w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold py-2 rounded-lg transition">Solicitar Adopción</button>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="col-span-full text-center text-slate-500 py-10 bg-white rounded-xl border italic">No hay mascotas disponibles para adopción en este momento. ¡Vuelve pronto!</p>
+      {% endif %}
+    </div>
   </div>
-  
-  <div id="usuario-shop" class="tab-content tab-content-usuario">
-    <div class="bg-white rounded-xl shadow-sm p-6"><h3 class="font-bold text-xl mb-6 border-b pb-2">Tienda de Productos Solidarios</h3><div id="galeria-shop" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6"></div></div>
-  </div>
 
-  <div id="usuario-donaciones" class="tab-content tab-content-usuario"><div class="max-w-md mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-8" id="donaciones-content"></div></div>
-
-  <div id="usuario-voluntariado" class="tab-content tab-content-usuario">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10" id="voluntariado-cards"></div>
-    <div id="detalle-voluntariado" class="hidden bg-slate-50/50 rounded-3xl p-8 border border-slate-200"></div>
-  </div>
-
-  <!-- ALERTA CIUDADANA EXTENDIDA -->
+  <!-- PESTAÑA 2: ALERTAS CIUDADANAS -->
   <div id="usuario-alertas" class="tab-content tab-content-usuario">
     <div class="bg-white rounded-xl shadow-sm p-8 max-w-3xl mx-auto border-t-4 border-red-500 form-extenso">
-      <h2 class="text-2xl font-bold text-center text-red-600 mb-2">Alerta Ciudadana: Reporte de Maltrato o Abandono</h2>
-      <p class="text-center text-slate-500 text-sm mb-6">Notificación de animales en riesgo o estado crítico para coordinación de rescate</p>
-      <form onsubmit="enviarAlertaCiudadana(event)" id="form-alerta-ciudadana">
+      <h2 class="text-2xl font-bold text-center text-red-600 mb-2">Reportar Alerta Ciudadana</h2>
+      <p class="text-center text-slate-500 mb-6 text-sm">Tu reporte llegará inmediatamente al panel de nuestros rescatistas.</p>
+      
+      <!-- AQUÍ ESTÁ EL FORMULARIO NUEVO CON SOPORTE PARA FOTOS (enctype) -->
+      <form action="{{ url_for('crear_alerta') }}" method="POST" enctype="multipart/form-data">
         <fieldset>
-          <legend>1. Nivel de Urgencia y Estado</legend>
-          <div class="urgent-box">
-            <label style="margin-top: 0; color: #78281f;">Estado de salud del animal:</label>
-            <div class="options-group">
-              <label><input type="radio" name="urgencia" value="Crítico" required> 🚨 <strong>CRÍTICO:</strong> Atropellado, sangrando, inconsciente.</label>
-              <label><input type="radio" name="urgencia" value="Grave"> ⚠️ <strong>GRAVE:</strong> Muy desnutrido, heridas visibles.</label>
-              <label><input type="radio" name="urgencia" value="Moderado"> 🟡 <strong>MODERADO:</strong> Abandonado, amarrado sin agua.</label>
+          <legend>Situación</legend>
+          <label>Nivel de Urgencia:</label>
+          <select name="urgencia" required>
+            <option value="Media">Media (Animal asustado o perdido)</option>
+            <option value="Grave">Grave (Herido o atrapado)</option>
+            <option value="Crítico">Crítico (Peligro de muerte inminente)</option>
+          </select>
+          <label>Animal (Especie y Cantidad):</label>
+          <input type="text" name="especie_cantidad" required placeholder="Ej. 1 perro mediano negro">
+          <label>Descripción de lo sucedido:</label>
+          <textarea name="descripcion" required rows="2" placeholder="Detalla cómo lo encontraste..."></textarea>
+          
+          <!-- CAMPO NUEVO: FOTO -->
+          <label class="mt-4">Adjuntar Fotografía (Opcional pero recomendado):</label>
+          <input type="file" name="foto" accept="image/*" class="w-full border rounded-lg p-2 text-sm bg-white">
+        </fieldset>
+        
+        <fieldset>
+          <legend>Ubicación y Contacto</legend>
+          <label>Dirección exacta o referencia:</label>
+          <input type="text" name="direccion" required placeholder="Calle, avenida, zona o referencias claras">
+          
+          <!-- CAMPOS NUEVOS: ENTORNO E INDICACIONES -->
+          <div class="grid grid-cols-2 gap-4 mt-2">
+            <div>
+              <label>Tipo de Entorno:</label>
+              <select name="entorno" class="w-full border rounded-lg p-2">
+                <option value="Vía Pública">Vía Pública / Calle</option>
+                <option value="Terreno Baldío">Terreno Baldío</option>
+                <option value="Casa Abandonada">Casa Abandonada</option>
+                <option value="Barranco">Barranco / Río</option>
+              </select>
+            </div>
+            <div>
+              <label>Indicaciones de llegada:</label>
+              <input type="text" name="indicaciones" placeholder="Ej. Al lado de la tienda azul">
             </div>
           </div>
-          <label>Especie y cantidad de animales:</label><input type="text" name="especie_cantidad" placeholder="Ej. 1 perro mediano mestizo" required>
-          <label>Descripción detallada de la situación:</label><textarea name="descripcion_caso" rows="3" required></textarea>
+          
+          <label class="mt-4">Tu Nombre:</label>
+          <input type="text" name="nombre_reporta" required value="{{ session['nombre'] }}">
+          
+          <label>Tu Teléfono (Para que el rescatista te contacte):</label>
+          <input type="text" name="telefono_reporta" required placeholder="Ej. 5555-4444">
         </fieldset>
-        <fieldset>
-          <legend>2. Ubicación y Evidencia</legend>
-          <label>Dirección exacta:</label><input type="text" name="direccion" required>
-          <label>¿Cómo llegar?:</label><textarea name="indicaciones" rows="2" required></textarea>
-          <label>Situación del lugar:</label>
-          <div class="options-group">
-            <label><input type="radio" name="entorno" value="via_publica" required> En vía pública</label>
-            <label><input type="radio" name="entorno" value="propiedad_privada"> En propiedad privada</label>
-          </div>
-          <label><strong>Evidencia Fotográfica (Obligatorio 3 fotos):</strong></label>
-          <input type="file" id="al-fotos" name="fotos[]" accept="image/*" multiple required>
-        </fieldset>
-        <fieldset>
-          <legend>3. Datos de Quien Notifica</legend>
-          <label>Nombre completo:</label><input type="text" name="nombre" required>
-          <label>Teléfono:</label><input type="tel" name="telefono" required>
-        </fieldset>
-        <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl transition mt-4 shadow-md text-lg">🚨 ENVIAR ALERTA CIUDADANA URGENTE</button>
+        
+        <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-xl mt-4 shadow-md transition text-lg flex items-center justify-center gap-2">
+          <i data-lucide="send" class="w-5 h-5"></i> Enviar Alerta al Refugio
+        </button>
       </form>
     </div>
   </div>
 
-  <div id="usuario-perfil" class="tab-content tab-content-usuario">
-    <div class="grid lg:grid-cols-2 gap-6">
-      <div class="profile-container"></div>
-      <div class="bg-indigo-50/30 rounded-2xl shadow-sm p-6 border border-indigo-100 form-extenso">
-        <h2 class="text-2xl font-bold text-center text-indigo-700 mb-2 uppercase">Solicitud Oficial de Adopción</h2>
-        <p class="text-center text-slate-500 text-sm mb-6">Formulario de evaluación de hogar</p>
-        <form id="form-base-adopcion" onsubmit="guardarFormularioAdopcion(event)">
-          <fieldset>
-            <legend>1. Datos del Solicitante</legend>
-            <label>Nombre completo:</label><input type="text" name="nombre" required>
-            <div class="grid grid-cols-2 gap-4">
-              <div><label>DPI:</label><input type="text" name="dpi" required></div>
-              <div><label>Fecha de nacimiento:</label><input type="date" name="fecha_nacimiento" required></div>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-              <div><label>Teléfono:</label><input type="tel" name="telefono" required></div>
-              <div><label>Ocupación:</label><input type="text" name="ocupacion" required></div>
-            </div>
-            <label>Dirección exacta:</label><input type="text" name="direccion" required>
-          </fieldset>
-          <fieldset>
-            <legend>2. Vivienda y Entorno</legend>
-            <div class="grid grid-cols-2 gap-4">
-              <div><label>Tipo de inmueble:</label><div class="options-group"><label><input type="radio" name="tipo_vivienda" value="Casa" required> Casa</label><label><input type="radio" name="tipo_vivienda" value="Departamento"> Departamento</label></div></div>
-              <div><label>Tenencia:</label><div class="options-group"><label><input type="radio" name="tenencia" value="Propia" required> Propia</label><label><input type="radio" name="tenencia" value="Rentada"> Rentada</label></div></div>
-            </div>
-            <label>Personas en el hogar (edades):</label><textarea name="integrantes" rows="2" required></textarea>
-            <label>¿Alergias en la familia?</label>
-            <div class="options-group"><label><input type="radio" name="alergias_familia" value="no" required> No</label><label><input type="radio" name="alergias_familia" value="si"> Sí</label></div>
-          </fieldset>
-          <fieldset>
-            <legend>3. Historial y Compromiso</legend>
-            <label>¿Otras mascotas actualmente?:</label><textarea name="mascotas_actuales" rows="2" required></textarea>
-            <div class="grid grid-cols-2 gap-4">
-              <div><label>Horas que se quedará solo:</label><input type="text" name="horas_solo" required></div>
-              <div><label>Presupuesto mensual:</label><input type="text" name="presupuesto" required></div>
-            </div>
-            <label>Fotografías del hogar:</label><input type="file" id="fb-fotos-hogar" name="fotos_hogar[]" multiple accept="image/*">
-          </fieldset>
-          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-md transition text-lg mt-2">ENVIAR/ACTUALIZAR SOLICITUD</button>
-          <p id="fb-status" class="text-center font-bold text-emerald-600 mt-3 hidden text-sm">Formulario Vigente y Guardado Exitosamente</p>
-        </form>
-      </div>
-    </div>
-  </div>
-</div>
+  <!-- PESTAÑAS 3 a 7 (Desconectadas por ahora) -->
+  <div id="usuario-mascotas" class="tab-content tab-content-usuario"><div class="bg-white rounded-xl shadow-sm p-6 text-center text-slate-500">Módulo de Mascotas (Esperando conexión)</div></div>
+  <div id="usuario-donaciones" class="tab-content tab-content-usuario"><div class="bg-white rounded-xl shadow-sm p-6 text-center text-slate-500">Módulo de Donaciones (Esperando conexión)</div></div>
+  <div id="usuario-voluntariado" class="tab-content tab-content-usuario"><div class="bg-white rounded-xl shadow-sm p-6 text-center text-slate-500">Módulo de Voluntariado (Esperando conexión)</div></div>
+  <div id="usuario-shop" class="tab-content tab-content-usuario"><div class="bg-white rounded-xl shadow-sm p-6 text-center text-slate-500">Tienda de Productos (Esperando conexión)</div></div>
+  <div id="usuario-perfil" class="tab-content tab-content-usuario"><div class="bg-white rounded-xl shadow-sm p-6 text-center text-slate-500">Módulo de Perfil (Se programará próximamente)</div></div>
 
-<script>
-  window.onload = () => {
-    DB.sesionActual.rol = 'usuario';
-    DB.sesionActual.nombre = 'Ana L.';
-    generarFormulariosPerfil();
-    renderUsuario();
-    switchTab('usuario', 'adoptar');
-    lucide.createIcons();
-  };
-</script>
+</div>
 {% endblock %}

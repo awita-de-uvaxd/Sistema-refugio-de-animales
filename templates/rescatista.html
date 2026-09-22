@@ -1,106 +1,132 @@
 {% extends "base.html" %}
-
 {% block content %}
 <div class="w-full">
   <nav class="flex overflow-x-auto border-b border-slate-200 text-sm font-medium mb-6 bg-white rounded-t-xl shadow-sm scroll-hide">
-    <button onclick="switchTab('rescatista', 'inicio')" class="tab-btn-rescatista px-6 py-4 border-b-2 flex items-center gap-2 active" data-tab="inicio"><i data-lucide="bell-ring" class="w-4 h-4"></i> Alertas</button>
-    <button onclick="switchTab('rescatista', 'nuevo')" class="tab-btn-rescatista px-6 py-4 border-b-2 flex items-center gap-2" data-tab="nuevo"><i data-lucide="plus-circle" class="w-4 h-4"></i> Nuevo Rescate</button>
-    <button onclick="switchTab('rescatista', 'mis-rescates')" class="tab-btn-rescatista px-6 py-4 border-b-2 flex items-center gap-2" data-tab="mis-rescates"><i data-lucide="folder-check" class="w-4 h-4"></i> Mis Rescates</button>
-    <button onclick="switchTab('rescatista', 'perfil')" class="tab-btn-rescatista px-6 py-4 border-b-2 flex items-center gap-2" data-tab="perfil"><i data-lucide="user" class="w-4 h-4"></i> Mi Perfil</button>
+    <button onclick="switchTab('rescatista', 'inicio')" class="tab-btn-rescatista px-6 py-4 border-b-2 flex active" data-tab="inicio"><i data-lucide="bell-ring" class="w-4 h-4 mr-2"></i> Alertas</button>
+    <button onclick="switchTab('rescatista', 'nuevo')" class="tab-btn-rescatista px-6 py-4 border-b-2 flex" data-tab="nuevo"><i data-lucide="plus-circle" class="w-4 h-4 mr-2"></i> Nuevo Rescate</button>
+    <button onclick="switchTab('rescatista', 'mis-rescates')" class="tab-btn-rescatista px-6 py-4 border-b-2 flex" data-tab="mis-rescates"><i data-lucide="folder-check" class="w-4 h-4 mr-2"></i> Mis Rescates</button>
   </nav>
 
+  <!-- Pestaña 1: ALERTAS CIUDADANAS -->
   <div id="rescatista-inicio" class="tab-content tab-content-rescatista active">
-    <div class="bg-white rounded-xl shadow-sm p-6"><h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="siren" class="text-red-500"></i> Alertas Ciudadanas Pendientes</h3><div id="lista-alertas-rescatista" class="grid md:grid-cols-2 gap-4"></div></div>
+    <div class="bg-white rounded-xl shadow-sm p-8 max-w-4xl mx-auto">
+      <h3 class="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2 border-b pb-4"><i data-lucide="siren" class="text-red-500 w-6 h-6"></i> Alertas Ciudadanas Pendientes</h3>
+      <div class="space-y-4">
+        {% if alertas %}
+          {% for a in alertas %}
+          <div class="border border-red-200 bg-red-50/20 p-6 rounded-2xl shadow-sm">
+            <p class="text-lg font-bold mb-1 flex items-center gap-2 text-slate-800"><i data-lucide="map-pin" class="w-5 h-5 text-red-500"></i> {{ a.direccion }}</p>
+            <p class="text-sm text-slate-600 mb-4 line-clamp-1">{{ a.descripcion }} | Especie: {{ a.especie_cantidad }}</p>
+            
+            <!-- Botón que abre el Modal actualizado con la Foto -->
+            <button onclick="openModal(`
+              <h2 class='text-xl font-bold text-red-600 mb-4 border-b pb-2'>Evaluación de Alerta Ciudadana</h2>
+              
+              <!-- Zona de fotos dinámica -->
+              <div class='flex gap-2 mb-6 overflow-x-auto pb-2'>
+                {% if a.foto %}
+                  <div class='h-40 w-auto rounded-xl overflow-hidden border border-slate-200 shadow-sm'>
+                    <img src='{{ url_for('static', filename='uploads/' ~ a.foto) }}' alt='Foto reporte' class='h-full object-cover'>
+                  </div>
+                {% else %}
+                  <div class='w-32 h-32 bg-slate-100 border border-slate-200 border-dashed rounded-xl flex-shrink-0 flex items-center justify-center text-slate-400'>
+                    <span class='text-xs text-center px-2'>Sin foto adjunta</span>
+                  </div>
+                {% endif %}
+              </div>
+              
+              <div class='mb-6 space-y-3'>
+                <p class='text-sm text-slate-800'><strong>Dirección reportada:</strong> {{ a.direccion }}</p>
+                <p class='text-xs text-slate-600'><i data-lucide='map' class='inline w-3 h-3'></i> <strong>Entorno:</strong> {{ a.entorno }} | <strong>Indicaciones:</strong> {{ a.indicaciones }}</p>
+                
+                <div class='p-3 border rounded-lg bg-slate-50'>
+                  <p class='text-sm text-slate-700'><strong>Descripción:</strong> {{ a.descripcion }} | Especie: {{ a.especie_cantidad }}</p>
+                </div>
+                <p class='text-xs text-slate-500 italic'>Reportó: {{ a.nombre_reporta }} (Tel: {{ a.telefono_reporta }}) - Urgencia: <strong class='text-red-600'>{{ a.urgencia }}</strong></p>
+              </div>
+              
+              <div class='grid grid-cols-2 gap-4'>
+                <button onclick='prepararCaso(\`{{ a.id }}\`, \`{{ a.direccion }}\`)' class='bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition'>Tomar Caso (Crear Ficha)</button>
+                <a href='/falsa_alarma/{{ a.id }}' class='bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl transition flex justify-center items-center'>Marcar como Falsa Alarma</a>
+              </div>
+            `); lucide.createIcons();" class="w-full bg-white border border-red-300 hover:bg-red-50 text-red-600 font-bold py-3 rounded-xl transition shadow-sm text-center mt-2">
+              Ver Fotografías y Detalle
+            </button>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-sm text-slate-500 italic p-6 border rounded-xl bg-slate-50 text-center">No hay alertas ciudadanas pendientes en este momento.</p>
+        {% endif %}
+      </div>
+    </div>
   </div>
 
+  <!-- Pestaña 2: NUEVO RESCATE -->
   <div id="rescatista-nuevo" class="tab-content tab-content-rescatista">
     <div class="bg-white rounded-xl shadow-sm p-6 max-w-3xl mx-auto border-t-4 border-indigo-600">
-      <div class="flex justify-between items-center mb-6 border-b pb-4"><h2 class="text-xl font-bold">Registrar Nuevo Rescate</h2><div class="bg-indigo-50 text-indigo-800 px-4 py-2 rounded-lg font-mono text-sm border border-indigo-200">ID Asignado: <strong id="res-id-asignado"></strong></div></div>
-      <form action="/crear_rescate" method="POST" class="space-y-5">
-        <div>
-          <label class="block text-sm font-semibold mb-1">Evidencia Fotográfica (Se programará pronto)</label>
-          <input type="file" id="res-fotos" multiple accept="image/*" class="w-full border p-2.5 rounded-lg bg-slate-50">
-        </div>
-        <div>
-          <label class="block text-sm font-semibold mb-1">Dirección del rescate</label>
-          <textarea name="direccion" required rows="2" class="w-full border rounded-lg p-2.5"></textarea>
+      <h2 class="text-xl font-bold mb-6 border-b pb-4">Registrar Nuevo Rescate</h2>
+      <form action="{{ url_for('crear_rescate') }}" method="POST" class="space-y-5">
+        
+        <!-- CAMPO OCULTO: Guarda el ID de la alerta originaria -->
+        <input type="hidden" name="alerta_id" id="form-alerta-id" value="">
+        
+        <div><label class="block text-sm font-semibold mb-1">Dirección del rescate</label><textarea name="direccion" id="form-direccion" required rows="2" class="w-full border rounded-lg p-2.5 outline-none"></textarea></div>
+        <div class="grid grid-cols-2 gap-4">
+          <div><label class="block text-sm font-semibold mb-1">Especie</label><select name="especie" class="w-full border rounded-lg p-2.5 outline-none"><option value="Perro">Perro</option><option value="Gato">Gato</option></select></div>
+          <div><label class="block text-sm font-semibold mb-1">Sexo</label><select name="sexo" class="w-full border rounded-lg p-2.5 outline-none"><option value="Macho">Macho</option><option value="Hembra">Hembra</option></select></div>
         </div>
         <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-semibold mb-1">Especie</label>
-            <div class="flex gap-2">
-              <select name="especie" class="w-full border rounded-lg p-2.5 bg-white">
-                <option value="Perro">Perro</option>
-                <option value="Gato">Gato</option>
-                <option value="Ave">Ave</option>
-                <option value="Caballo">Caballo</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label class="block text-sm font-semibold mb-1">Sexo</label>
-            <select name="sexo" class="w-full border rounded-lg p-2.5">
-              <option value="Macho">Macho</option>
-              <option value="Hembra">Hembra</option>
-              <option value="Desconocido">Desconocido</option>
-            </select>
-          </div>
+          <div><label class="block text-sm font-semibold mb-1">Gravedad</label><select name="gravedad" class="w-full border rounded-lg p-2.5 outline-none"><option value="Baja">Baja</option><option value="Media">Media</option><option value="Grave">Grave</option></select></div>
+          <div><label class="block text-sm font-semibold mb-1">Color / Marcas</label><input type="text" name="color" required class="w-full border rounded-lg p-2.5 outline-none"></div>
         </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-semibold mb-1">Gravedad</label>
-            <select name="gravedad" class="w-full border rounded-lg p-2.5">
-              <option value="Baja">Baja</option>
-              <option value="Media">Media</option>
-              <option value="Grave">Grave</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-semibold mb-1">Color / Marcas</label>
-            <input type="text" name="color" required class="w-full border rounded-lg p-2.5">
-          </div>
-        </div>
-        <div>
-          <label class="block text-sm font-semibold mb-1">Descripción del caso</label>
-          <textarea name="descripcion" required rows="2" class="w-full border rounded-lg p-2.5"></textarea>
-        </div>
-        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-md transition">Generar Ficha de Rescate</button>
+        <div><label class="block text-sm font-semibold mb-1">Descripción</label><textarea name="descripcion" required rows="2" class="w-full border rounded-lg p-2.5 outline-none"></textarea></div>
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-md transition">Guardar Ficha de Rescate</button>
       </form>
     </div>
   </div>
 
-  <div id="rescatista-mis-rescates" class="tab-content tab-content-rescatista"><div class="bg-white rounded-xl shadow-sm p-6"><h3 class="text-lg font-bold mb-4">Registro de Mis Rescates</h3>
-  <div id="lista-mis-rescates" class="grid gap-4">
-    <!-- Python inyectará aquí los datos reales -->
-    {% if mis_rescates %}
-      {% for r in mis_rescates %}
-      <div class="border p-5 rounded-xl bg-slate-50 flex gap-4 items-start shadow-sm">
-        <div class="w-20 h-20 bg-slate-200 rounded-lg flex items-center justify-center text-slate-400">
-          <i data-lucide="camera" class="w-8 h-8"></i>
-        </div>
-        <div class="w-full">
-          <div class="flex justify-between font-bold mb-1">
-            <span class="text-indigo-900 text-lg">Ficha #{{ r.id }}</span>
-            <span class="text-indigo-600 text-xs bg-indigo-100 px-3 py-1 rounded-full">{{ r.estado }}</span>
+  <!-- Pestaña 3: MIS RESCATES -->
+  <div id="rescatista-mis-rescates" class="tab-content tab-content-rescatista">
+    <div class="bg-white rounded-xl shadow-sm p-6">
+      <h3 class="text-lg font-bold mb-4 border-b pb-2">Registro de Mis Rescates</h3>
+      <div class="space-y-4 max-h-[500px] overflow-y-auto custom-scroll pr-2">
+        {% if mis_rescates %}
+          {% for r in mis_rescates %}
+          <div class="border p-5 rounded-xl bg-slate-50 flex gap-4 items-start shadow-sm">
+            <div class="w-16 h-16 bg-slate-200 rounded-lg flex items-center justify-center text-slate-400 flex-shrink-0"><i data-lucide="camera" class="w-6 h-6"></i></div>
+            <div class="w-full">
+              <div class="flex justify-between font-bold mb-1">
+                <span class="text-indigo-900">Ficha #{{ r.id }}</span>
+                <span class="text-xs bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full">{{ r.estado }}</span>
+              </div>
+              <p class="text-xs text-slate-600"><strong>{{ r.especie }}</strong> - {{ r.sexo }} | Gravedad: {{ r.gravedad }}</p>
+              <p class="text-xs text-slate-600 mt-1"><strong>Lugar:</strong> {{ r.direccion }}</p>
+              <p class="text-xs text-slate-500 mt-2 p-2 bg-white rounded border border-slate-100"><em>"{{ r.descripcion }}"</em></p>
+              
+              <!-- Pequeño detalle: Si viene de una alerta, lo decimos -->
+              {% if r.alerta_id %}
+                <p class="text-xs text-amber-600 font-bold mt-2"><i data-lucide="link" class="inline w-3 h-3"></i> Originado de Alerta Ciudadana #{{ r.alerta_id }}</p>
+              {% endif %}
+            </div>
           </div>
-          <p class="text-xs text-slate-600"><strong>{{ r.especie }}</strong> - {{ r.sexo }} | Gravedad: {{ r.gravedad }}</p>
-          <p class="text-xs text-slate-600 mt-1"><strong>Lugar:</strong> {{ r.direccion }}</p>
-          <p class="text-xs text-slate-500 mt-2 p-2 bg-white rounded border border-slate-100"><em>"{{ r.descripcion }}"</em></p>
-        </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-sm text-slate-500 italic p-4 border rounded bg-slate-50 text-center">Aún no has registrado ningún rescate.</p>
+        {% endif %}
       </div>
-      {% endfor %}
-    {% else %}
-      <p class="text-sm text-slate-500 bg-white p-4 rounded-xl border text-center">No hay rescates registrados en la base de datos real aún.</p>
-    {% endif %}
+    </div>
   </div>
-  </div></div>
-  <div id="rescatista-perfil" class="tab-content tab-content-rescatista profile-container"></div>
 </div>
 
+<!-- Lógica para que el botón "Tomar Caso" auto-complete el formulario -->
 <script>
-  window.onload = () => {
-    switchTab('rescatista', 'inicio');
-    lucide.createIcons();
-  };
+  function prepararCaso(alertaId, direccion) {
+    closeModal(); // Cierra la ventana emergente
+    switchTab('rescatista', 'nuevo'); // Cambia a la pestaña de Nuevo Rescate
+    
+    // Inyecta el ID invisible y la dirección en el formulario
+    document.getElementById('form-alerta-id').value = alertaId;
+    document.getElementById('form-direccion').value = direccion;
+  }
 </script>
 {% endblock %}
