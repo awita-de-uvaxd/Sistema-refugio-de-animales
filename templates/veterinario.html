@@ -74,7 +74,6 @@
         <div>
           <h2 class="text-2xl font-black text-indigo-950 flex items-center gap-3">
             <span id="titulo-consulta">Nuevo Animal Registrado</span>
-            <!-- SELECTOR BLOQUEADO (disabled) para que el veterinario no lo cambie -->
             <select id="selector-ruta" disabled class="text-sm border-2 border-indigo-200 rounded-lg p-1 text-indigo-700 font-bold outline-none bg-indigo-50 cursor-not-allowed">
               <option value="Externo">Externo (Con Dueño)</option>
               <option value="Rescate">Rescatado (Refugio)</option>
@@ -88,8 +87,8 @@
         </div>
       </div>
       
-      <form action="{{ url_for('crear_consulta') }}" method="POST" onsubmit="prepararEnvio()">
-        <!-- CAMPOS OCULTOS PARA ENVIAR LA VERDADERA INFORMACIÓN -->
+      <!-- ¡IMPORTANTE! enctype agregado para soportar fotos -->
+      <form action="{{ url_for('crear_consulta') }}" method="POST" enctype="multipart/form-data" onsubmit="prepararEnvio()">
         <input type="hidden" name="tipo_ingreso" id="form-tipo-ingreso" value="Externo">
         <input type="hidden" name="rescate_id" id="form-rescate-id" value="">
         <input type="hidden" name="paciente_existente_id" id="form-paciente-id" value="">
@@ -98,7 +97,6 @@
         <input type="hidden" name="vacunas_ocultas" id="vacunas-hidden" value="">
 
         <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
-          <!-- COLUMNA 1: PERFIL -->
           <div class="md:col-span-4 space-y-5">
             <h4 class="font-bold text-sm text-indigo-700 uppercase tracking-widest border-b border-indigo-100 pb-2 mb-4">1. Perfil del Paciente</h4>
             <div><label class="block text-sm font-bold mb-1 text-slate-800">Nombre</label><input type="text" name="nombre_paciente" id="form-nombre" class="w-full border rounded-lg p-2.5 outline-none bg-slate-50"></div>
@@ -108,6 +106,13 @@
                 <option value="Macho">Macho</option><option value="Hembra">Hembra</option>
               </select>
             </div>
+            
+            <!-- CAMPO: FOTO DE PERFIL -->
+            <div class="mt-4">
+              <label class="block text-sm font-bold mb-1 text-slate-800">Foto de Perfil</label>
+              <input type="file" name="foto_perfil" accept="image/*" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border border-slate-200 p-2 rounded-lg bg-white">
+            </div>
+
             <div id="caja-adopcion" class="hidden mt-4 pt-4 border-t border-slate-200">
               <label class="block text-sm font-bold mb-1 text-slate-800">Estado de Adopción</label>
               <select name="adopcion_status" class="w-full border rounded-lg p-2.5 outline-none bg-emerald-50 text-emerald-800 font-bold">
@@ -117,15 +122,18 @@
             </div>
           </div>
           
-          <!-- COLUMNA 2: CLÍNICA -->
           <div class="md:col-span-8 space-y-6">
             <h4 class="font-bold text-sm text-indigo-700 uppercase tracking-widest border-b border-indigo-100 pb-2 mb-4">2. Evaluación Clínica Actual</h4>
             <div class="grid grid-cols-3 gap-4">
               <div><label class="block text-sm font-bold mb-1 text-slate-800">Temp (°C)</label><input type="text" name="temp" class="w-full border rounded-lg p-2.5 outline-none"></div>
               <div><label class="block text-sm font-bold mb-1 text-slate-800">Peso (Kg)</label><input type="text" name="peso" class="w-full border rounded-lg p-2.5 outline-none"></div>
+              <!-- CAMPO: EVIDENCIA MULTIPLE -->
+              <div>
+                <label class="block text-sm font-bold mb-1 text-slate-800">Evidencia (Fotos)</label>
+                <input type="file" name="evidencia_fotos" multiple accept="image/*" class="w-full border border-slate-300 rounded-lg p-1.5 text-xs bg-white text-slate-500">
+              </div>
             </div>
             
-            <!-- SÍNTOMAS -->
             <div>
               <label class="block text-sm font-bold mb-1 text-slate-800">Síntomas Visualizados</label>
               <div class="flex gap-2">
@@ -140,12 +148,15 @@
               <div><label class="block text-sm font-bold mb-1 text-slate-800">Tratamiento / Receta</label><textarea name="tratamiento" rows="4" class="w-full border rounded-lg p-2.5 outline-none"></textarea></div>
             </div>
             
-            <!-- VACUNAS -->
             <div class="border border-emerald-300 rounded-xl bg-emerald-50/30 overflow-hidden">
               <h4 class="font-bold text-sm text-emerald-700 uppercase bg-emerald-100/50 px-5 py-3 border-b border-emerald-200">Sistema de Vacunación / Medicación</h4>
               <div class="p-5">
-                <div class="grid grid-cols-12 gap-4 items-end">
-                  <div class="col-span-5"><label class="block text-xs font-bold mb-1">Nombre</label><input type="text" id="input-vacuna" class="w-full border rounded-lg p-2 outline-none"></div>
+                
+                <!-- AQUÍ APARECERÁN LAS VACUNAS PASADAS AUTOMÁTICAMENTE -->
+                <div id="historial-vacunas-previas"></div>
+
+                <div class="grid grid-cols-12 gap-4 items-end mt-4">
+                  <div class="col-span-5"><label class="block text-xs font-bold mb-1">Nueva Dosis</label><input type="text" id="input-vacuna" class="w-full border rounded-lg p-2 outline-none"></div>
                   <div class="col-span-5">
                     <label class="block text-xs font-bold mb-1">Frecuencia</label>
                     <select id="select-frecuencia" class="w-full border rounded-lg p-2 outline-none bg-white">
@@ -197,6 +208,21 @@
               </div>
             </div>
 
+            <!-- HISTORIAL DE VACUNAS OCULTO -->
+            <div id="vacunas-previas-{{ p.id }}" class="hidden">
+              {% for consulta in p.consultas %}
+                {% for vac in consulta.vacunas %}
+                  <div class="flex justify-between items-center bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm mb-2">
+                    <div>
+                      <span class="font-bold text-slate-700">{{ vac.nombre }}</span>
+                      <span class="text-xs text-slate-500 ml-1">({{ vac.frecuencia }})</span>
+                    </div>
+                    <span class="text-xs font-mono bg-white px-2 py-1 rounded border">Aplicada: {{ vac.fecha_aplicacion.strftime('%d/%m/%Y') }}</span>
+                  </div>
+                {% endfor %}
+              {% endfor %}
+            </div>
+
             <!-- CONTENIDO OCULTO DEL HISTORIAL CLÍNICO (PARA EL MODAL) -->
             <div id="historial-paciente-{{ p.id }}" class="hidden">
               <div class="flex items-center gap-4 border-b pb-4 mb-6">
@@ -224,12 +250,19 @@
                         {% endif %}
                       </div>
                       <!-- ZONA DE EVIDENCIA GRÁFICA -->
+                      {% if consulta.evidencia_fotos %}
                       <div class="mt-4 pt-3 border-t border-slate-200">
                         <p class="text-xs font-bold text-slate-500 uppercase mb-2">Evidencia Gráfica</p>
-                        <div class="flex gap-2">
-                          <div class="w-20 h-20 bg-slate-200 rounded-lg flex items-center justify-center text-slate-400"><i data-lucide="image" class="w-6 h-6"></i></div>
+                        <div class="flex gap-2 overflow-x-auto pb-2">
+                          {% set fotos = consulta.evidencia_fotos.split(',') %}
+                          {% for f in fotos %}
+                            <a href="{{ url_for('static', filename='uploads/' ~ f) }}" target="_blank" class="w-20 h-20 bg-slate-100 rounded-lg overflow-hidden border border-slate-200 flex-shrink-0 block hover:opacity-80 transition">
+                              <img src="{{ url_for('static', filename='uploads/' ~ f) }}" class="w-full h-full object-cover">
+                            </a>
+                          {% endfor %}
                         </div>
                       </div>
+                      {% endif %}
                     </div>
                   {% endfor %}
                 {% else %}
@@ -316,33 +349,36 @@
     document.getElementById('vacunas-hidden').value = JSON.stringify(vacunas);
   }
 
-  function aplicarRuta(tipo) {
+function aplicarRuta(tipo) {
     document.getElementById('form-tipo-ingreso').value = tipo;
-    document.getElementById('selector-ruta').value = tipo; // Visual
+    document.getElementById('selector-ruta').value = tipo; 
     const cajaAdopcion = document.getElementById('caja-adopcion');
     const subtitulo = document.getElementById('subtitulo-consulta');
     
+    // AHORA MOSTRAMOS LA CAJA DE ADOPCIÓN EN RESCATES Y SEGUIMIENTOS
     if(tipo === 'Rescate') {
       subtitulo.textContent = "Expediente de animal rescatado (Propiedad del refugio).";
       cajaAdopcion.classList.remove('hidden'); 
     } else if (tipo === 'Seguimiento') {
       subtitulo.textContent = "Actualizando datos y dosis de una ficha existente.";
-      cajaAdopcion.classList.add('hidden');
+      cajaAdopcion.classList.remove('hidden'); 
     } else {
       subtitulo.textContent = "Creando expediente en blanco para nuevo ingreso (Con dueño).";
       cajaAdopcion.classList.add('hidden');
     }
   }
 
-  // Se activa al presionar "Generar Expediente" (Rescate) o "Nueva Consulta" / "Atender" (Seguimiento)
   function prepararConsulta(tipo, rescateId, especie, sexo, pacienteId = null, pacienteNombre = null, citaId = null) {
     switchTab('veterinario', 'nueva');
     aplicarRuta(tipo);
     
-    // Limpiamos todo
     document.getElementById('form-rescate-id').value = '';
     document.getElementById('form-paciente-id').value = '';
     document.getElementById('form-cita-id').value = '';
+    
+    // Limpiar zona de vacunas previas
+    const contenedorPrevias = document.getElementById('historial-vacunas-previas');
+    contenedorPrevias.innerHTML = '';
     
     if(tipo === 'Rescate') {
       document.getElementById('lbl-id').textContent = rescateId;
@@ -354,11 +390,16 @@
       document.getElementById('lbl-id').textContent = pacienteId;
       document.getElementById('form-paciente-id').value = pacienteId;
       document.getElementById('form-nombre').value = pacienteNombre;
-      document.getElementById('form-nombre').readOnly = true; // Bloquea editar nombre si ya existe
+      document.getElementById('form-nombre').readOnly = true; 
       document.getElementById('form-especie').readOnly = true;
-      if (citaId) document.getElementById('form-cita-id').value = citaId; // Si viene de una cita, esto la borrará al guardar
+      if (citaId) document.getElementById('form-cita-id').value = citaId; 
+      
+      // CARGAR VACUNAS ANTERIORES AL HTML
+      const previas = document.getElementById('vacunas-previas-' + pacienteId);
+      if (previas && previas.innerHTML.trim() !== '') {
+        contenedorPrevias.innerHTML = '<h5 class="text-xs font-bold text-slate-500 mb-2 border-b pb-1">DOSIS APLICADAS ANTERIORMENTE</h5>' + previas.innerHTML;
+      }
     }
-    
     document.getElementById('form-especie').value = especie;
     document.getElementById('form-sexo').value = sexo;
   }
