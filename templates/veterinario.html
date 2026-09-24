@@ -12,7 +12,7 @@
   <div id="veterinario-inicio" class="tab-content tab-content-veterinario active">
     <div class="grid md:grid-cols-2 gap-6">
       
-      <!-- CITAS PROGRAMADAS (FILTRABLE) -->
+      <!-- CITAS PROGRAMADAS -->
       <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-amber-500">
         <div class="flex justify-between items-center mb-6 border-b pb-4">
           <h3 class="font-bold text-lg flex items-center gap-2"><i data-lucide="clock" class="text-amber-500"></i> Citas Programadas</h3>
@@ -32,8 +32,8 @@
                   <p class="font-bold text-slate-800 text-sm">ID #{{ c.paciente_id }} <span class="text-xs text-slate-400 font-normal">({{ c.fecha }})</span></p>
                   <p class="text-xs text-slate-600 mt-1">{{ c.motivo }}</p>
                 </div>
-                <!-- El botón Atender manda la cita directamente a Nueva Consulta (Seguimiento) -->
-                <button onclick="prepararConsulta('Seguimiento', null, '{{ c.paciente_obj.especie }}', '{{ c.paciente_obj.sexo }}', '{{ c.paciente_id }}', '{{ c.paciente_obj.nombre }}', '{{ c.id }}')" class="bg-amber-100 text-amber-700 hover:bg-amber-200 px-4 py-2 text-xs font-bold rounded-lg transition">Atender</button>
+                <!-- Pasa el estado de adopción actual para mantenerlo -->
+                <button onclick="prepararConsulta('Seguimiento', null, '{{ c.paciente_obj.especie }}', '{{ c.paciente_obj.sexo }}', '{{ c.paciente_id }}', '{{ c.paciente_obj.nombre }}', '{{ c.id }}', '{{ c.paciente_obj.disponible_adopcion }}')" class="bg-amber-100 text-amber-700 hover:bg-amber-200 px-4 py-2 text-xs font-bold rounded-lg transition">Atender</button>
               </div>
             {% endfor %}
           {% else %}
@@ -55,7 +55,7 @@
                 </div>
                 <div class="px-4 py-2">
                   <p class="text-xs text-slate-600 line-clamp-1 mb-4">{{ r.descripcion }}</p>
-                  <button onclick="prepararConsulta('Rescate', '{{ r.id }}', '{{ r.especie }}', '{{ r.sexo }}', null, null, null)" class="bg-indigo-600 text-white px-3 py-2.5 text-xs font-bold rounded-lg w-full hover:bg-indigo-700 transition shadow">Generar Expediente Clínico</button>
+                  <button onclick="prepararConsulta('Rescate', '{{ r.id }}', '{{ r.especie }}', '{{ r.sexo }}', null, null, null, 'En Observación')" class="bg-indigo-600 text-white px-3 py-2.5 text-xs font-bold rounded-lg w-full hover:bg-indigo-700 transition shadow">Generar Expediente Clínico</button>
                 </div>
               </div>
             {% endfor %}
@@ -87,7 +87,7 @@
         </div>
       </div>
       
-      <!-- ¡IMPORTANTE! enctype agregado para soportar fotos -->
+      <!-- FORMULARIO CON MULTIPART PARA FOTOS -->
       <form action="{{ url_for('crear_consulta') }}" method="POST" enctype="multipart/form-data" onsubmit="prepararEnvio()">
         <input type="hidden" name="tipo_ingreso" id="form-tipo-ingreso" value="Externo">
         <input type="hidden" name="rescate_id" id="form-rescate-id" value="">
@@ -97,6 +97,8 @@
         <input type="hidden" name="vacunas_ocultas" id="vacunas-hidden" value="">
 
         <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
+          
+          <!-- COLUMNA 1: PERFIL -->
           <div class="md:col-span-4 space-y-5">
             <h4 class="font-bold text-sm text-indigo-700 uppercase tracking-widest border-b border-indigo-100 pb-2 mb-4">1. Perfil del Paciente</h4>
             <div><label class="block text-sm font-bold mb-1 text-slate-800">Nombre</label><input type="text" name="nombre_paciente" id="form-nombre" class="w-full border rounded-lg p-2.5 outline-none bg-slate-50"></div>
@@ -107,33 +109,41 @@
               </select>
             </div>
             
-            <!-- CAMPO: FOTO DE PERFIL -->
+            <!-- FOTO DE PERFIL CON VISOR EN VIVO -->
             <div class="mt-4">
               <label class="block text-sm font-bold mb-1 text-slate-800">Foto de Perfil</label>
-              <input type="file" name="foto_perfil" accept="image/*" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border border-slate-200 p-2 rounded-lg bg-white">
+              <div id="preview-perfil-container" class="hidden mb-3 w-32 h-32 rounded-xl overflow-hidden border-2 border-indigo-200 mx-auto bg-slate-100 flex items-center justify-center">
+                <img id="preview-perfil" src="" class="w-full h-full object-cover">
+              </div>
+              <input type="file" name="foto_perfil" accept="image/*" class="w-full text-xs text-slate-500 border border-slate-200 p-2 rounded-lg bg-white" onchange="previewImage(event, 'preview-perfil', 'preview-perfil-container')">
             </div>
 
+            <!-- ESTADO DE ADOPCIÓN (SE MUESTRA EN SEGUIMIENTOS) -->
             <div id="caja-adopcion" class="hidden mt-4 pt-4 border-t border-slate-200">
               <label class="block text-sm font-bold mb-1 text-slate-800">Estado de Adopción</label>
-              <select name="adopcion_status" class="w-full border rounded-lg p-2.5 outline-none bg-emerald-50 text-emerald-800 font-bold">
+              <select name="adopcion_status" id="select-adopcion" class="w-full border rounded-lg p-2.5 outline-none bg-emerald-50 text-emerald-800 font-bold">
                 <option value="En Observación">En Observación (Tratamiento)</option>
                 <option value="Listo para Adopción">Sano - Listo para Adopción</option>
               </select>
             </div>
           </div>
           
+          <!-- COLUMNA 2: CLÍNICA -->
           <div class="md:col-span-8 space-y-6">
             <h4 class="font-bold text-sm text-indigo-700 uppercase tracking-widest border-b border-indigo-100 pb-2 mb-4">2. Evaluación Clínica Actual</h4>
             <div class="grid grid-cols-3 gap-4">
               <div><label class="block text-sm font-bold mb-1 text-slate-800">Temp (°C)</label><input type="text" name="temp" class="w-full border rounded-lg p-2.5 outline-none"></div>
               <div><label class="block text-sm font-bold mb-1 text-slate-800">Peso (Kg)</label><input type="text" name="peso" class="w-full border rounded-lg p-2.5 outline-none"></div>
-              <!-- CAMPO: EVIDENCIA MULTIPLE -->
+              
+              <!-- EVIDENCIA FOTOGRÁFICA MÚLTIPLE CON VISOR -->
               <div>
                 <label class="block text-sm font-bold mb-1 text-slate-800">Evidencia (Fotos)</label>
-                <input type="file" name="evidencia_fotos" multiple accept="image/*" class="w-full border border-slate-300 rounded-lg p-1.5 text-xs bg-white text-slate-500">
+                <input type="file" name="evidencia_fotos" multiple accept="image/*" class="w-full border border-slate-300 rounded-lg p-1.5 text-xs bg-white text-slate-500" onchange="previewMultipleImages(event, 'preview-evidencia-container')">
               </div>
             </div>
             
+            <div id="preview-evidencia-container" class="flex gap-2 overflow-x-auto pb-2 min-h-[10px]"></div>
+
             <div>
               <label class="block text-sm font-bold mb-1 text-slate-800">Síntomas Visualizados</label>
               <div class="flex gap-2">
@@ -148,22 +158,23 @@
               <div><label class="block text-sm font-bold mb-1 text-slate-800">Tratamiento / Receta</label><textarea name="tratamiento" rows="4" class="w-full border rounded-lg p-2.5 outline-none"></textarea></div>
             </div>
             
+            <!-- SISTEMA DE VACUNAS Y REFUERZOS -->
             <div class="border border-emerald-300 rounded-xl bg-emerald-50/30 overflow-hidden">
               <h4 class="font-bold text-sm text-emerald-700 uppercase bg-emerald-100/50 px-5 py-3 border-b border-emerald-200">Sistema de Vacunación / Medicación</h4>
               <div class="p-5">
                 
-                <!-- AQUÍ APARECERÁN LAS VACUNAS PASADAS AUTOMÁTICAMENTE -->
+                <!-- AQUÍ SE INYECTAN LAS VACUNAS PASADAS AL HACER CLIC EN SEGUIMIENTO -->
                 <div id="historial-vacunas-previas"></div>
 
                 <div class="grid grid-cols-12 gap-4 items-end mt-4">
-                  <div class="col-span-5"><label class="block text-xs font-bold mb-1">Nueva Dosis</label><input type="text" id="input-vacuna" class="w-full border rounded-lg p-2 outline-none"></div>
+                  <div class="col-span-5"><label class="block text-xs font-bold mb-1 text-emerald-800">Nueva Dosis / Refuerzo</label><input type="text" id="input-vacuna" class="w-full border border-emerald-200 rounded-lg p-2 outline-none"></div>
                   <div class="col-span-5">
-                    <label class="block text-xs font-bold mb-1">Frecuencia</label>
-                    <select id="select-frecuencia" class="w-full border rounded-lg p-2 outline-none bg-white">
+                    <label class="block text-xs font-bold mb-1 text-emerald-800">Frecuencia</label>
+                    <select id="select-frecuencia" class="w-full border border-emerald-200 rounded-lg p-2 outline-none bg-white">
                       <option>Semanal</option><option>Quincenal</option><option>Mensual</option><option>Anual</option>
                     </select>
                   </div>
-                  <div class="col-span-2"><button type="button" onclick="addVacuna()" class="w-full bg-emerald-600 text-white font-bold py-2 rounded-lg"><i data-lucide="plus" class="w-5 h-5 mx-auto"></i></button></div>
+                  <div class="col-span-2"><button type="button" onclick="addVacuna()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg transition h-[42px] flex items-center justify-center"><i data-lucide="plus" class="w-5 h-5"></i></button></div>
                 </div>
                 <div id="lista-vacunas" class="mt-4 space-y-2"></div>
               </div>
@@ -178,22 +189,20 @@
     </div>
   </div>
 
-  <!-- PESTAÑA 3: BUSCAR PACIENTE -->
+  <!-- PESTAÑA 3: BUSCAR PACIENTE (Y MODAL DE EXPEDIENTE) -->
   <div id="veterinario-buscar" class="tab-content tab-content-veterinario">
     <div class="bg-white rounded-xl shadow-sm p-8 max-w-5xl mx-auto">
-      <!-- Buscador -->
       <div class="relative mb-6">
         <i data-lucide="search" class="absolute left-4 top-3.5 text-indigo-400 w-5 h-5"></i>
         <input type="text" id="buscador-paciente" onkeyup="buscarPacientes()" placeholder="Buscar paciente por ID o Nombre..." class="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-xl py-3.5 pl-12 pr-4 outline-none focus:border-indigo-500 focus:bg-white transition text-lg">
       </div>
 
-      <!-- Lista de Pacientes -->
       <div class="space-y-4" id="lista-pacientes-buscar">
         {% if pacientes %}
           {% for p in pacientes %}
             <div class="paciente-card border border-slate-200 p-5 rounded-2xl flex justify-between items-center bg-white shadow-sm hover:shadow transition">
               <div class="flex items-center gap-4">
-                <div class="w-14 h-14 bg-slate-200 rounded-full flex items-center justify-center text-slate-400 overflow-hidden border-2 border-indigo-100">
+                <div class="w-14 h-14 bg-slate-200 rounded-full flex items-center justify-center text-slate-400 overflow-hidden border-2 border-indigo-100 shadow-sm">
                   {% if p.foto %}<img src="{{ url_for('static', filename='uploads/' ~ p.foto) }}" class="w-full h-full object-cover">{% else %}<i data-lucide="paw-print"></i>{% endif %}
                 </div>
                 <div>
@@ -203,41 +212,52 @@
               </div>
               <div class="flex gap-2">
                 <button onclick="abrirExpediente('{{ p.id }}')" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-4 py-2 text-sm font-bold rounded-lg transition">Ver Expediente Clínico</button>
-                <button onclick="prepararConsulta('Seguimiento', null, '{{ p.especie }}', '{{ p.sexo }}', '{{ p.id }}', '{{ p.nombre }}', null)" class="bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-2 text-sm font-bold rounded-lg transition">Nueva Consulta</button>
+                <button onclick="prepararConsulta('Seguimiento', null, '{{ p.especie }}', '{{ p.sexo }}', '{{ p.id }}', '{{ p.nombre }}', null, '{{ p.disponible_adopcion }}')" class="bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-2 text-sm font-bold rounded-lg transition">Nueva Consulta</button>
                 <button onclick="abrirAgendarCita('{{ p.id }}', '{{ p.nombre }}')" class="bg-amber-500 text-white hover:bg-amber-600 px-4 py-2 text-sm font-bold rounded-lg transition">Agendar Cita</button>
               </div>
             </div>
 
-            <!-- HISTORIAL DE VACUNAS OCULTO -->
-            <div id="vacunas-previas-{{ p.id }}" class="hidden">
-              {% for consulta in p.consultas %}
-                {% for vac in consulta.vacunas %}
-                  <div class="flex justify-between items-center bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm mb-2">
-                    <div>
-                      <span class="font-bold text-slate-700">{{ vac.nombre }}</span>
-                      <span class="text-xs text-slate-500 ml-1">({{ vac.frecuencia }})</span>
-                    </div>
-                    <span class="text-xs font-mono bg-white px-2 py-1 rounded border">Aplicada: {{ vac.fecha_aplicacion.strftime('%d/%m/%Y') }}</span>
-                  </div>
-                {% endfor %}
-              {% endfor %}
-            </div>
-
-            <!-- CONTENIDO OCULTO DEL HISTORIAL CLÍNICO (PARA EL MODAL) -->
+            <!-- MODAL: EXPEDIENTE CLÍNICO -->
             <div id="historial-paciente-{{ p.id }}" class="hidden">
               <div class="flex items-center gap-4 border-b pb-4 mb-6">
-                <div class="w-16 h-16 bg-slate-200 rounded-full overflow-hidden border-2 border-indigo-100 flex items-center justify-center">
-                  {% if p.foto %}<img src="{{ url_for('static', filename='uploads/' ~ p.foto) }}" class="w-full h-full object-cover">{% else %}<i data-lucide="paw-print" class="text-slate-400"></i>{% endif %}
+                <div class="w-20 h-20 bg-slate-200 rounded-full overflow-hidden border-4 border-indigo-100 shadow-sm flex items-center justify-center text-slate-400">
+                  {% if p.foto %}<img src="{{ url_for('static', filename='uploads/' ~ p.foto) }}" class="w-full h-full object-cover">{% else %}<i data-lucide="paw-print" class="w-8 h-8"></i>{% endif %}
                 </div>
-                <h2 class="text-3xl font-black text-indigo-900">#{{ p.id }} - {{ p.nombre }}</h2>
+                <div>
+                  <h2 class="text-3xl font-black text-indigo-900">#{{ p.id }} - {{ p.nombre }}</h2>
+                  <div class="flex items-center gap-2 mt-1">
+                    <span class="text-sm bg-slate-100 px-3 py-1 rounded-full font-bold text-slate-600 border border-slate-200">{{ p.disponible_adopcion }}</span>
+                    <span class="text-sm text-slate-500">{{ p.especie }} | {{ p.sexo }}</span>
+                  </div>
+                </div>
               </div>
+              
               <div class="space-y-4 max-h-[60vh] overflow-y-auto custom-scroll pr-2">
+                <!-- NOTA DE RESCATE (ALERTA CIUDADANA) -->
+                {% if p.rescate_obj and p.rescate_obj.alerta_obj %}
+                <div class="bg-red-50 border border-red-200 p-5 rounded-xl mb-4 shadow-sm">
+                  <h4 class="text-red-700 font-black text-sm mb-3 flex items-center gap-2"><i data-lucide="siren" class="w-5 h-5"></i> Origen: Alerta Ciudadana de Rescate</h4>
+                  <div class="flex gap-4">
+                    {% if p.rescate_obj.alerta_obj.foto %}
+                      <div class="w-24 h-24 rounded-lg overflow-hidden border border-red-200 flex-shrink-0 shadow-sm">
+                        <a href="{{ url_for('static', filename='uploads/' ~ p.rescate_obj.alerta_obj.foto) }}" target="_blank"><img src="{{ url_for('static', filename='uploads/' ~ p.rescate_obj.alerta_obj.foto) }}" class="w-full h-full object-cover hover:opacity-80"></a>
+                      </div>
+                    {% endif %}
+                    <div class="text-sm text-slate-700 space-y-1">
+                      <p><strong>Ubicación:</strong> {{ p.rescate_obj.alerta_obj.direccion }}</p>
+                      <p><strong>Reportó:</strong> {{ p.rescate_obj.alerta_obj.nombre_reporta }} (Urgencia: <span class="text-red-600 font-bold">{{ p.rescate_obj.alerta_obj.urgencia }}</span>)</p>
+                      <p class="italic bg-white p-2 rounded border border-red-100 text-xs mt-2 text-slate-600 shadow-sm">"{{ p.rescate_obj.alerta_obj.descripcion }}"</p>
+                    </div>
+                  </div>
+                </div>
+                {% endif %}
+
                 {% if p.consultas %}
                   {% for consulta in p.consultas %}
                     <div class="border border-slate-200 rounded-xl p-5 shadow-sm bg-slate-50 relative">
                       <div class="flex justify-between items-center mb-4 border-b border-slate-200 pb-3">
-                        <p class="font-bold text-indigo-700 text-lg flex items-center gap-2"><i data-lucide="stethoscope" class="w-5 h-5"></i> {{ consulta.fecha.strftime('%d/%m/%Y') }} - {{ consulta.veterinario_obj.nombre }}</p>
-                        <div class="bg-white px-3 py-1 border rounded-lg text-sm font-bold text-slate-700">{{ consulta.temperatura }}°C | {{ consulta.peso }}kg</div>
+                        <p class="font-bold text-indigo-700 text-lg flex items-center gap-2"><i data-lucide="stethoscope" class="w-5 h-5"></i> {{ consulta.fecha.strftime('%d/%m/%Y') }} - Vet. {{ consulta.veterinario_obj.nombre }}</p>
+                        <div class="bg-white px-3 py-1 border rounded-lg text-sm font-bold text-slate-700 shadow-sm">{{ consulta.temperatura }}°C | {{ consulta.peso }}kg</div>
                       </div>
                       <div class="space-y-2 text-sm text-slate-800">
                         <p><strong>Síntomas:</strong> {% if consulta.sintomas %}{{ consulta.sintomas }}{% else %}<span class="text-slate-400">Ninguno</span>{% endif %}</p>
@@ -245,18 +265,19 @@
                         <p><strong>Tratamiento:</strong> {{ consulta.tratamiento }}</p>
                         {% if consulta.vacunas %}
                           <p><strong>Vacunas/Dosis:</strong> 
-                            {% for vac in consulta.vacunas %}<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-xs ml-1">{{ vac.nombre }}</span>{% endfor %}
+                            {% for vac in consulta.vacunas %}<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-xs ml-1 font-bold">{{ vac.nombre }}</span>{% endfor %}
                           </p>
                         {% endif %}
                       </div>
-                      <!-- ZONA DE EVIDENCIA GRÁFICA -->
+                      
+                      <!-- EVIDENCIA GRÁFICA MOSTRADA EN EL HISTORIAL -->
                       {% if consulta.evidencia_fotos %}
-                      <div class="mt-4 pt-3 border-t border-slate-200">
-                        <p class="text-xs font-bold text-slate-500 uppercase mb-2">Evidencia Gráfica</p>
+                      <div class="mt-4 pt-4 border-t border-slate-200">
+                        <p class="text-xs font-bold text-slate-500 uppercase mb-3">Evidencia Gráfica del Caso</p>
                         <div class="flex gap-2 overflow-x-auto pb-2">
                           {% set fotos = consulta.evidencia_fotos.split(',') %}
                           {% for f in fotos %}
-                            <a href="{{ url_for('static', filename='uploads/' ~ f) }}" target="_blank" class="w-20 h-20 bg-slate-100 rounded-lg overflow-hidden border border-slate-200 flex-shrink-0 block hover:opacity-80 transition">
+                            <a href="{{ url_for('static', filename='uploads/' ~ f) }}" target="_blank" class="w-24 h-24 bg-slate-200 rounded-lg overflow-hidden border border-slate-300 flex-shrink-0 block hover:opacity-80 transition shadow-sm">
                               <img src="{{ url_for('static', filename='uploads/' ~ f) }}" class="w-full h-full object-cover">
                             </a>
                           {% endfor %}
@@ -270,6 +291,22 @@
                 {% endif %}
               </div>
             </div>
+
+            <!-- DIV OCULTO: EXTRAE VACUNAS PASADAS PARA EL BOTÓN DE "APLICAR REFUERZO" -->
+            <div id="vacunas-previas-{{ p.id }}" class="hidden">
+              {% for consulta in p.consultas %}
+                {% for vac in consulta.vacunas %}
+                  <div class="flex justify-between items-center bg-slate-50 border border-slate-200 p-2.5 rounded-lg text-sm mb-2 shadow-sm">
+                    <div>
+                      <span class="font-bold text-slate-700 text-base">{{ vac.nombre }}</span>
+                      <span class="text-xs text-slate-500 ml-1">({{ vac.frecuencia }})</span>
+                      <button type="button" onclick="aplicarRefuerzo('{{ vac.nombre }}', '{{ vac.frecuencia }}')" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-xs font-bold px-3 py-1.5 rounded-lg ml-3 transition shadow-sm border border-indigo-200"><i data-lucide="syringe" class="w-3 h-3 inline mr-1"></i> Aplicar Refuerzo</button>
+                    </div>
+                    <span class="text-xs font-mono bg-white px-3 py-1.5 rounded border border-slate-200 shadow-sm text-slate-500">Aplicada: {{ vac.fecha_aplicacion.strftime('%d/%m/%Y') }}</span>
+                  </div>
+                {% endfor %}
+              {% endfor %}
+            </div>
           {% endfor %}
         {% else %}
           <p class="text-center text-slate-500 p-8 border rounded-xl bg-slate-50 italic">No hay pacientes registrados en el sistema.</p>
@@ -278,12 +315,10 @@
     </div>
   </div>
 
-  <!-- PESTAÑA 4: CITAS AGENDADAS -->
   <div id="veterinario-citas" class="tab-content tab-content-veterinario">
+    <!-- Citas agendadas (sin cambios, ya funcionaba perfecto) -->
     <div class="bg-white rounded-xl shadow-sm p-8 max-w-5xl mx-auto">
-      <div class="flex justify-between items-center mb-6 border-b pb-4">
-        <h2 class="text-2xl font-black text-indigo-950">Agenda General de Citas</h2>
-      </div>
+      <div class="flex justify-between items-center mb-6 border-b pb-4"><h2 class="text-2xl font-black text-indigo-950">Agenda General de Citas</h2></div>
       <div class="space-y-4">
         {% if citas %}
           {% for c in citas %}
@@ -303,13 +338,31 @@
   </div>
 </div>
 
-<!-- ==========================================
-      SCRIPTS Y FUNCIONES DE VETERINARIO 
-=========================================== -->
 <script>
   let sintomas = [];
   let vacunas = [];
   const fechaHoy = "{{ hoy }}"; 
+
+  // --- VISOR DE IMÁGENES EN VIVO ---
+  function previewImage(event, imgId, containerId) {
+    const img = document.getElementById(imgId);
+    const container = document.getElementById(containerId);
+    if(event.target.files.length > 0){
+      img.src = URL.createObjectURL(event.target.files[0]);
+      container.classList.remove('hidden');
+    } else {
+      container.classList.add('hidden');
+    }
+  }
+
+  function previewMultipleImages(event, containerId) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    for(let i=0; i<event.target.files.length; i++) {
+      const url = URL.createObjectURL(event.target.files[i]);
+      container.innerHTML += `<div class="w-20 h-20 flex-shrink-0 border-2 border-indigo-100 rounded-lg overflow-hidden shadow-sm"><img src="${url}" class="w-full h-full object-cover"></div>`;
+    }
+  }
 
   // --- SÍNTOMAS ---
   function addSintoma() {
@@ -323,11 +376,11 @@
   }
   function removeSintoma(index) { sintomas.splice(index, 1); renderSintomas(); }
   function renderSintomas() {
-    document.getElementById('contenedor-sintomas').innerHTML = sintomas.map((s, i) => `<span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1">${s} <i data-lucide="x" class="w-3 h-3 cursor-pointer hover:text-red-500" onclick="removeSintoma(${i})"></i></span>`).join('');
+    document.getElementById('contenedor-sintomas').innerHTML = sintomas.map((s, i) => `<span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 shadow-sm">${s} <i data-lucide="x" class="w-3 h-3 cursor-pointer hover:text-red-500" onclick="removeSintoma(${i})"></i></span>`).join('');
     lucide.createIcons();
   }
 
-  // --- VACUNAS ---
+  // --- VACUNAS Y REFUERZOS ---
   function addVacuna() {
     const nombre = document.getElementById('input-vacuna').value.trim();
     const freq = document.getElementById('select-frecuencia').value;
@@ -339,8 +392,15 @@
   }
   function removeVacuna(index) { vacunas.splice(index, 1); renderVacunas(); }
   function renderVacunas() {
-    document.getElementById('lista-vacunas').innerHTML = vacunas.map((v, i) => `<div class="flex justify-between items-center bg-white border border-emerald-100 p-2 rounded-lg text-sm"><div><span class="font-bold text-emerald-800">${v.nombre}</span><span class="text-xs text-slate-500 ml-2">Freq: ${v.frecuencia}</span></div><div class="flex gap-3"><span class="text-xs font-mono bg-slate-100 px-2 py-1 rounded">Fecha: ${v.fecha}</span><button type="button" onclick="removeVacuna(${i})" class="text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div></div>`).join('');
+    document.getElementById('lista-vacunas').innerHTML = vacunas.map((v, i) => `<div class="flex justify-between items-center bg-white border border-emerald-100 p-3 rounded-lg text-sm shadow-sm"><div class="flex items-center gap-2"><i data-lucide="syringe" class="w-4 h-4 text-emerald-600"></i><span class="font-bold text-emerald-800">${v.nombre}</span><span class="text-xs text-slate-500 ml-2">Freq: ${v.frecuencia}</span></div><div class="flex gap-3 items-center"><span class="text-xs font-mono bg-slate-100 px-2 py-1 rounded">Aplicación: ${v.fecha}</span><button type="button" onclick="removeVacuna(${i})" class="text-red-500 hover:bg-red-50 p-1 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div></div>`).join('');
     lucide.createIcons();
+  }
+  
+  // MAGIA DEL REFUERZO: Autocompleta el formulario de nueva dosis
+  function aplicarRefuerzo(nombre, frecuencia) {
+    document.getElementById('input-vacuna').value = nombre;
+    document.getElementById('select-frecuencia').value = frecuencia;
+    addVacuna(); // Lo agrega a la lista de "Nueva Dosis" automáticamente
   }
 
   // --- FORMULARIO Y RUTAS BLOQUEADAS ---
@@ -349,13 +409,12 @@
     document.getElementById('vacunas-hidden').value = JSON.stringify(vacunas);
   }
 
-function aplicarRuta(tipo) {
+  function aplicarRuta(tipo) {
     document.getElementById('form-tipo-ingreso').value = tipo;
     document.getElementById('selector-ruta').value = tipo; 
     const cajaAdopcion = document.getElementById('caja-adopcion');
     const subtitulo = document.getElementById('subtitulo-consulta');
     
-    // AHORA MOSTRAMOS LA CAJA DE ADOPCIÓN EN RESCATES Y SEGUIMIENTOS
     if(tipo === 'Rescate') {
       subtitulo.textContent = "Expediente de animal rescatado (Propiedad del refugio).";
       cajaAdopcion.classList.remove('hidden'); 
@@ -368,7 +427,7 @@ function aplicarRuta(tipo) {
     }
   }
 
-  function prepararConsulta(tipo, rescateId, especie, sexo, pacienteId = null, pacienteNombre = null, citaId = null) {
+  function prepararConsulta(tipo, rescateId, especie, sexo, pacienteId = null, pacienteNombre = null, citaId = null, adopcionStatus = 'En Observación') {
     switchTab('veterinario', 'nueva');
     aplicarRuta(tipo);
     
@@ -376,9 +435,12 @@ function aplicarRuta(tipo) {
     document.getElementById('form-paciente-id').value = '';
     document.getElementById('form-cita-id').value = '';
     
-    // Limpiar zona de vacunas previas
     const contenedorPrevias = document.getElementById('historial-vacunas-previas');
     contenedorPrevias.innerHTML = '';
+    
+    // Limpiamos los visores de fotos por si acaso
+    document.getElementById('preview-perfil-container').classList.add('hidden');
+    document.getElementById('preview-evidencia-container').innerHTML = '';
     
     if(tipo === 'Rescate') {
       document.getElementById('lbl-id').textContent = rescateId;
@@ -386,25 +448,27 @@ function aplicarRuta(tipo) {
       document.getElementById('form-nombre').value = "Rescatado #" + rescateId;
       document.getElementById('form-nombre').readOnly = false;
       document.getElementById('form-especie').readOnly = false;
+      document.getElementById('select-adopcion').value = 'En Observación';
     } else if (tipo === 'Seguimiento') {
       document.getElementById('lbl-id').textContent = pacienteId;
       document.getElementById('form-paciente-id').value = pacienteId;
       document.getElementById('form-nombre').value = pacienteNombre;
       document.getElementById('form-nombre').readOnly = true; 
       document.getElementById('form-especie').readOnly = true;
+      document.getElementById('select-adopcion').value = adopcionStatus; // Mantiene el estado que tenía
       if (citaId) document.getElementById('form-cita-id').value = citaId; 
       
-      // CARGAR VACUNAS ANTERIORES AL HTML
+      // CARGAR VACUNAS ANTERIORES CON BOTÓN DE REFUERZO
       const previas = document.getElementById('vacunas-previas-' + pacienteId);
       if (previas && previas.innerHTML.trim() !== '') {
-        contenedorPrevias.innerHTML = '<h5 class="text-xs font-bold text-slate-500 mb-2 border-b pb-1">DOSIS APLICADAS ANTERIORMENTE</h5>' + previas.innerHTML;
+        contenedorPrevias.innerHTML = '<div class="bg-slate-100 p-4 rounded-xl border border-slate-200 mb-4"><h5 class="text-xs font-black text-slate-500 mb-3 uppercase flex items-center gap-2"><i data-lucide="history" class="w-4 h-4"></i> Dosis Aplicadas Anteriormente</h5>' + previas.innerHTML + '</div>';
+        lucide.createIcons();
       }
     }
     document.getElementById('form-especie').value = especie;
     document.getElementById('form-sexo').value = sexo;
   }
 
-  // --- BUSCADOR ---
   function buscarPacientes() {
     const input = document.getElementById('buscador-paciente').value.toLowerCase();
     const cards = document.querySelectorAll('.paciente-card');
@@ -414,31 +478,25 @@ function aplicarRuta(tipo) {
     });
   }
 
-  // --- FILTRO DE CITAS DEL PANEL ---
   function filtrarCitas() {
     const filtro = document.getElementById('filtro-citas').value;
     const items = document.querySelectorAll('.cita-item');
     const hoy = new Date("{{ hoy }}");
-
     items.forEach(item => {
       const fechaCita = new Date(item.getAttribute('data-fecha'));
       const diffTime = fechaCita - hoy;
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
       let mostrar = false;
       if (filtro === 'todas') mostrar = true;
       else if (filtro === 'hoy' && diffDays === 0) mostrar = true;
       else if (filtro === 'semana' && diffDays >= 0 && diffDays <= 7) mostrar = true;
       else if (filtro === 'quincena' && diffDays >= 0 && diffDays <= 14) mostrar = true;
       else if (filtro === 'mes' && diffDays >= 0 && diffDays <= 30) mostrar = true;
-      
       item.style.display = mostrar ? 'flex' : 'none';
     });
   }
-  // Ejecutar el filtro al cargar para que muestre "Hoy" por defecto
   window.addEventListener('DOMContentLoaded', filtrarCitas);
 
-  // --- MODALES ---
   function abrirExpediente(pacienteId) {
     const contenidoHTML = document.getElementById('historial-paciente-' + pacienteId).innerHTML;
     openModal(contenidoHTML);
@@ -452,17 +510,8 @@ function aplicarRuta(tipo) {
       </div>
       <form action="{{ url_for('crear_cita') }}" method="POST" class="space-y-4">
         <input type="hidden" name="paciente_id" value="${pacienteId}">
-        
-        <div>
-          <label class="block text-sm font-bold mb-1 text-slate-800">Fecha de la cita</label>
-          <input type="date" name="fecha" required class="w-full border rounded-lg p-3 outline-none text-slate-600 bg-slate-50">
-        </div>
-        
-        <div>
-          <label class="block text-sm font-bold mb-1 text-slate-800">Motivo de la visita</label>
-          <input type="text" name="motivo" required placeholder="Ej. Retiro de puntos, Vacunación..." class="w-full border rounded-lg p-3 outline-none">
-        </div>
-        
+        <div><label class="block text-sm font-bold mb-1 text-slate-800">Fecha de la cita</label><input type="date" name="fecha" required class="w-full border rounded-lg p-3 outline-none text-slate-600 bg-slate-50"></div>
+        <div><label class="block text-sm font-bold mb-1 text-slate-800">Motivo de la visita</label><input type="text" name="motivo" required placeholder="Ej. Retiro de puntos..." class="w-full border rounded-lg p-3 outline-none"></div>
         <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 rounded-xl shadow-md transition mt-4">Confirmar y Programar Cita</button>
       </form>
     `);

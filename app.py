@@ -36,7 +36,8 @@ class Paciente(db.Model):
     foto = db.Column(db.Text, nullable=True)
     disponible_adopcion = db.Column(db.String(20), default="En Observación")
     dueno_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
-    rescate_id = db.Column(db.Integer, db.ForeignKey('rescate.id'), nullable=True) # ¡El enlace que pediste!
+    rescate_id = db.Column(db.Integer, db.ForeignKey('rescate.id'), nullable=True)
+    rescate_obj = db.relationship('Rescate', backref='paciente_asociado', lazy=True)
     consultas = db.relationship('ConsultaMedica', backref='paciente_obj', lazy=True, order_by='ConsultaMedica.id.desc()')
     citas = db.relationship('Cita', backref='paciente_obj', lazy=True)
 
@@ -95,6 +96,7 @@ class Rescate(db.Model):
     estado = db.Column(db.String(20), default="Pendiente")
     rescatista_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     alerta_id = db.Column(db.Integer, db.ForeignKey('alerta.id'), nullable=True)
+    alerta_obj = db.relationship('Alerta', backref='rescate_asociado', lazy=True)
 
 class SolicitudAdopcion(db.Model):
     id = db.Column(db.Integer, primary_key=True)
