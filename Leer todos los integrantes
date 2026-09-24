@@ -1,0 +1,49 @@
+Roles Asignados para Modularizacion 
+
+
+1. Eddy 
+    {
+        Rescatista
+            cosas a tomar en cuenta en modularizacion 
+            1. En Mis Rescates debe aparecer una de las fotos de la alerta 
+            2. En nuevo rescate en el apartado de Especie, porfavor realizar la opcion de "Añadir especie" el cual debe poder agregar especies a la lista 
+    }
+
+
+2. Yamilet
+    {
+        Veterinario
+            Cosas a tomar en cuenta en la modularizacion 
+            1. Las especies agregadas por Eddy deben aparecer aqui tambien 
+            2. En las fotos agregadas de evidencia habilitar la opcion de una (x) para poder remover la imagen antes de generar el reporte por si agrege una foto por accidente 
+            3. En la foto de perfil en nueva consulta, debe aparecer la imagen del paciente si se añadio en la consulta anterior y si la actualizas debe cambiar la foto por la nueva y en la siguiente consulta debes poder visualizar la foto 
+    }
+
+
+3. Hugo 
+    {
+        Administrador 
+            (Pendiente de terminar modularizacion por...)
+    }
+
+
+4. Melvin 
+    {
+        Pendiente de asignacion 
+    }
+
+
+5. Aeelyn y Daniel 
+    {
+        Usuario 
+            cosas a tomar en cuenta 
+            1. Dar acceso a administrador de modificar texto de donaciones 
+            2. crear formularios y modularizacion de Voluntariado ademas de crear correo de confirmacion o negacion de solicitud de voluntariado 
+            3. realizar conexion de mascotas de adopcion y realizar la prueba de si en Nueva consulta de Veterinario si pasas a la mascota de disponible a en observacion si se elimina o no del apartado de adopcion 
+            4. mover y reordenar los menu en el orden por proridad 
+            5. En mis mascotas debe aparecer la alerta original de Alerta de Ciudanana 
+            
+        
+        Crear sistema de Mi perfil para los 4 roles de manera generalizada 
+
+    }
