@@ -43,46 +43,48 @@ Roles Asignados para Modularizacion
             4. mover y reordenar los menu en el orden por proridad 
             5. En mis mascotas debe aparecer la alerta original de Alerta de Ciudanana
             6. Realizar modulo de verificacion de accesos de los usuarios y empleados
+                        PARA EMPLEADOS 	
+                            creamos el usuario con administrador 
+                            darle el código de acceso y contraseña temporal 
+                            un formulario que solicite correo y contraseña nueva 
+                                -foto 
+                                -nombre
+                                -correo 
+                                -nueva contraseña
+                                -confirmar contraseña
+                            PERFIL COMPLETO 
+
+                        -PARA USUARIOS 
+                            En la casilla de correo evitar que puedan utilizar el mismo correo para crear otra cuenta 
+                            Boton para ver la contraseña que estoy escribiendo
             7.pruebas de multi-usuarios
             8. ver temas de ciber-seguridad
             9. manual de usuario
             10.realizar sistema entero de compra, cobro y envio de producto de la tienda (shop)
+            11. Crear sistema de Mi perfil para los 4 roles de manera generalizada 
+    }
 
-    Accesos y contraseñas:
-    Rescatista  
-                Res-001
-                1234
+    ================================================================
+    =====  ACCESOS Y CONTRASEñAS====================================
+    ================================================================
+    Nota: si el usuario no existe porfavor crear los usuarios con las siguientes claves o accesos 
+
     Administrador
-                ADMIN-001
-                admin123
+                CORREO    :  ADMIN-001
+                CONTRASEñA:  admin123
+
+    Rescatista  
+                CORREO    : Res-001
+                CONTRASEñA: 1234
+    
     Veterinario
-                Vet-001
-                1234
+                CORREO    : Vet-001
+                CONTRASEñA: 1234
     Usuario
-                usuario@gmail.com
-                1234
+                CORREO    : usuario@gmail.com
+                CONTRASEñA: 1234
     
 
-    PARA EMPLEADOS 	
-creamos el usuario con administrador 
-	darle el código de acceso y contraseña temporal 
-		un formulario que solicite correo y contraseña nueva 
-			-foto 
-			nombre
-			correo 
-			nueva contraseña
-			confirmar contraseña
-	PERFIL COMPLETO 
-
-
-
--PARA USUARIOS 
-	En la casilla de correo evitar que puedan utilizar el mismo correo para crear otra cuenta 
-	Boton para ver la contraseña que estoy escribiendo
-
 
         
-        
-        Crear sistema de Mi perfil para los 4 roles de manera generalizada 
-
-    }
+    
