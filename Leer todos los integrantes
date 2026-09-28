@@ -12,7 +12,7 @@ Roles Asignados para Modularizacion
 
 2. Yamilet
     {
-        Veterinario
+        Veterinario Inicio y nueva consulta de veterinario 
             Cosas a tomar en cuenta en la modularizacion 
             1. Las especies agregadas por Eddy deben aparecer aqui tambien 
             2. En las fotos agregadas de evidencia habilitar la opcion de una (x) para poder remover la imagen antes de generar el reporte por si agrege una foto por accidente 
@@ -29,7 +29,8 @@ Roles Asignados para Modularizacion
 
 4. Melvin 
     {
-        Pendiente de asignacion 
+        Veterinario 
+            1. modularizar pestañas de Buscar paciente y Agendar cita  
     }
 
 
@@ -71,7 +72,7 @@ Roles Asignados para Modularizacion
 
     Administrador
                 CORREO    :  ADMIN-001
-                CONTRASEñA:  admin123
+                CONTRASEñA:  123
 
     Rescatista  
                 CORREO    : Res-001
@@ -85,7 +86,5 @@ Roles Asignados para Modularizacion
                 CONTRASEñA: 1234
     
 
-
-Reunion DOmingo en la tarde noche
 
     
