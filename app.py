@@ -27,16 +27,18 @@ class Usuario(db.Model):
     codigo_empleado = db.Column(db.String(20), unique=True, nullable=True)
     password = db.Column(db.String(200), nullable=False)
     rol = db.Column(db.String(20), nullable=False, default='usuario')
+    # Relación: Un usuario tiene un único CV de adopción
+    perfil_cv = db.relationship('PerfilAdopcion', backref='usuario', uselist=False, lazy=True)
 
-    # === DATOS DEL SUPER FORMULARIO DE ADOPCIÓN (CV) ===
-    # 1. Personales
+class PerfilAdopcion(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     dpi = db.Column(db.String(20))
     fecha_nacimiento = db.Column(db.String(20))
     telefono = db.Column(db.String(20))
     direccion = db.Column(db.Text)
     ocupacion = db.Column(db.String(100))
     redes_sociales = db.Column(db.String(100))
-    # 2. Entorno
     tipo_vivienda = db.Column(db.String(50))
     tenencia = db.Column(db.String(50))
     permiso_arrendador = db.Column(db.String(50))
@@ -44,22 +46,18 @@ class Usuario(db.Model):
     integrantes = db.Column(db.Text)
     acuerdo_familiar = db.Column(db.String(50))
     alergias_familia = db.Column(db.String(50))
-    # 3. Historial
     mascotas_actuales = db.Column(db.Text)
     mascotas_anteriores = db.Column(db.Text)
-    # 4. Estilo de vida
     motivo_adopcion = db.Column(db.Text)
     lugar_estancia = db.Column(db.String(200))
     horas_solo = db.Column(db.String(50))
     presupuesto = db.Column(db.String(50))
     plan_viaje = db.Column(db.String(200))
     plan_mudanza = db.Column(db.String(200))
-    # 5. Compromisos
     problema_conducta = db.Column(db.String(50))
     gastos_emergencia = db.Column(db.String(20))
     seguimiento = db.Column(db.String(20))
     contrato = db.Column(db.String(20))
-    # 6. Referencias
     ref1_nombre = db.Column(db.String(100))
     ref1_tel = db.Column(db.String(100))
     ref2_nombre = db.Column(db.String(100))
@@ -69,16 +67,12 @@ class SolicitudAdopcion(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     fecha = db.Column(db.DateTime, default=datetime.utcnow)
     estado = db.Column(db.String(20), default="En Revisión")
-    
-    # Copiamos un resumen útil para el listado rápido del administrador
     dpi = db.Column(db.String(20))
     ocupacion = db.Column(db.String(100))
     tipo_vivienda = db.Column(db.String(50))
     horas_solo = db.Column(db.String(50))
-    
     paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=False)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
-    
     paciente_obj = db.relationship('Paciente', backref='solicitudes_recibidas', lazy=True)
     usuario_obj = db.relationship('Usuario', backref='solicitudes_enviadas', lazy=True)
 
@@ -249,9 +243,10 @@ def veterinario():
 @app.route('/usuario')
 def usuario(): 
     if 'usuario_id' not in session or session['rol'] != 'usuario': return redirect(url_for('login'))
-    usuario_actual = Usuario.query.get(session['usuario_id'])
+    # Buscamos el CV en la nueva tabla
+    cv_actual = PerfilAdopcion.query.filter_by(usuario_id=session['usuario_id']).first()
     disponibles = Paciente.query.filter_by(disponible_adopcion="Listo para Adopción").all()
-    return render_template('usuario.html', adopciones=disponibles, mi_perfil=usuario_actual)
+    return render_template('usuario.html', adopciones=disponibles, mi_cv=cv_actual)
 
 @app.route('/admin')
 def admin(): 
@@ -423,37 +418,42 @@ def crear_consulta():
 @app.route('/actualizar_cv', methods=['POST'])
 def actualizar_cv():
     if 'usuario_id' not in session or session['rol'] != 'usuario': return redirect(url_for('login'))
-    u = Usuario.query.get(session['usuario_id'])
     
-    u.dpi = request.form.get('dpi')
-    u.fecha_nacimiento = request.form.get('fecha_nacimiento')
-    u.telefono = request.form.get('telefono')
-    u.direccion = request.form.get('direccion')
-    u.ocupacion = request.form.get('ocupacion')
-    u.redes_sociales = request.form.get('redes_sociales')
-    u.tipo_vivienda = request.form.get('tipo_vivienda')
-    u.tenencia = request.form.get('tenencia')
-    u.permiso_arrendador = request.form.get('permiso_arrendador')
-    u.cerramiento = request.form.get('cerramiento')
-    u.integrantes = request.form.get('integrantes')
-    u.acuerdo_familiar = request.form.get('acuerdo_familiar')
-    u.alergias_familia = request.form.get('alergias_familia')
-    u.mascotas_actuales = request.form.get('mascotas_actuales')
-    u.mascotas_anteriores = request.form.get('mascotas_anteriores')
-    u.motivo_adopcion = request.form.get('motivo_adopcion')
-    u.lugar_estancia = request.form.get('lugar_estancia')
-    u.horas_solo = request.form.get('horas_solo')
-    u.presupuesto = request.form.get('presupuesto')
-    u.plan_viaje = request.form.get('plan_viaje')
-    u.plan_mudanza = request.form.get('plan_mudanza')
-    u.problema_conducta = request.form.get('problema_conducta')
-    u.gastos_emergencia = request.form.get('gastos_emergencia')
-    u.seguimiento = request.form.get('seguimiento')
-    u.contrato = request.form.get('contrato')
-    u.ref1_nombre = request.form.get('ref1_nombre')
-    u.ref1_tel = request.form.get('ref1_tel')
-    u.ref2_nombre = request.form.get('ref2_nombre')
-    u.ref2_tel = request.form.get('ref2_tel')
+    # Si no tiene CV creado en la nueva tabla, se lo creamos
+    cv = PerfilAdopcion.query.filter_by(usuario_id=session['usuario_id']).first()
+    if not cv:
+        cv = PerfilAdopcion(usuario_id=session['usuario_id'])
+        db.session.add(cv)
+
+    cv.dpi = request.form.get('dpi')
+    cv.fecha_nacimiento = request.form.get('fecha_nacimiento')
+    cv.telefono = request.form.get('telefono')
+    cv.direccion = request.form.get('direccion')
+    cv.ocupacion = request.form.get('ocupacion')
+    cv.redes_sociales = request.form.get('redes_sociales')
+    cv.tipo_vivienda = request.form.get('tipo_vivienda')
+    cv.tenencia = request.form.get('tenencia')
+    cv.permiso_arrendador = request.form.get('permiso_arrendador')
+    cv.cerramiento = request.form.get('cerramiento')
+    cv.integrantes = request.form.get('integrantes')
+    cv.acuerdo_familiar = request.form.get('acuerdo_familiar')
+    cv.alergias_familia = request.form.get('alergias_familia')
+    cv.mascotas_actuales = request.form.get('mascotas_actuales')
+    cv.mascotas_anteriores = request.form.get('mascotas_anteriores')
+    cv.motivo_adopcion = request.form.get('motivo_adopcion')
+    cv.lugar_estancia = request.form.get('lugar_estancia')
+    cv.horas_solo = request.form.get('horas_solo')
+    cv.presupuesto = request.form.get('presupuesto')
+    cv.plan_viaje = request.form.get('plan_viaje')
+    cv.plan_mudanza = request.form.get('plan_mudanza')
+    cv.problema_conducta = request.form.get('problema_conducta')
+    cv.gastos_emergencia = request.form.get('gastos_emergencia')
+    cv.seguimiento = request.form.get('seguimiento')
+    cv.contrato = request.form.get('contrato')
+    cv.ref1_nombre = request.form.get('ref1_nombre')
+    cv.ref1_tel = request.form.get('ref1_tel')
+    cv.ref2_nombre = request.form.get('ref2_nombre')
+    cv.ref2_tel = request.form.get('ref2_tel')
     
     db.session.commit()
     flash("Tu Formulario de Adopción se ha guardado con éxito.", "success")
@@ -462,10 +462,11 @@ def actualizar_cv():
 @app.route('/crear_solicitud/<int:paciente_id>', methods=['POST'])
 def crear_solicitud(paciente_id):
     if 'usuario_id' not in session or session['rol'] != 'usuario': return redirect(url_for('login'))
-    usuario = Usuario.query.get(session['usuario_id'])
+    cv = PerfilAdopcion.query.filter_by(usuario_id=session['usuario_id']).first()
+    
     nueva_solicitud = SolicitudAdopcion(
-        dpi=usuario.dpi, ocupacion=usuario.ocupacion, tipo_vivienda=usuario.tipo_vivienda,
-        horas_solo=usuario.horas_solo, paciente_id=paciente_id, usuario_id=usuario.id
+        dpi=cv.dpi, ocupacion=cv.ocupacion, tipo_vivienda=cv.tipo_vivienda,
+        horas_solo=cv.horas_solo, paciente_id=paciente_id, usuario_id=session['usuario_id']
     )
     db.session.add(nueva_solicitud)
     db.session.commit()
