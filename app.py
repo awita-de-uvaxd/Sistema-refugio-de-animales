@@ -28,6 +28,70 @@ class Usuario(db.Model):
     password = db.Column(db.String(200), nullable=False)
     rol = db.Column(db.String(20), nullable=False, default='usuario')
 
+    # === DATOS DEL SUPER FORMULARIO DE ADOPCIÓN (CV) ===
+    # 1. Personales
+    dpi = db.Column(db.String(20))
+    fecha_nacimiento = db.Column(db.String(20))
+    telefono = db.Column(db.String(20))
+    direccion = db.Column(db.Text)
+    ocupacion = db.Column(db.String(100))
+    redes_sociales = db.Column(db.String(100))
+    # 2. Entorno
+    tipo_vivienda = db.Column(db.String(50))
+    tenencia = db.Column(db.String(50))
+    permiso_arrendador = db.Column(db.String(50))
+    cerramiento = db.Column(db.String(50))
+    integrantes = db.Column(db.Text)
+    acuerdo_familiar = db.Column(db.String(50))
+    alergias_familia = db.Column(db.String(50))
+    # 3. Historial
+    mascotas_actuales = db.Column(db.Text)
+    mascotas_anteriores = db.Column(db.Text)
+    # 4. Estilo de vida
+    motivo_adopcion = db.Column(db.Text)
+    lugar_estancia = db.Column(db.String(200))
+    horas_solo = db.Column(db.String(50))
+    presupuesto = db.Column(db.String(50))
+    plan_viaje = db.Column(db.String(200))
+    plan_mudanza = db.Column(db.String(200))
+    # 5. Compromisos
+    problema_conducta = db.Column(db.String(50))
+    gastos_emergencia = db.Column(db.String(20))
+    seguimiento = db.Column(db.String(20))
+    contrato = db.Column(db.String(20))
+    # 6. Referencias
+    ref1_nombre = db.Column(db.String(100))
+    ref1_tel = db.Column(db.String(100))
+    ref2_nombre = db.Column(db.String(100))
+    ref2_tel = db.Column(db.String(100))
+
+class SolicitudAdopcion(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    fecha = db.Column(db.DateTime, default=datetime.utcnow)
+    estado = db.Column(db.String(20), default="En Revisión")
+    
+    # Copiamos un resumen útil para el listado rápido del administrador
+    dpi = db.Column(db.String(20))
+    ocupacion = db.Column(db.String(100))
+    tipo_vivienda = db.Column(db.String(50))
+    horas_solo = db.Column(db.String(50))
+    
+    paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=False)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    
+    paciente_obj = db.relationship('Paciente', backref='solicitudes_recibidas', lazy=True)
+    usuario_obj = db.relationship('Usuario', backref='solicitudes_enviadas', lazy=True)
+
+class ReclamoPropiedad(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    fecha = db.Column(db.DateTime, default=datetime.utcnow)
+    nombre_responde = db.Column(db.String(100))
+    marcas_unicas = db.Column(db.Text)
+    evidencia_fotos = db.Column(db.Text)
+    estado = db.Column(db.String(20), default="En Revisión")
+    paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=False)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+
 class Paciente(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False)
@@ -97,25 +161,6 @@ class Rescate(db.Model):
     rescatista_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     alerta_id = db.Column(db.Integer, db.ForeignKey('alerta.id'), nullable=True)
     alerta_obj = db.relationship('Alerta', backref='rescate_asociado', lazy=True)
-
-class SolicitudAdopcion(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    dpi = db.Column(db.String(20), nullable=False)
-    ocupacion = db.Column(db.String(100))
-    tipo_vivienda = db.Column(db.String(50))
-    horas_solo = db.Column(db.String(50))
-    mascotas_actuales = db.Column(db.Text)
-    estado = db.Column(db.String(20), default="En Revisión")
-    paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=False)
-    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
-
-class ReclamoPropiedad(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    nombre_responde = db.Column(db.String(100))
-    marcas_unicas = db.Column(db.Text)
-    estado = db.Column(db.String(20), default="En Revisión")
-    paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=False)
-    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
 
 class ProductoShop(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -204,8 +249,9 @@ def veterinario():
 @app.route('/usuario')
 def usuario(): 
     if 'usuario_id' not in session or session['rol'] != 'usuario': return redirect(url_for('login'))
-    disponibles = Paciente.query.filter_by(disponible_adopcion="Sí").all()
-    return render_template('usuario.html', adopciones=disponibles)
+    usuario_actual = Usuario.query.get(session['usuario_id'])
+    disponibles = Paciente.query.filter_by(disponible_adopcion="Listo para Adopción").all()
+    return render_template('usuario.html', adopciones=disponibles, mi_perfil=usuario_actual)
 
 @app.route('/admin')
 def admin(): 
@@ -254,8 +300,6 @@ def crear_alerta():
     db.session.add(nueva_alerta)
     db.session.commit()
     return redirect(url_for('usuario'))
-
-
 
 @app.route('/falsa_alarma/<int:alerta_id>')
 def falsa_alarma(alerta_id):
@@ -374,6 +418,81 @@ def crear_consulta():
 
     db.session.commit()
     return redirect(url_for('veterinario'))
+
+# === RUTAS DEL USUARIO ===
+@app.route('/actualizar_cv', methods=['POST'])
+def actualizar_cv():
+    if 'usuario_id' not in session or session['rol'] != 'usuario': return redirect(url_for('login'))
+    u = Usuario.query.get(session['usuario_id'])
+    
+    u.dpi = request.form.get('dpi')
+    u.fecha_nacimiento = request.form.get('fecha_nacimiento')
+    u.telefono = request.form.get('telefono')
+    u.direccion = request.form.get('direccion')
+    u.ocupacion = request.form.get('ocupacion')
+    u.redes_sociales = request.form.get('redes_sociales')
+    u.tipo_vivienda = request.form.get('tipo_vivienda')
+    u.tenencia = request.form.get('tenencia')
+    u.permiso_arrendador = request.form.get('permiso_arrendador')
+    u.cerramiento = request.form.get('cerramiento')
+    u.integrantes = request.form.get('integrantes')
+    u.acuerdo_familiar = request.form.get('acuerdo_familiar')
+    u.alergias_familia = request.form.get('alergias_familia')
+    u.mascotas_actuales = request.form.get('mascotas_actuales')
+    u.mascotas_anteriores = request.form.get('mascotas_anteriores')
+    u.motivo_adopcion = request.form.get('motivo_adopcion')
+    u.lugar_estancia = request.form.get('lugar_estancia')
+    u.horas_solo = request.form.get('horas_solo')
+    u.presupuesto = request.form.get('presupuesto')
+    u.plan_viaje = request.form.get('plan_viaje')
+    u.plan_mudanza = request.form.get('plan_mudanza')
+    u.problema_conducta = request.form.get('problema_conducta')
+    u.gastos_emergencia = request.form.get('gastos_emergencia')
+    u.seguimiento = request.form.get('seguimiento')
+    u.contrato = request.form.get('contrato')
+    u.ref1_nombre = request.form.get('ref1_nombre')
+    u.ref1_tel = request.form.get('ref1_tel')
+    u.ref2_nombre = request.form.get('ref2_nombre')
+    u.ref2_tel = request.form.get('ref2_tel')
+    
+    db.session.commit()
+    flash("Tu Formulario de Adopción se ha guardado con éxito.", "success")
+    return redirect(url_for('usuario'))
+
+@app.route('/crear_solicitud/<int:paciente_id>', methods=['POST'])
+def crear_solicitud(paciente_id):
+    if 'usuario_id' not in session or session['rol'] != 'usuario': return redirect(url_for('login'))
+    usuario = Usuario.query.get(session['usuario_id'])
+    nueva_solicitud = SolicitudAdopcion(
+        dpi=usuario.dpi, ocupacion=usuario.ocupacion, tipo_vivienda=usuario.tipo_vivienda,
+        horas_solo=usuario.horas_solo, paciente_id=paciente_id, usuario_id=usuario.id
+    )
+    db.session.add(nueva_solicitud)
+    db.session.commit()
+    flash("Solicitud de adopción enviada con éxito.", "success")
+    return redirect(url_for('usuario'))
+
+@app.route('/crear_reclamo/<int:paciente_id>', methods=['POST'])
+def crear_reclamo(paciente_id):
+    if 'usuario_id' not in session or session['rol'] != 'usuario': return redirect(url_for('login'))
+    nombres_evidencia = []
+    if 'evidencia_dueno' in request.files:
+        for archivo in request.files.getlist('evidencia_dueno'):
+            if archivo.filename != '':
+                nom_arch = secure_filename(archivo.filename)
+                archivo.save(os.path.join(app.config['UPLOAD_FOLDER'], nom_arch))
+                nombres_evidencia.append(nom_arch)
+    evidencia_str = ",".join(nombres_evidencia) if nombres_evidencia else None
+
+    nuevo_reclamo = ReclamoPropiedad(
+        nombre_responde=request.form.get('nombre_responde'),
+        marcas_unicas=request.form.get('marcas'), evidencia_fotos=evidencia_str,
+        paciente_id=paciente_id, usuario_id=session['usuario_id']
+    )
+    db.session.add(nuevo_reclamo)
+    db.session.commit()
+    flash("Reclamo de propiedad enviado con éxito.", "success")
+    return redirect(url_for('usuario'))
 
 if __name__ == '__main__':
     with app.app_context():
