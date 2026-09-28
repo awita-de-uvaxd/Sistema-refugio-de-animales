@@ -1,20 +1,25 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="w-full">
-  <!-- Pestañas de Navegación -->
+  <!-- Librerías de Gráficos y PDF -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <!-- Pestañas Principales de Navegación -->
   <nav class="flex overflow-x-auto border-b border-slate-200 text-sm font-medium mb-6 bg-white rounded-t-xl shadow-sm scroll-hide">
-    <button onclick="switchTab('admin', 'adopciones')" class="tab-btn-admin px-5 py-4 border-b-2 flex active" data-tab="adopciones">Solicitudes</button>
-    <button onclick="switchTab('admin', 'logs')" class="tab-btn-admin px-5 py-4 border-b-2 flex" data-tab="logs">Auditoría Empleados</button>
+    <button onclick="switchMainTab('adopciones')" class="tab-btn-main px-5 py-4 border-b-2 border-indigo-600 text-indigo-600 font-bold flex active" data-tab="adopciones">Solicitudes</button>
+    <button onclick="switchMainTab('logs')" class="tab-btn-main px-5 py-4 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex" data-tab="logs">Auditoría Empleados</button>
+    <button onclick="switchMainTab('shop')" class="tab-btn-main px-5 py-4 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex" data-tab="shop"> Tienda </button>
   </nav>
 
-  <!-- Pestaña 1: Adopciones (Aún desconectada) -->
-  <div id="admin-adopciones" class="tab-content tab-content-admin active bg-white p-6 rounded-xl shadow-sm">
+  <!-- Pestaña Principal 1: Adopciones -->
+  <div id="admin-adopciones" class="tab-content-main bg-white p-6 rounded-xl shadow-sm">
     <h3 class="font-bold text-xl mb-6 text-indigo-900 border-b pb-2">Panel de Aprobaciones</h3>
     <p class="text-slate-500 bg-slate-50 p-6 rounded-xl border text-center">Bandeja limpia. (Esperando conexión a BD)</p>
   </div>
 
-  <!-- Pestaña 2: Auditoría y Registro de Empleados (¡CONECTADA!) -->
-  <div id="admin-logs" class="tab-content tab-content-admin bg-white p-6 rounded-xl shadow-sm">
+  <!-- Pestaña Principal 2: Auditoría y Registro de Empleados -->
+  <div id="admin-logs" class="tab-content-main hidden bg-white p-6 rounded-xl shadow-sm">
     <div class="grid md:grid-cols-2 gap-8">
       
       <!-- Lado Izquierdo: Formulario para crear empleado -->
@@ -70,5 +75,638 @@
       
     </div>
   </div>
+
+  <!-- Pestaña Principal 3: TIENDA / SHOP (Contenedor Maestro de la Tienda) -->
+  <div id="admin-shop" class="tab-content-main hidden bg-white p-6 rounded-xl shadow-sm space-y-6">
+    
+    <!-- SUB-NAVEGACIÓN INTERNA DE LA TIENDA -->
+    <div class="border-b pb-4">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+        <div>
+          <h2 class="text-2xl font-black text-indigo-900">Módulo de Tienda y Comercio</h2>
+          <p class="text-xs text-slate-500">Administración general de productos, ventas, inventario y métricas.</p>
+        </div>
+      </div>
+
+      <nav class="flex overflow-x-auto bg-slate-100 p-1.5 rounded-2xl gap-1 text-xs font-semibold scroll-hide">
+        <button onclick="switchShopSubTab('pedidos')" class="tab-btn-shop px-4 py-2.5 rounded-xl transition bg-white text-indigo-700 shadow-sm font-bold" data-subtab="pedidos"> Gestión de Pedidos</button>
+        <button onclick="switchShopSubTab('cobro')" class="tab-btn-shop px-4 py-2.5 rounded-xl transition text-slate-600 hover:bg-slate-200/60" data-subtab="cobro"> Cobro / Venta Refugio</button>
+        <button onclick="switchShopSubTab('inventario')" class="tab-btn-shop px-4 py-2.5 rounded-xl transition text-slate-600 hover:bg-slate-200/60" data-subtab="inventario"> Inventario y Control</button>
+        <button onclick="switchShopSubTab('metricas')" class="tab-btn-shop px-4 py-2.5 rounded-xl transition text-slate-600 hover:bg-slate-200/60" data-subtab="metricas"> Métricas y Reportes</button>
+      </nav>
+    </div>
+
+    <!-- SUB-PESTAÑA 1: GESTIÓN DE PEDIDOS -->
+    <div id="shop-pedidos" class="tab-content-shop space-y-8">
+      <!-- SERVICIO A DOMICILIO -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 overflow-x-auto space-y-3 shadow-sm">
+        <div class="flex justify-between items-center border-b pb-2">
+          <div>
+            <h4 class="font-bold text-sm text-slate-800">Órdenes con Servicio a Domicilio</h4>
+            <p class="text-[11px] text-slate-500">Valida pagos antes de procesar el despacho.</p>
+          </div>
+          <span class="text-xs bg-blue-100 text-blue-700 font-bold px-2.5 py-1 rounded-full">Exclusivo Domicilio</span>
+        </div>
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-100 uppercase font-bold text-slate-600">
+            <tr><th class="p-3">ID Pedido</th><th class="p-3">Cliente</th><th class="p-3">Detalle Pago</th><th class="p-3">Monto</th><th class="p-3">Acciones / Flujo</th></tr>
+          </thead>
+          <tbody id="tbody-domicilio"></tbody>
+        </table>
+      </div>
+
+      <!-- ENTREGA EN TIENDA -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 overflow-x-auto space-y-3 shadow-sm">
+        <div class="flex justify-between items-center border-b pb-2">
+          <div>
+            <h4 class="font-bold text-sm text-slate-800">Órdenes para Entrega en Tienda (Recoger en Refugio)</h4>
+            <p class="text-[11px] text-slate-500">Actualiza el progreso. Al presionar <strong>5. Finalizar</strong> pasa a estar disponible para cobro en <strong>Caja Refugio</strong>.</p>
+          </div>
+          <span class="text-xs bg-indigo-100 text-indigo-700 font-bold px-2.5 py-1 rounded-full">Recoger en Refugio</span>
+        </div>
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-100 uppercase font-bold text-slate-600">
+            <tr><th class="p-3">ID Pedido</th><th class="p-3">Cliente</th><th class="p-3">Progreso del Pedido</th><th class="p-3">Total</th><th class="p-3">Estatus Caja</th></tr>
+          </thead>
+          <tbody id="tbody-tienda"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SUB-PESTAÑA 2: COBRO / VENTA REFUGIO -->
+    <div id="shop-cobro" class="tab-content-shop hidden space-y-6 max-w-2xl mx-auto">
+      <div class="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
+        <div class="border-b pb-3 flex justify-between items-center">
+          <div>
+            <h3 class="font-black text-slate-800 text-base">Caja Refugio - Cobro de Pedidos Presenciales</h3>
+            <p class="text-xs text-slate-500">Solo muestra pedidos marcados como <strong>5. Finalizar</strong> pendientes de cobro.</p>
+          </div>
+          <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-full">Caja Registradora</span>
+        </div>
+
+        <div class="space-y-2">
+          <label class="block text-xs font-bold text-slate-700">Seleccionar Orden Finalizada:</label>
+          <select id="select-pos-order" onchange="cargarDetallePos()" class="w-full p-2.5 border rounded-xl text-xs bg-slate-50 font-bold outline-indigo-600"></select>
+        </div>
+
+        <div id="pos-details" class="hidden bg-slate-50 p-4 rounded-2xl border space-y-3 text-xs">
+          <div class="flex justify-between items-center border-b pb-2">
+            <div><p class="font-bold text-indigo-600 text-sm" id="pos-id">#PED-0000</p><p id="pos-cli" class="text-[11px] text-slate-500">Cliente: ---</p></div>
+            <span class="px-2 py-1 bg-amber-100 text-amber-800 font-bold text-[10px] rounded-full">Pendiente de Pago</span>
+          </div>
+
+          <ul id="pos-items" class="space-y-1 list-disc list-inside text-slate-600"></ul>
+
+          <div class="border-t pt-2 space-y-2">
+            <label class="block font-bold">Método de Pago Presencial:</label>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <label class="p-2 border rounded-xl bg-white flex items-center gap-1 cursor-pointer"><input type="radio" name="pos-method" value="Efectivo" checked onchange="toggleCuponPos()"><span class="font-semibold text-xs"> Efectivo</span></label>
+              <label class="p-2 border rounded-xl bg-white flex items-center gap-1 cursor-pointer"><input type="radio" name="pos-method" value="Tarjeta POS" onchange="toggleCuponPos()"><span class="font-semibold text-xs"> Tarjeta</span></label>
+              <label class="p-2 border rounded-xl bg-white flex items-center gap-1 cursor-pointer"><input type="radio" name="pos-method" value="Transferencia" onchange="toggleCuponPos()"><span class="font-semibold text-xs"> Transf.</span></label>
+              <label class="p-2 border rounded-xl bg-white flex items-center gap-1 cursor-pointer"><input type="radio" name="pos-method" value="Cupón Refugio" onchange="toggleCuponPos()"><span class="font-semibold text-xs"> Cupón</span></label>
+            </div>
+          </div>
+
+          <div id="pos-cupon-box" class="hidden space-y-2 bg-amber-50 p-3 rounded-xl border border-amber-200">
+            <div class="flex gap-2">
+              <input type="text" id="pos-cupon-code" placeholder="Ej: REFUGIO10" class="w-full p-2 border rounded-xl text-xs uppercase bg-white">
+              <button type="button" onclick="aplicarCuponPos()" class="px-3 py-1.5 bg-amber-600 text-white font-bold text-xs rounded-xl">Aplicar</button>
+            </div>
+            <p id="pos-cupon-msg" class="text-[10px] font-bold text-emerald-700"></p>
+          </div>
+
+          <div class="border-t pt-3 flex justify-between items-center text-sm font-black">
+            <span>Total a Cobrar:</span>
+            <span id="pos-total" class="text-indigo-600 text-base">Q0.00</span>
+          </div>
+
+          <button onclick="completarCobroRefugio()" class="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700 transition">
+            ✓ Procesar Pago, Finalizar Cancelación y Emitir Factura
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUB-PESTAÑA 3: INVENTARIO Y CONTROL -->
+    <div id="shop-inventario" class="tab-content-shop hidden space-y-4">
+      <div id="vencimiento-alerts" class="space-y-2"></div>
+      <div class="bg-white rounded-2xl border p-4 space-y-3 shadow-sm">
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-3">
+          <input type="text" id="inv-search" oninput="renderizarInventario()" placeholder="Buscar producto..." class="px-3 py-2 border rounded-xl text-xs w-full sm:w-64 bg-slate-50">
+          <button onclick="toggleModalProd()" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-sm hover:bg-indigo-700 transition">+ Agregar Producto</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-100 uppercase font-bold text-slate-600">
+              <tr><th class="p-3">ID</th><th class="p-3">Producto</th><th class="p-3">Categoría</th><th class="p-3">Stock</th><th class="p-3">Precio</th><th class="p-3">Visibilidad</th><th class="p-3 text-right">Opciones</th></tr>
+            </thead>
+            <tbody id="tbody-inventario"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUB-PESTAÑA 4: MÉTRICAS Y REPORTES -->
+    <div id="shop-metricas" class="tab-content-shop hidden space-y-6">
+      <!-- TARJETAS DE MÉTRICAS / KPI -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white p-4 rounded-2xl border shadow-sm border-indigo-100">
+          <p class="text-xs font-bold text-slate-400">Ventas Totales Realizadas</p>
+          <h2 id="kpi-total-ventas" class="text-2xl font-black text-indigo-600 mt-1">Q0.00</h2>
+          <p class="text-[10px] text-emerald-600 font-bold mt-1">✓ Facturación acumulada</p>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border shadow-sm border-blue-100">
+          <p class="text-xs font-bold text-slate-400">Total de Pedidos Completados</p>
+          <h2 id="kpi-total-pedidos" class="text-2xl font-black text-blue-600 mt-1">0</h2>
+          <p class="text-[10px] text-slate-500 mt-1">Transacciones procesadas</p>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border shadow-sm border-amber-100">
+          <p class="text-xs font-bold text-slate-400">Producto Estrella</p>
+          <h2 id="kpi-prod-estrella" class="text-lg font-black text-amber-600 mt-1 truncate">---</h2>
+          <p class="text-[10px] text-slate-500 mt-1">Más unidades vendidas</p>
+        </div>
+      </div>
+
+      <!-- GRÁFICO DE VENTAS -->
+      <div class="bg-white p-5 rounded-2xl border space-y-3 shadow-sm">
+        <h4 class="font-bold text-sm text-slate-800">Gráfico de Ventas por Producto</h4>
+        <div class="h-64"><canvas id="chartVentas"></canvas></div>
+      </div>
+
+      <!-- HISTORIAL DETALLADO DE TRANSACCIONES -->
+      <div class="bg-white rounded-2xl border p-5 space-y-3 shadow-sm overflow-x-auto">
+        <div class="flex justify-between items-center border-b pb-2">
+          <div>
+            <h4 class="font-bold text-sm text-slate-800">Historial General de Ventas y Transacciones</h4>
+            <p class="text-[11px] text-slate-500">Registro histórico de compras realizadas en la plataforma y en refugio.</p>
+          </div>
+          <span class="text-xs bg-slate-100 font-bold text-slate-600 px-3 py-1 rounded-full">Reporte Oficial</span>
+        </div>
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-100 uppercase font-bold text-slate-600">
+            <tr>
+              <th class="p-3">ID Pedido</th>
+              <th class="p-3">Cliente</th>
+              <th class="p-3">Tipo / Canal</th>
+              <th class="p-3">Productos Adquiridos</th>
+              <th class="p-3">Método de Pago</th>
+              <th class="p-3">Monto Total</th>
+              <th class="p-3">Estado</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-historial-metricas"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
 </div>
+
+<!-- MODAL NUEVO PRODUCTO -->
+<div id="modal-prod" class="fixed inset-0 bg-slate-900/50 hidden z-50 flex items-center justify-center p-4">
+  <form onsubmit="guardarNuevoProd(event)" class="bg-white rounded-3xl max-w-md w-full p-6 space-y-3 text-xs shadow-xl">
+    <h3 class="font-black text-slate-800 border-b pb-2 text-sm">Agregar Producto</h3>
+    
+    <div>
+      <label class="block font-bold text-slate-700 mb-1">Nombre *</label>
+      <input type="text" id="p-nombre" placeholder="Ej. Alimento Adulto 5kg" required class="w-full p-2 border rounded-xl">
+    </div>
+
+    <div class="grid grid-cols-2 gap-2">
+      <div>
+        <label class="block font-bold text-slate-700 mb-1">Categoría</label>
+        <select id="p-cat" class="w-full p-2 border rounded-xl bg-white">
+          <option value="Comida">Comida</option>
+          <option value="Medicina">Medicina</option>
+          <option value="Juguetes">Juguetes</option>
+          <option value="Accesorios">Accesorios</option>
+        </select>
+      </div>
+      <div>
+        <label class="block font-bold text-slate-700 mb-1">Precio (Q) *</label>
+        <input type="number" step="0.01" id="p-precio" placeholder="0.00" required class="w-full p-2 border rounded-xl">
+      </div>
+    </div>
+
+    <div>
+      <label class="block font-bold text-slate-700 mb-1">Stock Inicial *</label>
+      <input type="number" id="p-stock" placeholder="10" required class="w-full p-2 border rounded-xl">
+    </div>
+
+    <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
+      <label class="block font-bold text-slate-700">Imagen del Producto</label>
+      <div>
+        <label class="block text-[10px] text-slate-500 mb-1">Seleccionar desde tu equipo (JPG, PNG):</label>
+        <input type="file" id="p-img-file" accept="image/*" onchange="previewImagen(event)" class="w-full text-[10px] text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[11px] file:font-bold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 cursor-pointer">
+      </div>
+
+      <div id="p-img-preview-box" class="hidden pt-1 text-center">
+        <span class="text-[10px] font-bold text-slate-400 block mb-1">Vista Previa:</span>
+        <img id="p-img-preview" src="" class="w-16 h-16 object-cover rounded-xl border mx-auto shadow-sm">
+      </div>
+    </div>
+
+    <div class="flex gap-2 pt-2">
+      <button type="button" onclick="toggleModalProd()" class="w-1/2 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-bold">Cancelar</button>
+      <button type="submit" class="w-1/2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition">Guardar</button>
+    </div>
+  </form>
+</div>
+
+<!-- PLANTILLA OCULTA PARA PDF -->
+<div class="hidden">
+  <div id="pdf-template" class="p-8 bg-white text-slate-800 space-y-4 max-w-xl text-xs">
+    <h1 class="text-xl font-black text-indigo-600">Huellitas Refugio - Factura Oficial</h1>
+    <p id="pdf-ord-id" class="font-bold">#PED-0000</p>
+    <div id="pdf-client-box" class="bg-slate-50 p-3 rounded-xl border text-[11px]"></div>
+    <table class="w-full text-left divide-y"><tbody id="pdf-items-body"></tbody></table>
+    <p class="font-black text-right text-sm">Total: <span id="pdf-total" class="text-indigo-600">Q0.00</span></p>
+  </div>
+</div>
+
+<!-- LÓGICA JAVASCRIPT REORGANIZADA -->
+<script>
+  // Cambiador de Pestañas Principales (Solicitudes, Empleados, Shop)
+  function switchMainTab(tabName) {
+      document.querySelectorAll('.tab-btn-main').forEach(btn => {
+          if (btn.dataset.tab === tabName) {
+              btn.classList.add('active', 'border-indigo-600', 'text-indigo-600', 'font-bold');
+              btn.classList.remove('border-transparent', 'text-slate-500');
+          } else {
+              btn.classList.remove('active', 'border-indigo-600', 'text-indigo-600', 'font-bold');
+              btn.classList.add('border-transparent', 'text-slate-500');
+          }
+      });
+
+      document.querySelectorAll('.tab-content-main').forEach(content => {
+          content.classList.add('hidden');
+      });
+
+      const target = document.getElementById(`admin-${tabName}`);
+      if (target) {
+          target.classList.remove('hidden');
+      }
+
+      if (tabName === 'shop') {
+          // Por defecto al entrar a la tienda activa 'pedidos' si no hay otra seleccionada
+          const activeSubTab = document.querySelector('.tab-btn-shop.bg-white');
+          const subName = activeSubTab ? activeSubTab.dataset.subtab : 'pedidos';
+          switchShopSubTab(subName);
+      }
+  }
+
+  // Cambiador de Sub-Pestañas dentro de la Tienda (Shop)
+  function switchShopSubTab(subTabName) {
+      document.querySelectorAll('.tab-btn-shop').forEach(btn => {
+          if (btn.dataset.subtab === subTabName) {
+              btn.classList.add('bg-white', 'text-indigo-700', 'shadow-sm', 'font-bold');
+              btn.classList.remove('text-slate-600', 'hover:bg-slate-200/60');
+          } else {
+              btn.classList.remove('bg-white', 'text-indigo-700', 'shadow-sm', 'font-bold');
+              btn.classList.add('text-slate-600', 'hover:bg-slate-200/60');
+          }
+      });
+
+      document.querySelectorAll('.tab-content-shop').forEach(content => {
+          content.classList.add('hidden');
+      });
+
+      const target = document.getElementById(`shop-${subTabName}`);
+      if (target) {
+          target.classList.remove('hidden');
+      }
+
+      if (subTabName === 'cobro') cargarSelectorPos();
+      if (subTabName === 'metricas') renderizarMetricasYReporte();
+  }
+
+  // ALMACENAMIENTO DE DATOS REALES (SISTEMA LIMPIO SIN DATOS DE PRUEBA)
+  let productos = JSON.parse(localStorage.getItem('huellitas_productos')) || [];
+  let historialVentas = JSON.parse(localStorage.getItem('huellitas_historial')) || [];
+
+  let descPos = 0;
+  let chartInstance = null;
+  let tempImgData = "";
+
+  window.addEventListener('storage', (e) => {
+      if(e.key === 'huellitas_historial' || e.key === 'huellitas_productos') {
+          productos = JSON.parse(localStorage.getItem('huellitas_productos')) || [];
+          historialVentas = JSON.parse(localStorage.getItem('huellitas_historial')) || [];
+          actualizarTodo();
+      }
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+      actualizarTodo();
+      initChart();
+  });
+
+  function guardarDatos() {
+      localStorage.setItem('huellitas_productos', JSON.stringify(productos));
+      localStorage.setItem('huellitas_historial', JSON.stringify(historialVentas));
+  }
+
+  function actualizarTodo() {
+      renderizarPedidos();
+      renderizarInventario();
+      cargarSelectorPos();
+      renderizarMetricasYReporte();
+      if(chartInstance) actualizarChart();
+  }
+
+  function renderizarPedidos() {
+      const dom = historialVentas.filter(o => o.tipo === 'Domicilio');
+      const tie = historialVentas.filter(o => o.tipo === 'Tienda');
+
+      const tbodyDom = document.getElementById('tbody-domicilio');
+      if(tbodyDom) {
+          tbodyDom.innerHTML = dom.length === 0 ? `<tr><td colspan="5" class="p-4 text-center text-slate-400">No hay órdenes a domicilio activas</td></tr>` :
+          dom.map(o => `
+              <tr class="border-b">
+                  <td class="p-3 font-bold text-indigo-600">${o.id}</td>
+                  <td class="p-3">${o.clienteNombre}<br><span class="text-[10px] text-slate-400">${o.clienteTel || ''}</span></td>
+                  <td class="p-3">${o.metodoPago}<br><span class="font-bold ${o.estadoPago === 'PAGADO' ? 'text-emerald-600' : 'text-amber-600'}">${o.estadoPago}</span></td>
+                  <td class="p-3 font-bold">Q${o.total.toFixed(2)}</td>
+                  <td class="p-3">
+                      ${o.estadoPago.includes('PENDIENTE DE VERIFICACIÓN') ? `
+                          <button onclick="confirmarPago('${o.id}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold transition">✓ Confirmar Pago</button>
+                      ` : `
+                          <div class="flex flex-wrap gap-1">
+                              ${["1. Tomando", "2. Aceptado", "3. Procesando", "4. Empacando", "5. Finalizar"].map(st => `
+                                  <button onclick="cambiarFlujo('${o.id}', '${st}')" class="px-1.5 py-0.5 text-[9px] rounded ${o.estadoOrden === st ? 'bg-indigo-600 text-white font-bold' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">${st}</button>
+                              `).join('')}
+                          </div>
+                      `}
+                  </td>
+              </tr>
+          `).join('');
+      }
+
+      const tbodyTie = document.getElementById('tbody-tienda');
+      if(tbodyTie) {
+          tbodyTie.innerHTML = tie.length === 0 ? `<tr><td colspan="5" class="p-4 text-center text-slate-400">No hay órdenes para retirar en tienda activas</td></tr>` :
+          tie.map(o => `
+              <tr class="border-b">
+                  <td class="p-3 font-bold text-indigo-600">${o.id}</td>
+                  <td class="p-3">${o.clienteNombre}</td>
+                  <td class="p-3">
+                      <div class="flex flex-wrap gap-1">
+                          ${["1. Tomando", "2. Aceptado", "3. Procesando", "4. Empacando", "5. Finalizar"].map(st => `
+                              <button onclick="cambiarFlujo('${o.id}', '${st}')" class="px-1.5 py-0.5 text-[9px] rounded ${o.estadoOrden === st ? 'bg-indigo-600 text-white font-bold' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">${st}</button>
+                          `).join('')}
+                      </div>
+                  </td>
+                  <td class="p-3 font-bold">Q${o.total.toFixed(2)}</td>
+                  <td class="p-3">
+                      ${o.estadoOrden === '5. Finalizar' && !o.estadoPago.includes('PAGADO EN TIENDA') ? `
+                          <span class="px-2 py-1 bg-amber-100 text-amber-800 font-bold text-[10px] rounded-full"> Listo en Caja</span>
+                      ` : o.estadoPago.includes('PAGADO EN TIENDA') ? `
+                          <span class="px-2 py-1 bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded-full">✓ Cobrado</span>
+                      ` : `<span class="px-2 py-1 bg-slate-100 text-[10px] rounded-full">En Proceso</span>`}
+                  </td>
+              </tr>
+          `).join('');
+      }
+  }
+
+  function cambiarFlujo(id, st) {
+      const o = historialVentas.find(x => x.id === id);
+      if(o) {
+          o.estadoOrden = st;
+          if(o.tipo === 'Domicilio' && st === '5. Finalizar') descontarStock(o);
+          guardarDatos();
+          actualizarTodo();
+      }
+  }
+
+  function confirmarPago(id) {
+      const o = historialVentas.find(x => x.id === id);
+      if(o) {
+          o.estadoPago = "PAGADO";
+          o.estadoOrden = "2. Aceptado";
+          descontarStock(o);
+          guardarDatos();
+          actualizarTodo();
+      }
+  }
+
+  function descontarStock(o) {
+      if(o.stockDescontado) return;
+      o.itemsDetalle.forEach(i => {
+          const p = productos.find(x => x.id === i.id);
+          if(p) p.stock = Math.max(0, p.stock - i.cantidad);
+      });
+      o.stockDescontado = true;
+  }
+
+  function cargarSelectorPos() {
+      const list = historialVentas.filter(o => o.tipo === 'Tienda' && o.estadoOrden === '5. Finalizar' && !o.estadoPago.includes('PAGADO EN TIENDA'));
+      const sel = document.getElementById('select-pos-order');
+      if(!sel) return;
+      sel.innerHTML = list.length === 0 ? `<option value="">-- No hay pedidos listos para cobro --</option>` :
+          `<option value="">-- Selecciona pedido --</option>` + list.map(o => `<option value="${o.id}">${o.id} - ${o.clienteNombre} (Q${o.total.toFixed(2)})</option>`).join('');
+      cargarDetallePos();
+  }
+
+  function cargarDetallePos() {
+      const sel = document.getElementById('select-pos-order');
+      if(!sel) return;
+      const id = sel.value;
+      const box = document.getElementById('pos-details');
+      if(!id) { box.classList.add('hidden'); return; }
+      const o = historialVentas.find(x => x.id === id);
+      box.classList.remove('hidden');
+      document.getElementById('pos-id').innerText = `#${o.id}`;
+      document.getElementById('pos-cli').innerText = `Cliente: ${o.clienteNombre}`;
+      document.getElementById('pos-items').innerHTML = o.itemsDetalle.map(i => `<li>${i.nombre} (x${i.cantidad}) - Q${(i.precio*i.cantidad).toFixed(2)}</li>`).join('');
+      document.getElementById('pos-total').innerText = `Q${o.total.toFixed(2)}`;
+      descPos = 0;
+  }
+
+  function toggleCuponPos() {
+      const m = document.querySelector('input[name="pos-method"]:checked').value;
+      document.getElementById('pos-cupon-box').classList.toggle('hidden', m !== 'Cupón Refugio');
+  }
+
+  function aplicarCuponPos() {
+      const code = document.getElementById('pos-cupon-code').value.trim().toUpperCase();
+      const id = document.getElementById('select-pos-order').value;
+      const o = historialVentas.find(x => x.id === id);
+      if(code === 'REFUGIO10' && o) {
+          descPos = o.subtotal * 0.10;
+          document.getElementById('pos-cupon-msg').innerText = `Descuento Q${descPos.toFixed(2)} aplicado`;
+          document.getElementById('pos-total').innerText = `Q${(o.subtotal - descPos).toFixed(2)}`;
+      } else alert('Cupón inválido');
+  }
+
+  function completarCobroRefugio() {
+      const id = document.getElementById('select-pos-order').value;
+      const o = historialVentas.find(x => x.id === id);
+      if(!o) return;
+      const m = document.querySelector('input[name="pos-method"]:checked').value;
+      if(descPos > 0) o.total = o.subtotal - descPos;
+      o.metodoPago = `Presencial (${m})`;
+      o.estadoPago = "PAGADO EN TIENDA";
+      descontarStock(o);
+      guardarDatos();
+      actualizarTodo();
+      
+      document.getElementById('pdf-ord-id').innerText = `#${o.id}`;
+      document.getElementById('pdf-client-box').innerHTML = `<p>Cliente: ${o.clienteNombre}</p><p>Pago: ${o.estadoPago}</p>`;
+      document.getElementById('pdf-items-body').innerHTML = o.itemsDetalle.map(i => `<tr><td>${i.nombre}</td><td>x${i.cantidad}</td><td class="text-right">Q${(i.precio*i.cantidad).toFixed(2)}</td></tr>`).join('');
+      document.getElementById('pdf-total').innerText = `Q${o.total.toFixed(2)}`;
+      const el = document.getElementById('pdf-template');
+      el.parentElement.classList.remove('hidden');
+      html2pdf().from(el).save(`Factura_${o.id}.pdf`).then(() => el.parentElement.classList.add('hidden'));
+      
+      alert(`Cobro finalizado con éxito para ${o.id}`);
+  }
+
+  function previewImagen(event) {
+      const file = event.target.files[0];
+      if (file) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+              tempImgData = e.target.result;
+              document.getElementById('p-img-preview').src = tempImgData;
+              document.getElementById('p-img-preview-box').classList.remove('hidden');
+          };
+          reader.readAsDataURL(file);
+      } else {
+          tempImgData = "";
+          document.getElementById('p-img-preview-box').classList.add('hidden');
+      }
+  }
+
+  function renderizarInventario() {
+      const searchInput = document.getElementById('inv-search');
+      if(!searchInput) return;
+      const q = searchInput.value.toLowerCase();
+      const tbodyInv = document.getElementById('tbody-inventario');
+      if(!tbodyInv) return;
+
+      if (productos.length === 0) {
+          tbodyInv.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">No hay productos registrados en el inventario</td></tr>`;
+          return;
+      }
+
+      tbodyInv.innerHTML = productos.filter(p => p.nombre.toLowerCase().includes(q)).map(p => `
+          <tr class="border-b hover:bg-slate-50">
+              <td class="p-3 font-bold">${p.id}</td>
+              <td class="p-3 flex items-center gap-3">
+                  <img src="${p.img || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=300'}" class="w-10 h-10 object-cover rounded-xl border border-slate-200 shadow-sm">
+                  <span class="font-bold text-slate-800">${p.nombre}</span>
+              </td>
+              <td class="p-3">${p.categoria}</td>
+              <td class="p-3 font-bold ${p.stock <= 5 ? 'text-red-600 font-extrabold' : ''}">${p.stock}</td>
+              <td class="p-3 font-semibold">Q${p.precio.toFixed(2)}</td>
+              <td class="p-3"><button onclick="toggleVis('${p.id}')" class="text-xs font-bold">${p.visible ? '👁 Visible' : 'Oculto'}</button></td>
+              <td class="p-3 text-right"><button onclick="eliminarProd('${p.id}')" class="text-red-500 font-bold hover:underline">Eliminar</button></td>
+          </tr>
+      `).join('');
+  }
+
+  function toggleVis(id) { const p = productos.find(x => x.id === id); if(p) p.visible = !p.visible; guardarDatos(); actualizarTodo(); }
+  function eliminarProd(id) { productos = productos.filter(x => x.id !== id); guardarDatos(); actualizarTodo(); }
+  function toggleModalProd() { document.getElementById('modal-prod').classList.toggle('hidden'); }
+
+  function guardarNuevoProd(e) {
+      e.preventDefault();
+      const defaultImg = "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=300";
+      const imagenFinal = tempImgData || defaultImg;
+
+      productos.push({
+          id: "PROD-" + String(productos.length + 1).padStart(3, '0'),
+          nombre: document.getElementById('p-nombre').value,
+          categoria: document.getElementById('p-cat').value,
+          precio: parseFloat(document.getElementById('p-precio').value),
+          stock: parseInt(document.getElementById('p-stock').value),
+          visible: true,
+          img: imagenFinal
+      });
+
+      tempImgData = "";
+      document.getElementById('p-img-file').value = "";
+      document.getElementById('p-img-preview-box').classList.add('hidden');
+      document.getElementById('p-nombre').value = "";
+      document.getElementById('p-precio').value = "";
+      document.getElementById('p-stock').value = "";
+
+      guardarDatos();
+      toggleModalProd();
+      actualizarTodo();
+  }
+
+  function renderizarMetricasYReporte() {
+      const pagosCompletados = historialVentas.filter(o => o.estadoPago.includes('PAGADO'));
+      const totalIngresos = pagosCompletados.reduce((acc, curr) => acc + curr.total, 0);
+      
+      const elVentas = document.getElementById('kpi-total-ventas');
+      const elPedidos = document.getElementById('kpi-total-pedidos');
+      if(elVentas) elVentas.innerText = `Q${totalIngresos.toFixed(2)}`;
+      if(elPedidos) elPedidos.innerText = pagosCompletados.length;
+
+      const conteoProds = {};
+      historialVentas.forEach(h => {
+          h.itemsDetalle.forEach(i => {
+              conteoProds[i.nombre] = (conteoProds[i.nombre] || 0) + i.cantidad;
+          });
+      });
+
+      let topProd = "N/A";
+      let maxCant = 0;
+      for(const [nombre, cant] of Object.entries(conteoProds)) {
+          if(cant > maxCant) {
+              maxCant = cant;
+              topProd = nombre;
+          }
+      }
+      const elTop = document.getElementById('kpi-prod-estrella');
+      if(elTop) elTop.innerText = topProd !== "N/A" ? `${topProd} (${maxCant})` : "N/A";
+
+      const tbodyHist = document.getElementById('tbody-historial-metricas');
+      if(tbodyHist) {
+          tbodyHist.innerHTML = historialVentas.length === 0 ? `<tr><td colspan="7" class="p-4 text-center text-slate-400">Sin historial registrado</td></tr>` :
+          historialVentas.map(h => `
+              <tr class="border-b hover:bg-slate-50">
+                  <td class="p-3 font-bold text-indigo-600">${h.id}</td>
+                  <td class="p-3 font-semibold">${h.clienteNombre}</td>
+                  <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${h.tipo === 'Domicilio' ? 'bg-blue-100 text-blue-700' : 'bg-indigo-100 text-indigo-700'}">${h.tipo}</span></td>
+                  <td class="p-3 text-[11px] text-slate-600">
+                      ${h.itemsDetalle.map(i => `• ${i.nombre} (x${i.cantidad})`).join('<br>')}
+                  </td>
+                  <td class="p-3 text-[11px]">${h.metodoPago}</td>
+                  <td class="p-3 font-black text-slate-800">Q${h.total.toFixed(2)}</td>
+                  <td class="p-3">
+                      <span class="px-2 py-1 rounded-full text-[10px] font-bold ${h.estadoPago.includes('PAGADO') ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                          ${h.estadoPago}
+                      </span>
+                  </td>
+              </tr>
+          `).join('');
+      }
+  }
+
+  function initChart() {
+      const canvas = document.getElementById('chartVentas');
+      if(!canvas) return;
+      const ctx = canvas.getContext('2d');
+      chartInstance = new Chart(ctx, {
+          type: 'bar',
+          data: { labels: [], datasets: [{ label: 'Unidades Vendidas', data: [], backgroundColor: '#4F46E5' }] },
+          options: { responsive: true, maintainAspectRatio: false }
+      });
+      actualizarChart();
+  }
+
+  function actualizarChart() {
+      if(!chartInstance) return;
+      const counts = {};
+      productos.forEach(p => counts[p.nombre] = 0);
+      historialVentas.forEach(h => h.itemsDetalle.forEach(i => counts[i.nombre] = (counts[i.nombre] || 0) + i.cantidad));
+      chartInstance.data.labels = Object.keys(counts);
+      chartInstance.data.datasets[0].data = Object.values(counts);
+      chartInstance.update();
+  }
+</script>
 {% endblock %}
