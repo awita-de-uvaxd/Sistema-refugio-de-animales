@@ -12,10 +12,230 @@
     <button onclick="switchMainTab('shop')" class="tab-btn-main px-5 py-4 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex" data-tab="shop"> Tienda </button>
   </nav>
 
-  <!-- Pestaña Principal 1: Adopciones -->
+<!-- Pestaña Principal 1: Adopciones y Reclamos Agrupados -->
   <div id="admin-adopciones" class="tab-content-main bg-white p-6 rounded-xl shadow-sm">
-    <h3 class="font-bold text-xl mb-6 text-indigo-900 border-b pb-2">Panel de Aprobaciones</h3>
-    <p class="text-slate-500 bg-slate-50 p-6 rounded-xl border text-center">Bandeja limpia. (Esperando conexión a BD)</p>
+    <h3 class="font-bold text-xl mb-6 text-indigo-900 border-b pb-2">Panel de Aprobaciones (Agrupado por Mascota)</h3>
+    
+    <div class="space-y-6">
+      {% if pacientes %}
+        {% for mascota in pacientes %}
+          <!-- Tarjeta de la Mascota -->
+          <div class="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+             <div class="bg-slate-50 p-4 flex gap-4 items-center border-b border-slate-200">
+                <div class="w-16 h-16 rounded-lg overflow-hidden border border-slate-300 bg-white">
+                    {% if mascota.foto %}<img src="{{ url_for('static', filename='uploads/' ~ mascota.foto) }}" class="w-full h-full object-cover">{% else %}<i data-lucide="paw-print"></i>{% endif %}
+                </div>
+                <div>
+                    <h4 class="font-black text-indigo-900 text-lg">Mascota: {{ mascota.nombre }}</h4>
+                    <p class="text-sm text-slate-500">ID: #{{ mascota.id }} | {{ mascota.especie }} ({{ mascota.sexo }})</p>
+                </div>
+             </div>
+             
+             <!-- Listado interno de Solicitudes y Reclamos -->
+             <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <!-- Adopciones -->
+                <div>
+                  <h5 class="text-sm font-bold text-emerald-700 border-b pb-1 mb-3"><i data-lucide="heart" class="w-4 h-4 inline mr-1"></i> Postulantes de Adopción</h5>
+                  {% set adopciones = mascota.solicitudes_recibidas|selectattr("estado", "equalto", "En Revisión")|list %}
+                  {% if adopciones %}
+                      <div class="space-y-3">
+                      {% for adop in adopciones %}
+                         <!-- Fila de la Lista (Aquí están los botones por fuera) -->
+                         <div class="flex justify-between items-center bg-white border border-emerald-100 p-3 rounded-lg shadow-sm flex-wrap gap-2">
+                             <div>
+                                 <p class="font-bold text-sm text-slate-800 flex items-center gap-1.5">
+                                     {{ adop.usuario_obj.nombre }}
+                                     <span id="badge_leido_adop_{{ adop.id }}" class="hidden bg-slate-200 text-slate-600 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">Revisado</span>
+                                 </p>
+                                 <p class="text-[10px] text-slate-500">DPI: {{ adop.dpi }} | {{ adop.tipo_vivienda }}</p>
+                             </div>
+                             <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                                 <!-- Opciones de Aceptar/Rechazar (Ocultas inicialmente) -->
+                                 <div id="acciones_adop_{{ adop.id }}" class="hidden items-center gap-1.5">
+                                     <form action="{{ url_for('procesar_adopcion', solicitud_id=adop.id, accion='rechazar') }}" method="POST">
+                                         <button type="submit" class="bg-red-100 hover:bg-red-200 text-red-700 p-2 rounded-lg transition" title="Rechazar Solicitud"><i data-lucide="x" class="w-4 h-4"></i></button>
+                                     </form>
+                                     <form action="{{ url_for('procesar_adopcion', solicitud_id=adop.id, accion='aceptar') }}" method="POST">
+                                         <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white p-2 rounded-lg transition shadow-sm" title="Aprobar y Entregar Mascota"><i data-lucide="check" class="w-4 h-4"></i></button>
+                                     </form>
+                                 </div>
+                                 <!-- Botón de Leer (Principal) -->
+                                 <button id="btn_leer_adop_{{ adop.id }}" onclick="abrirModalAdmin('adop_{{ adop.id }}')" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-3 py-2 rounded-lg text-xs font-bold transition">Leer CV Completo</button>
+                             </div>
+                         </div>
+                         
+                         <!-- MODAL OCULTO DEL CV (VERSION COMPLETA) -->
+                         <div id="modal-adop_{{ adop.id }}" class="hidden">
+                             <h2 class="text-xl font-black text-emerald-800 mb-4 border-b pb-2">Formulario Oficial: {{ adop.usuario_obj.nombre }}</h2>
+                             
+                             <div class="space-y-4 max-h-[65vh] overflow-y-auto custom-scroll pr-2 text-sm text-slate-700 pb-6">
+                                 {% set cv = adop.usuario_obj.perfil_cv %}
+                                 {% if cv %}
+                                     <!-- 1. Datos Personales -->
+                                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                        <h3 class="font-bold text-slate-800 border-b pb-2 mb-3 text-xs uppercase tracking-wider text-emerald-700">1. Datos Personales</h3>
+                                        <div class="grid grid-cols-2 gap-4 text-xs">
+                                            <div><p class="text-slate-400">DPI:</p><p class="font-bold text-slate-800">{{ cv.dpi }}</p></div>
+                                            <div><p class="text-slate-400">F. Nacimiento:</p><p class="font-bold text-slate-800">{{ cv.fecha_nacimiento }}</p></div>
+                                            <div><p class="text-slate-400">Teléfono:</p><p class="font-bold text-slate-800">{{ cv.telefono }}</p></div>
+                                            <div><p class="text-slate-400">Ocupación:</p><p class="font-bold text-slate-800">{{ cv.ocupacion }}</p></div>
+                                            <div class="col-span-2"><p class="text-slate-400">Dirección:</p><p class="font-bold text-slate-800">{{ cv.direccion }}</p></div>
+                                            <div class="col-span-2"><p class="text-slate-400">Redes Sociales:</p><p class="font-bold text-indigo-600">{{ cv.redes_sociales or 'No indicó' }}</p></div>
+                                        </div>
+                                     </div>
+
+                                     <!-- 2. Vivienda y Entorno -->
+                                     <div class="bg-white p-4 rounded-xl border border-slate-200">
+                                        <h3 class="font-bold text-slate-800 border-b pb-2 mb-3 text-xs uppercase tracking-wider text-emerald-700">2. Vivienda y Entorno Familiar</h3>
+                                        <div class="grid grid-cols-2 gap-4 text-xs mb-4">
+                                            <div><p class="text-slate-400">Inmueble:</p><p class="font-bold text-slate-800">{{ cv.tipo_vivienda }} ({{ cv.tenencia }})</p></div>
+                                            <div><p class="text-slate-400">Permiso Arrendador:</p><p class="font-bold text-slate-800">{{ cv.permiso_arrendador }}</p></div>
+                                            <div><p class="text-slate-400">Cerramiento:</p><p class="font-bold text-slate-800">{{ cv.cerramiento }}</p></div>
+                                            <div><p class="text-slate-400">Acuerdo Familiar:</p><p class="font-bold text-slate-800">{{ cv.acuerdo_familiar }}</p></div>
+                                        </div>
+                                        <div class="text-xs space-y-3 bg-slate-50 p-3 rounded-lg border">
+                                            <p><span class="text-slate-400 block mb-1">Integrantes de la casa:</span> <strong>{{ cv.integrantes }}</strong></p>
+                                            <p><span class="text-slate-400 block mb-1">Alergias en familia:</span> <strong>{{ cv.alergias_familia }}</strong></p>
+                                        </div>
+                                     </div>
+
+                                     <!-- 3. Historial de Mascotas -->
+                                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                        <h3 class="font-bold text-slate-800 border-b pb-2 mb-3 text-xs uppercase tracking-wider text-emerald-700">3. Historial de Mascotas</h3>
+                                        <div class="text-xs space-y-4">
+                                            <p><span class="text-slate-400 block mb-1">Mascotas Actuales:</span> <strong class="bg-white p-3 block rounded-lg border shadow-sm">{{ cv.mascotas_actuales }}</strong></p>
+                                            <p><span class="text-slate-400 block mb-1">Mascotas Anteriores (5 años):</span> <strong class="bg-white p-3 block rounded-lg border shadow-sm">{{ cv.mascotas_anteriores }}</strong></p>
+                                        </div>
+                                     </div>
+
+                                     <!-- 4. Cuidados y Estilo de Vida -->
+                                     <div class="bg-white p-4 rounded-xl border border-slate-200">
+                                        <h3 class="font-bold text-slate-800 border-b pb-2 mb-3 text-xs uppercase tracking-wider text-emerald-700">4. Cuidados y Presupuesto</h3>
+                                        <div class="grid grid-cols-2 gap-4 text-xs">
+                                            <div class="col-span-2"><p class="text-slate-400">Motivo de Adopción:</p><p class="font-bold text-slate-800 text-sm">"{{ cv.motivo_adopcion }}"</p></div>
+                                            <div><p class="text-slate-400">Presupuesto Mensual:</p><p class="font-black text-emerald-600 text-base">{{ cv.presupuesto }}</p></div>
+                                            <div><p class="text-slate-400">Tiempo Solo al Día:</p><p class="font-black text-amber-600 text-base">{{ cv.horas_solo }}</p></div>
+                                            <div class="col-span-2"><p class="text-slate-400">Lugar de Estancia:</p><p class="font-bold text-slate-800">{{ cv.lugar_estancia }}</p></div>
+                                            <div class="col-span-2 bg-slate-50 p-2 rounded border mt-2"><p class="text-slate-400">Plan de Viaje:</p><p class="font-bold text-slate-800">{{ cv.plan_viaje }}</p></div>
+                                            <div class="col-span-2 bg-slate-50 p-2 rounded border"><p class="text-slate-400">Plan Mudanza:</p><p class="font-bold text-slate-800">{{ cv.plan_mudanza }}</p></div>
+                                        </div>
+                                     </div>
+
+                                     <!-- 5. Responsabilidad -->
+                                     <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                                        <h3 class="font-bold text-indigo-900 border-b border-indigo-200 pb-2 mb-3 text-xs uppercase tracking-wider">5. Compromisos</h3>
+                                        <div class="grid grid-cols-2 gap-4 text-xs">
+                                            <div><p class="text-slate-500">Problemas de Conducta:</p><p class="font-bold text-indigo-900">{{ cv.problema_conducta }}</p></div>
+                                            <div><p class="text-slate-500">Gastos Emergencia:</p><p class="font-bold text-indigo-900">{{ cv.gastos_emergencia }} asume</p></div>
+                                            <div><p class="text-slate-500">Visitas Seguimiento:</p><p class="font-bold text-indigo-900">{{ cv.seguimiento }} acepta</p></div>
+                                            <div><p class="text-slate-500">Firma de Contrato:</p><p class="font-bold text-indigo-900">{{ cv.contrato }} acepta</p></div>
+                                        </div>
+                                     </div>
+
+                                     <!-- 6. Referencias -->
+                                     <div class="bg-white p-4 rounded-xl border border-slate-200">
+                                        <h3 class="font-bold text-slate-800 border-b pb-2 mb-3 text-xs uppercase tracking-wider text-emerald-700">6. Referencias</h3>
+                                        <div class="grid grid-cols-2 gap-4 text-xs">
+                                            <div class="bg-slate-50 p-3 rounded border"><p class="text-slate-400 mb-1">Referencia 1:</p><p class="font-bold text-slate-800">{{ cv.ref1_nombre }}</p><p class="text-slate-600">{{ cv.ref1_tel }}</p></div>
+                                            <div class="bg-slate-50 p-3 rounded border"><p class="text-slate-400 mb-1">Referencia 2:</p><p class="font-bold text-slate-800">{{ cv.ref2_nombre }}</p><p class="text-slate-600">{{ cv.ref2_tel }}</p></div>
+                                        </div>
+                                     </div>
+
+                                 {% else %}
+                                     <p class="italic text-red-500 p-4 bg-red-50 rounded-lg border border-red-200">Error: El formulario CV está vacío o corrupto.</p>
+                                 {% endif %}
+                             </div>
+                             
+                             <!-- BOTÓN MAGICO DE "MARCAR LEÍDO" -->
+                             <div class="mt-4 pt-4 border-t border-slate-200">
+                                 <button type="button" onclick="marcarComoLeido('adop_{{ adop.id }}')" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3.5 rounded-xl transition shadow-sm flex items-center justify-center">
+                                     <i data-lucide="check-circle" class="w-5 h-5 inline mr-2"></i> Marcar Formulario como Leído y Volver
+                                 </button>
+                             </div>
+                         </div>
+                      {% endfor %}
+                      </div>
+                  {% else %}
+                      <p class="text-xs text-slate-400 italic">No hay postulantes.</p>
+                  {% endif %}
+                </div>
+                
+                <!-- Reclamos -->
+                <div>
+                  <h5 class="text-sm font-bold text-red-700 border-b pb-1 mb-3"><i data-lucide="alert-triangle" class="w-4 h-4 inline mr-1"></i> Reclamos de Propiedad</h5>
+                  {% set reclamos = mascota.reclamos_recibidos|selectattr("estado", "equalto", "En Revisión")|list %}
+                  {% if reclamos %}
+                      <div class="space-y-3">
+                      {% for rec in reclamos %}
+                          <!-- Fila de la Lista -->
+                          <div class="flex justify-between items-center bg-white border border-red-100 p-3 rounded-lg shadow-sm flex-wrap gap-2">
+                             <div>
+                                 <p class="font-bold text-sm text-slate-800 flex items-center gap-1.5">
+                                     {{ rec.usuario_obj.nombre }}
+                                     <span id="badge_leido_rec_{{ rec.id }}" class="hidden bg-slate-200 text-slate-600 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">Revisado</span>
+                                 </p>
+                                 <p class="text-[10px] text-slate-500">Alega que responde a: <strong class="text-red-600">{{ rec.nombre_responde }}</strong></p>
+                             </div>
+                             <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                                 <!-- Opciones (Ocultas) -->
+                                 <div id="acciones_rec_{{ rec.id }}" class="hidden items-center gap-1.5">
+                                     <form action="{{ url_for('procesar_reclamo', reclamo_id=rec.id, accion='rechazar') }}" method="POST">
+                                         <button type="submit" class="bg-red-100 hover:bg-red-200 text-red-700 p-2 rounded-lg transition" title="Rechazar Reclamo"><i data-lucide="x" class="w-4 h-4"></i></button>
+                                     </form>
+                                     <form action="{{ url_for('procesar_reclamo', reclamo_id=rec.id, accion='aceptar') }}" method="POST">
+                                         <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white p-2 rounded-lg transition shadow-sm" title="Devolver Mascota al Dueño"><i data-lucide="check" class="w-4 h-4"></i></button>
+                                     </form>
+                                 </div>
+                                 <button id="btn_leer_rec_{{ rec.id }}" onclick="abrirModalAdmin('rec_{{ rec.id }}')" class="bg-red-100 hover:bg-red-200 text-red-800 px-3 py-2 rounded-lg text-xs font-bold transition">Ver Evidencia</button>
+                             </div>
+                         </div>
+                         
+                         <!-- MODAL OCULTO DEL RECLAMO -->
+                         <div id="modal-rec_{{ rec.id }}" class="hidden">
+                             <h2 class="text-xl font-black text-red-800 mb-4 border-b pb-2">Reclamo Oficial de Propiedad</h2>
+                             <div class="space-y-4 text-sm text-slate-700 pb-6">
+                                 <div class="bg-white p-4 rounded-lg border border-slate-200">
+                                     <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">Marcas Únicas Justificadas</p>
+                                     <p class="italic">"{{ rec.marcas_unicas }}"</p>
+                                 </div>
+                                 {% if rec.evidencia_fotos %}
+                                  <div>
+                                    <p class="text-[10px] font-bold text-slate-500 uppercase mb-2">Evidencia Fotográfica del Dueño:</p>
+                                    <div class="flex gap-2 overflow-x-auto pb-2">
+                                      {% set fotos_rec = rec.evidencia_fotos.split(',') %}
+                                      {% for f in fotos_rec %}
+                                        <a href="{{ url_for('static', filename='uploads/' ~ f) }}" target="_blank" class="w-20 h-20 bg-slate-200 rounded-lg overflow-hidden border border-slate-300 flex-shrink-0 block hover:opacity-80 transition shadow-sm"><img src="{{ url_for('static', filename='uploads/' ~ f) }}" class="w-full h-full object-cover"></a>
+                                      {% endfor %}
+                                    </div>
+                                  </div>
+                                {% endif %}
+                             </div>
+                             
+                             <div class="mt-4 pt-4 border-t border-slate-200">
+                                 <button type="button" onclick="marcarComoLeido('rec_{{ rec.id }}')" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3.5 rounded-xl transition shadow-sm flex items-center justify-center">
+                                     <i data-lucide="check-circle" class="w-5 h-5 inline mr-2"></i> Marcar Evidencia como Revisada y Volver
+                                 </button>
+                             </div>
+                         </div>
+                      {% endfor %}
+                      </div>
+                  {% else %}
+                      <p class="text-xs text-slate-400 italic">No hay reclamos.</p>
+                  {% endif %}
+                </div>
+                
+             </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="text-center p-10 bg-slate-50 border rounded-2xl">
+            <i data-lucide="inbox" class="w-10 h-10 mx-auto text-slate-300 mb-2"></i>
+            <p class="text-slate-500 font-bold">Bandeja limpia.</p>
+            <p class="text-xs text-slate-400">No hay mascotas con solicitudes de adopción ni reclamos pendientes.</p>
+        </div>
+      {% endif %}
+    </div>
   </div>
 
   <!-- Pestaña Principal 2: Auditoría y Registro de Empleados -->
@@ -708,5 +928,59 @@
       chartInstance.data.datasets[0].data = Object.values(counts);
       chartInstance.update();
   }
+
+// Abrir Modal
+  function abrirModalAdmin(suffix) {
+      const html = document.getElementById('modal-' + suffix).innerHTML;
+      openModal(html);
+      lucide.createIcons();
+  }
+
+  // Marcar como leído y revelar botones externamente
+  function marcarComoLeido(id) {
+      closeModal(); // Cierra el pop-up inmediatamente
+      
+      // 1. Mostrar la etiqueta "Revisado"
+      const badge = document.getElementById('badge_leido_' + id);
+      if(badge) badge.classList.remove('hidden');
+
+      // 2. Apagar el botón principal para que quede gris (Indicador visual)
+      const btnLeer = document.getElementById('btn_leer_' + id);
+      if(btnLeer) {
+          // Limpia colores anteriores
+          btnLeer.classList.remove('bg-emerald-100', 'hover:bg-emerald-200', 'text-emerald-800');
+          btnLeer.classList.remove('bg-red-100', 'hover:bg-red-200', 'text-red-800');
+          // Lo vuelve neutral
+          btnLeer.classList.add('bg-slate-100', 'hover:bg-slate-200', 'text-slate-500', 'shadow-none');
+          btnLeer.innerText = "Releer Info";
+      }
+
+      // 3. Mostrar los botones de Aceptar/Rechazar por fuera
+      const acciones = document.getElementById('acciones_' + id);
+      if(acciones) {
+          acciones.classList.remove('hidden');
+          acciones.classList.add('flex');
+      }
+
+      // 4. Guardar en memoria para que no se pierda al darle F5
+      let leidos = JSON.parse(localStorage.getItem('admin_solicitudes_leidas') || '[]');
+      if(!leidos.includes(id)) {
+          leidos.push(id);
+          localStorage.setItem('admin_solicitudes_leidas', JSON.stringify(leidos));
+      }
+      lucide.createIcons();
+  }
+
+  // Cargar estados previos al iniciar la página
+  document.addEventListener('DOMContentLoaded', () => {
+      let leidos = JSON.parse(localStorage.getItem('admin_solicitudes_leidas') || '[]');
+      leidos.forEach(id => {
+          // Si el elemento sigue en la lista, aplicarle el estado "Leído"
+          if(document.getElementById('badge_leido_' + id)) {
+              marcarComoLeido(id);
+          }
+      });
+  });
+  
 </script>
 {% endblock %}

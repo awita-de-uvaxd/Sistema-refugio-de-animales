@@ -85,6 +85,8 @@ class ReclamoPropiedad(db.Model):
     estado = db.Column(db.String(20), default="En Revisión")
     paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=False)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    paciente_obj = db.relationship('Paciente', backref='reclamos_recibidos', lazy=True)
+    usuario_obj = db.relationship('Usuario', backref='reclamos_enviados', lazy=True)
 
 class Paciente(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -252,7 +254,55 @@ def usuario():
 def admin(): 
     if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
     empleados_db = Usuario.query.filter(Usuario.rol.in_(['veterinario', 'rescatista'])).all()
-    return render_template('admin.html', empleados=empleados_db)
+    
+    # MAGIA AQUÍ: Solo traemos a los Pacientes que tengan al menos 1 adopción o 1 reclamo "En Revisión"
+    pacientes_con_solicitudes = Paciente.query.filter(
+        Paciente.solicitudes_recibidas.any(estado='En Revisión') | 
+        Paciente.reclamos_recibidos.any(estado='En Revisión')
+    ).all()
+    
+    return render_template('admin.html', empleados=empleados_db, pacientes=pacientes_con_solicitudes)
+
+@app.route('/procesar_adopcion/<int:solicitud_id>/<accion>', methods=['POST'])
+def procesar_adopcion(solicitud_id, accion):
+    if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
+    solicitud = SolicitudAdopcion.query.get(solicitud_id)
+    if solicitud:
+        if accion == 'aceptar':
+            paciente = Paciente.query.get(solicitud.paciente_id)
+            paciente.disponible_adopcion = "Adoptado"
+            paciente.dueno_id = solicitud.usuario_id # Se transfiere el perro a "Mis Mascotas"
+            solicitud.estado = "Aprobada"
+            # Opcional: Borramos las demás solicitudes de este perrito para limpiar bandeja
+            otras = SolicitudAdopcion.query.filter_by(paciente_id=paciente.id, estado='En Revisión').all()
+            for o in otras:
+                if o.id != solicitud.id: db.session.delete(o)
+            flash("Adopción aprobada. La mascota ahora está en el perfil del usuario.", "success")
+        elif accion == 'rechazar':
+            db.session.delete(solicitud) # Se elimina si es rechazada
+            flash("Solicitud de adopción rechazada y eliminada.", "success")
+        db.session.commit()
+    return redirect(url_for('admin'))
+
+@app.route('/procesar_reclamo/<int:reclamo_id>/<accion>', methods=['POST'])
+def procesar_reclamo(reclamo_id, accion):
+    if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
+    reclamo = ReclamoPropiedad.query.get(reclamo_id)
+    if reclamo:
+        if accion == 'aceptar':
+            paciente = Paciente.query.get(reclamo.paciente_id)
+            paciente.disponible_adopcion = "Reclamado Oficialmente"
+            paciente.dueno_id = reclamo.usuario_id
+            reclamo.estado = "Aprobado"
+            # Si alguien más quería adoptarlo, borramos esas adopciones porque el perro tiene dueño
+            adopciones_pendientes = SolicitudAdopcion.query.filter_by(paciente_id=paciente.id, estado='En Revisión').all()
+            for a in adopciones_pendientes: db.session.delete(a)
+            flash("Reclamo aprobado. La mascota ha sido devuelta a su dueño original.", "success")
+        elif accion == 'rechazar':
+            db.session.delete(reclamo)
+            flash("Reclamo de propiedad rechazado y eliminado.", "success")
+        db.session.commit()
+    return redirect(url_for('admin'))
 
 # ==========================================
 # 4. RUTAS POST (CONEXIONES Y LÓGICA)
