@@ -91,7 +91,7 @@
           </div>
 
           <!-- Botones de Acción Inteligentes -->
-          {% if mi_perfil.dpi %}
+          {% if mi_cv and mi_cv.dpi %}
             <!-- Si ya llenó el CV, el botón es verde y envía el formulario -->
             <form action="{{ url_for('crear_solicitud', paciente_id=mascota.id) }}" method="POST">
               <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl transition flex items-center justify-center gap-2 mb-4 shadow-md">
@@ -191,42 +191,37 @@
       <p class="text-center text-slate-500 mb-8 text-sm border-b pb-4">Formulario de evaluación de hogar y compromiso responsable.</p>
       
       <form action="{{ url_for('actualizar_cv') }}" method="POST">
-        
-        <!-- 1. Datos Personales -->
         <fieldset>
           <legend>1. Datos Personales del Solicitante</legend>
           <div class="grid grid-cols-2 gap-4">
-            <div><label>DPI / Documento:</label><input type="text" name="dpi" value="{{ mi_perfil.dpi or '' }}" required placeholder="Ej. 1234 56789 0101"></div>
-            <div><label>Fecha de nacimiento:</label><input type="date" name="fecha_nacimiento" value="{{ mi_perfil.fecha_nacimiento or '' }}" required></div>
+            <div><label>DPI / Documento:</label><input type="text" name="dpi" value="{{ mi_cv.dpi if mi_cv else '' }}" required placeholder="Ej. 1234 56789 0101"></div>
+            <div><label>Fecha de nacimiento:</label><input type="date" name="fecha_nacimiento" value="{{ mi_cv.fecha_nacimiento if mi_cv else '' }}" required></div>
           </div>
           <div class="grid grid-cols-2 gap-4 mt-2">
-            <div><label>Teléfono / WhatsApp:</label><input type="tel" name="telefono" value="{{ mi_perfil.telefono or '' }}" required></div>
-            <div><label>Ocupación / Profesión:</label><input type="text" name="ocupacion" value="{{ mi_perfil.ocupacion or '' }}" required></div>
+            <div><label>Teléfono / WhatsApp:</label><input type="tel" name="telefono" value="{{ mi_cv.telefono if mi_cv else '' }}" required></div>
+            <div><label>Ocupación / Profesión:</label><input type="text" name="ocupacion" value="{{ mi_cv.ocupacion if mi_cv else '' }}" required></div>
           </div>
-          <label class="mt-2">Dirección exacta de residencia:</label>
-          <input type="text" name="direccion" value="{{ mi_perfil.direccion or '' }}" required>
-          <label class="mt-2">Red social (Opcional):</label>
-          <input type="text" name="redes_sociales" value="{{ mi_perfil.redes_sociales or '' }}" placeholder="@usuario o enlace">
+          <label class="mt-2">Dirección exacta de residencia:</label><input type="text" name="direccion" value="{{ mi_cv.direccion if mi_cv else '' }}" required>
+          <label class="mt-2">Red social (Opcional):</label><input type="text" name="redes_sociales" value="{{ mi_cv.redes_sociales if mi_cv else '' }}" placeholder="@usuario o enlace">
         </fieldset>
 
-        <!-- 2. Vivienda y Entorno -->
         <fieldset>
           <legend>2. Vivienda y Entorno Familiar</legend>
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label>Tipo de inmueble:</label>
               <select name="tipo_vivienda" required>
-                <option value="Casa" {% if mi_perfil.tipo_vivienda == 'Casa' %}selected{% endif %}>Casa</option>
-                <option value="Departamento" {% if mi_perfil.tipo_vivienda == 'Departamento' %}selected{% endif %}>Departamento</option>
-                <option value="Condominio" {% if mi_perfil.tipo_vivienda == 'Condominio' %}selected{% endif %}>Condominio cerrado</option>
+                <option value="Casa" {% if mi_cv and mi_cv.tipo_vivienda == 'Casa' %}selected{% endif %}>Casa</option>
+                <option value="Departamento" {% if mi_cv and mi_cv.tipo_vivienda == 'Departamento' %}selected{% endif %}>Departamento</option>
+                <option value="Condominio" {% if mi_cv and mi_cv.tipo_vivienda == 'Condominio' %}selected{% endif %}>Condominio cerrado</option>
               </select>
             </div>
             <div>
               <label>Tenencia:</label>
               <select name="tenencia" required>
-                <option value="Propia" {% if mi_perfil.tenencia == 'Propia' %}selected{% endif %}>Propia</option>
-                <option value="Rentada" {% if mi_perfil.tenencia == 'Rentada' %}selected{% endif %}>Rentada</option>
-                <option value="Familiar" {% if mi_perfil.tenencia == 'Familiar' %}selected{% endif %}>Familiar</option>
+                <option value="Propia" {% if mi_cv and mi_cv.tenencia == 'Propia' %}selected{% endif %}>Propia</option>
+                <option value="Rentada" {% if mi_cv and mi_cv.tenencia == 'Rentada' %}selected{% endif %}>Rentada</option>
+                <option value="Familiar" {% if mi_cv and mi_cv.tenencia == 'Familiar' %}selected{% endif %}>Familiar</option>
               </select>
             </div>
           </div>
@@ -234,85 +229,82 @@
             <div>
               <label>¿Cerramiento seguro (muros/portón)?</label>
               <select name="cerramiento" required>
-                <option value="Sí" {% if mi_perfil.cerramiento == 'Sí' %}selected{% endif %}>Sí, totalmente segura</option>
-                <option value="Parcial" {% if mi_perfil.cerramiento == 'Parcial' %}selected{% endif %}>Parcialmente</option>
-                <option value="No" {% if mi_perfil.cerramiento == 'No' %}selected{% endif %}>No tiene</option>
+                <option value="Sí" {% if mi_cv and mi_cv.cerramiento == 'Sí' %}selected{% endif %}>Sí, totalmente segura</option>
+                <option value="Parcial" {% if mi_cv and mi_cv.cerramiento == 'Parcial' %}selected{% endif %}>Parcialmente</option>
+                <option value="No" {% if mi_cv and mi_cv.cerramiento == 'No' %}selected{% endif %}>No tiene</option>
               </select>
             </div>
             <div>
               <label>Permiso del arrendador:</label>
               <select name="permiso_arrendador" required>
-                <option value="No Aplica" {% if mi_perfil.permiso_arrendador == 'No Aplica' %}selected{% endif %}>No aplica (Propia)</option>
-                <option value="Sí" {% if mi_perfil.permiso_arrendador == 'Sí' %}selected{% endif %}>Sí tengo permiso</option>
-                <option value="No" {% if mi_perfil.permiso_arrendador == 'No' %}selected{% endif %}>No tengo permiso</option>
+                <option value="No Aplica" {% if mi_cv and mi_cv.permiso_arrendador == 'No Aplica' %}selected{% endif %}>No aplica (Propia)</option>
+                <option value="Sí" {% if mi_cv and mi_cv.permiso_arrendador == 'Sí' %}selected{% endif %}>Sí tengo permiso</option>
+                <option value="No" {% if mi_cv and mi_cv.permiso_arrendador == 'No' %}selected{% endif %}>No tengo permiso</option>
               </select>
             </div>
           </div>
           <label class="mt-2">Personas que habitan en el hogar (relación y edades):</label>
-          <textarea name="integrantes" rows="2" required>{{ mi_perfil.integrantes or '' }}</textarea>
+          <textarea name="integrantes" rows="2" required>{{ mi_cv.integrantes if mi_cv else '' }}</textarea>
           
           <div class="grid grid-cols-2 gap-4 mt-2">
             <div>
               <label>¿Están todos de acuerdo?</label>
               <select name="acuerdo_familiar" required>
-                <option value="Sí" {% if mi_perfil.acuerdo_familiar == 'Sí' %}selected{% endif %}>Sí, absolutamente</option>
-                <option value="Parcial" {% if mi_perfil.acuerdo_familiar == 'Parcial' %}selected{% endif %}>Algunos dudan</option>
+                <option value="Sí" {% if mi_cv and mi_cv.acuerdo_familiar == 'Sí' %}selected{% endif %}>Sí, absolutamente</option>
+                <option value="Parcial" {% if mi_cv and mi_cv.acuerdo_familiar == 'Parcial' %}selected{% endif %}>Algunos dudan</option>
               </select>
             </div>
             <div>
               <label>¿Alergias en la familia?</label>
               <select name="alergias_familia" required>
-                <option value="No" {% if mi_perfil.alergias_familia == 'No' %}selected{% endif %}>No, ninguna</option>
-                <option value="Controlada" {% if mi_perfil.alergias_familia == 'Controlada' %}selected{% endif %}>Sí, controladas</option>
-                <option value="Severas" {% if mi_perfil.alergias_familia == 'Severas' %}selected{% endif %}>Sí, severas</option>
+                <option value="No" {% if mi_cv and mi_cv.alergias_familia == 'No' %}selected{% endif %}>No, ninguna</option>
+                <option value="Controlada" {% if mi_cv and mi_cv.alergias_familia == 'Controlada' %}selected{% endif %}>Sí, controladas</option>
+                <option value="Severas" {% if mi_cv and mi_cv.alergias_familia == 'Severas' %}selected{% endif %}>Sí, severas</option>
               </select>
             </div>
           </div>
         </fieldset>
 
-        <!-- 3. Historial de Mascotas -->
         <fieldset>
           <legend>3. Historial de Mascotas</legend>
           <label>¿Tienes otras mascotas? (Especie, edad, esterilizados/vacunados):</label>
-          <textarea name="mascotas_actuales" rows="2" required placeholder="Si no tienes, coloca 'Ninguna'">{{ mi_perfil.mascotas_actuales or '' }}</textarea>
+          <textarea name="mascotas_actuales" rows="2" required placeholder="Si no tienes, coloca 'Ninguna'">{{ mi_cv.mascotas_actuales if mi_cv else '' }}</textarea>
           <label class="mt-2">Mascotas en los últimos 5 años y qué ocurrió con ellas:</label>
-          <textarea name="mascotas_anteriores" rows="2" required>{{ mi_perfil.mascotas_anteriores or '' }}</textarea>
+          <textarea name="mascotas_anteriores" rows="2" required>{{ mi_cv.mascotas_anteriores if mi_cv else '' }}</textarea>
         </fieldset>
 
-        <!-- 4. Cuidados y Presupuesto -->
         <fieldset>
           <legend>4. Cuidados, Estilo de Vida y Presupuesto</legend>
           <div class="grid grid-cols-2 gap-4">
-            <div><label>¿Por qué deseas adoptar?</label><input type="text" name="motivo_adopcion" value="{{ mi_perfil.motivo_adopcion or '' }}" required></div>
-            <div><label>Presupuesto mensual estimado:</label><input type="text" name="presupuesto" value="{{ mi_perfil.presupuesto or '' }}" placeholder="Ej. Q. 400" required></div>
+            <div><label>¿Por qué deseas adoptar?</label><input type="text" name="motivo_adopcion" value="{{ mi_cv.motivo_adopcion if mi_cv else '' }}" required></div>
+            <div><label>Presupuesto mensual estimado:</label><input type="text" name="presupuesto" value="{{ mi_cv.presupuesto if mi_cv else '' }}" placeholder="Ej. Q. 400" required></div>
           </div>
           <div class="grid grid-cols-2 gap-4 mt-2">
-            <div><label>Horas que pasará solo:</label><input type="text" name="horas_solo" value="{{ mi_perfil.horas_solo or '' }}" required></div>
-            <div><label>Área de día y lugar para dormir:</label><input type="text" name="lugar_estancia" value="{{ mi_perfil.lugar_estancia or '' }}" required></div>
+            <div><label>Horas que pasará solo:</label><input type="text" name="horas_solo" value="{{ mi_cv.horas_solo if mi_cv else '' }}" required></div>
+            <div><label>Área de día y lugar para dormir:</label><input type="text" name="lugar_estancia" value="{{ mi_cv.lugar_estancia if mi_cv else '' }}" required></div>
           </div>
           <div class="grid grid-cols-2 gap-4 mt-2">
-            <div><label>En vacaciones/viaje, ¿quién lo cuidará?</label><input type="text" name="plan_viaje" value="{{ mi_perfil.plan_viaje or '' }}" required></div>
-            <div><label>En caso de mudanza, ¿qué pasará?</label><input type="text" name="plan_mudanza" value="{{ mi_perfil.plan_mudanza or '' }}" required></div>
+            <div><label>En vacaciones/viaje, ¿quién lo cuidará?</label><input type="text" name="plan_viaje" value="{{ mi_cv.plan_viaje if mi_cv else '' }}" required></div>
+            <div><label>En caso de mudanza, ¿qué pasará?</label><input type="text" name="plan_mudanza" value="{{ mi_cv.plan_mudanza if mi_cv else '' }}" required></div>
           </div>
         </fieldset>
 
-        <!-- 5. Compromiso -->
         <fieldset>
           <legend>5. Responsabilidad y Compromiso</legend>
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label>Si rompe objetos o ladra mucho:</label>
               <select name="problema_conducta" required>
-                <option value="Educar" {% if mi_perfil.problema_conducta == 'Educar' %}selected{% endif %}>Educar / Contratar Entrenador</option>
-                <option value="Devolver" {% if mi_perfil.problema_conducta == 'Devolver' %}selected{% endif %}>Lo devuelvo al refugio</option>
-                <option value="Regalar" {% if mi_perfil.problema_conducta == 'Regalar' %}selected{% endif %}>Lo regalo</option>
+                <option value="Educar" {% if mi_cv and mi_cv.problema_conducta == 'Educar' %}selected{% endif %}>Educar / Contratar Entrenador</option>
+                <option value="Devolver" {% if mi_cv and mi_cv.problema_conducta == 'Devolver' %}selected{% endif %}>Lo devuelvo al refugio</option>
+                <option value="Regalar" {% if mi_cv and mi_cv.problema_conducta == 'Regalar' %}selected{% endif %}>Lo regalo</option>
               </select>
             </div>
             <div>
               <label>¿Asumes gastos médicos de emergencia?</label>
               <select name="gastos_emergencia" required>
-                <option value="Sí" {% if mi_perfil.gastos_emergencia == 'Sí' %}selected{% endif %}>Sí, asumo responsabilidad</option>
-                <option value="No" {% if mi_perfil.gastos_emergencia == 'No' %}selected{% endif %}>No tengo recursos para eso</option>
+                <option value="Sí" {% if mi_cv and mi_cv.gastos_emergencia == 'Sí' %}selected{% endif %}>Sí, asumo responsabilidad</option>
+                <option value="No" {% if mi_cv and mi_cv.gastos_emergencia == 'No' %}selected{% endif %}>No tengo recursos para eso</option>
               </select>
             </div>
           </div>
@@ -320,31 +312,30 @@
             <div>
               <label>¿Aceptas visitas de seguimiento?</label>
               <select name="seguimiento" required>
-                <option value="Sí" {% if mi_perfil.seguimiento == 'Sí' %}selected{% endif %}>Sí acepto</option>
-                <option value="No" {% if mi_perfil.seguimiento == 'No' %}selected{% endif %}>No acepto</option>
+                <option value="Sí" {% if mi_cv and mi_cv.seguimiento == 'Sí' %}selected{% endif %}>Sí acepto</option>
+                <option value="No" {% if mi_cv and mi_cv.seguimiento == 'No' %}selected{% endif %}>No acepto</option>
               </select>
             </div>
             <div>
               <label>¿Firmarás Contrato de Adopción?</label>
               <select name="contrato" required>
-                <option value="Sí" {% if mi_perfil.contrato == 'Sí' %}selected{% endif %}>Sí firmo</option>
-                <option value="No" {% if mi_perfil.contrato == 'No' %}selected{% endif %}>No firmaré</option>
+                <option value="Sí" {% if mi_cv and mi_cv.contrato == 'Sí' %}selected{% endif %}>Sí firmo</option>
+                <option value="No" {% if mi_cv and mi_cv.contrato == 'No' %}selected{% endif %}>No firmaré</option>
               </select>
             </div>
           </div>
         </fieldset>
 
-        <!-- 6. Referencias -->
         <fieldset>
           <legend>6. Referencias Personales (No familiares de la misma casa)</legend>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label>Referencia 1 (Nombre):</label><input type="text" name="ref1_nombre" value="{{ mi_perfil.ref1_nombre or '' }}" required>
-              <label class="mt-2">Teléfono / Relación:</label><input type="text" name="ref1_tel" value="{{ mi_perfil.ref1_tel or '' }}" required>
+              <label>Referencia 1 (Nombre):</label><input type="text" name="ref1_nombre" value="{{ mi_cv.ref1_nombre if mi_cv else '' }}" required>
+              <label class="mt-2">Teléfono / Relación:</label><input type="text" name="ref1_tel" value="{{ mi_cv.ref1_tel if mi_cv else '' }}" required>
             </div>
             <div>
-              <label>Referencia 2 (Nombre):</label><input type="text" name="ref2_nombre" value="{{ mi_perfil.ref2_nombre or '' }}" required>
-              <label class="mt-2">Teléfono / Relación:</label><input type="text" name="ref2_tel" value="{{ mi_perfil.ref2_tel or '' }}" required>
+              <label>Referencia 2 (Nombre):</label><input type="text" name="ref2_nombre" value="{{ mi_cv.ref2_nombre if mi_cv else '' }}" required>
+              <label class="mt-2">Teléfono / Relación:</label><input type="text" name="ref2_tel" value="{{ mi_cv.ref2_tel if mi_cv else '' }}" required>
             </div>
           </div>
         </fieldset>
@@ -391,12 +382,11 @@ function iniciarReclamo(mascotaId) {
      closeModal();
      openModal(`
       <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-bold text-red-600 flex items-center gap-2"><i data-lucide="shield-alert"></i> Reclamo de Propiedad (ID #${mascotaId})</h2>
+        <h2 class="text-xl font-bold text-red-600 flex items-center gap-2"><i data-lucide="shield-alert"></i> Reclamo de Propiedad (ID #` + mascotaId + `)</h2>
       </div>
       <p class="text-sm text-slate-600 mb-6">Por favor, proporciona datos precisos que demuestren de manera contundente que eres el dueño original de este animal.</p>
       
-      <!-- AHORA APUNTA A LA RUTA CORRECTA PARA QUE NO DÉ "METHOD NOT ALLOWED" -->
-      <form action="/crear_reclamo/${mascotaId}" method="POST" enctype="multipart/form-data" class="space-y-4 border border-indigo-100 p-4 rounded-xl">
+      <form action="/crear_reclamo/` + mascotaId + `" method="POST" enctype="multipart/form-data" class="space-y-4 border border-indigo-100 p-4 rounded-xl">
         <h3 class="text-indigo-800 font-bold mb-2">Datos de Reclamo Oficial</h3>
         <div><label class="block text-sm font-semibold mb-1 text-slate-700">¿A qué nombre exacto responde?</label><input type="text" name="nombre_responde" required class="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-indigo-500"></div>
         <div><label class="block text-sm font-semibold mb-1 text-slate-700">Marcas únicas (cicatrices, manchas específicas)</label><textarea name="marcas" required rows="3" class="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-indigo-500"></textarea></div>
