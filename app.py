@@ -145,6 +145,14 @@ class SolicitudVoluntariado(db.Model):
     transporte = db.Column(db.String(20))
     moviliza_refugio = db.Column(db.String(20))
 
+class InfoDonacion(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    titulo = db.Column(db.String(100))
+    subtitulo = db.Column(db.Text)
+    info_bancaria = db.Column(db.String(200))
+    nombre_de = db.Column(db.String(100))
+    sede_fisica = db.Column(db.String(200))
+
 class Paciente(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False)
@@ -307,8 +315,10 @@ def usuario():
     disponibles = Paciente.query.filter_by(disponible_adopcion="Listo para Adopción").all()
     # NUEVO: Traemos los programas de voluntariado de la base de datos
     programas_db = ProgramaVoluntariado.query.all()
+
+    info_don = InfoDonacion.query.first()
     
-    return render_template('usuario.html', adopciones=disponibles, mi_cv=cv_actual, programas=programas_db)
+    return render_template('usuario.html', adopciones=disponibles, mi_cv=cv_actual, programas=programas_db, info_donacion=info_don)
 
 @app.route('/enviar_voluntariado', methods=['POST'])
 def enviar_voluntariado():
@@ -393,8 +403,10 @@ def admin():
     # NUEVO: Traemos datos para la pestaña de Voluntariado
     programas_db = ProgramaVoluntariado.query.all()
     solicitudes_vol = SolicitudVoluntariado.query.filter_by(estado='Pendiente').all()
-    
-    return render_template('admin.html', empleados=empleados_db, pacientes=pacientes_con_solicitudes, programas=programas_db, voluntariados=solicitudes_vol)
+
+    info_don = InfoDonacion.query.first()
+
+    return render_template('admin.html', empleados=empleados_db, pacientes=pacientes_con_solicitudes, programas=programas_db, voluntariados=solicitudes_vol, info_donacion=info_don)
 
 @app.route('/editar_programa', methods=['POST'])
 def editar_programa():
@@ -483,6 +495,26 @@ def procesar_reclamo(reclamo_id, accion):
             flash("Reclamo de propiedad rechazado y eliminado.", "success")
         db.session.commit()
     return redirect(url_for('admin'))
+
+@app.route('/editar_donacion', methods=['POST'])
+def editar_donacion():
+    if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
+    info = InfoDonacion.query.first()
+    if info:
+        info.titulo = request.form.get('titulo')
+        info.subtitulo = request.form.get('subtitulo')
+        info.info_bancaria = request.form.get('info_bancaria')
+        info.nombre_de = request.form.get('nombre_de')
+        info.sede_fisica = request.form.get('sede_fisica')
+        db.session.commit()
+        flash("Información de donaciones actualizada con éxito.", "success")
+    return redirect(url_for('admin'))
+
+@app.route('/registrar_donacion', methods=['POST'])
+def registrar_donacion():
+    if 'usuario_id' not in session or session['rol'] != 'usuario': return redirect(url_for('login'))
+    flash("¡Gracias por tu intención de donar! Nos pondremos en contacto contigo pronto.", "success")
+    return redirect(url_for('usuario'))
 
 # ==========================================
 # 4. RUTAS POST (CONEXIONES Y LÓGICA)
@@ -736,6 +768,16 @@ if __name__ == '__main__':
             db.session.add(ProgramaVoluntariado(tipo='Coexistencia', descripcion='Ven a pasar un rato agradable con nuestros animales. Ayúdalos a socializar, dales cariño y acompáñalos. ¡Ideal para relajarte y dar amor sin llevarlos a casa!'))
             db.session.add(ProgramaVoluntariado(tipo='Hogar Temporal', descripcion='Abre las puertas de tu casa temporalmente (3 a 7 días). Dale a un perrito o gatito la oportunidad de dormir en un hogar calientito mientras le encontramos su familia definitiva.'))
             db.session.add(ProgramaVoluntariado(tipo='Apoyo Operativo', descripcion='Únete al equipo del refugio. Ayúdanos a bañar, alimentar, pasear y mantener limpias las áreas. Trabajo físico, pero con la mejor recompensa del mundo.'))
-            
+
+        # NUEVO: Crear información de donación por defecto
+        if not InfoDonacion.query.first():
+            db.session.add(InfoDonacion(
+                titulo="Apoya la Causa",
+                subtitulo="Aceptamos donaciones monetarias o insumos físicos (alimentos, cobijas, juguetes).",
+                info_bancaria="Banco Nacional: Cuenta Monetaria #000-123456-7",
+                nombre_de="A Nombre De: Asociación Huellitas de Amor",
+                sede_fisica="Sede Recepción Comida: Calle Principal 12-45 Zona 10"
+            ))
+        
             db.session.commit()
     app.run(debug=True)
