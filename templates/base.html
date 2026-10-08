@@ -33,9 +33,11 @@
     </div>
   </div>
 
-  <!-- Header Dinámico -->
+  <!-- Header Dinámico y Limpio -->
   <header class="bg-indigo-950 text-white shadow-lg sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-4">
+      
+      <!-- Logotipo y Título -->
       <div class="flex items-center gap-3">
         <div class="bg-amber-400 p-2 rounded-xl text-indigo-950"><i data-lucide="paw-print" class="w-6 h-6"></i></div>
         <div>
@@ -43,13 +45,20 @@
           <span class="text-xs text-indigo-300">v5.0 - Entorno Python</span>
         </div>
       </div>
-      <div class="flex items-center gap-1 bg-indigo-900/50 p-1.5 rounded-lg border border-indigo-800">
-        <a href="{{ url_for('inicio') }}" class="px-4 py-1.5 text-xs font-semibold rounded-md transition {% if request.path == '/' %}bg-amber-400 text-indigo-950{% else %}text-indigo-300 hover:text-white{% endif %}">Inicio</a>
-        <a href="{{ url_for('rescatista') }}" class="px-4 py-1.5 text-xs font-semibold rounded-md transition {% if request.path == '/rescatista' %}bg-amber-400 text-indigo-950{% else %}text-indigo-300 hover:text-white{% endif %}">Rescatista</a>
-        <a href="{{ url_for('veterinario') }}" class="px-4 py-1.5 text-xs font-semibold rounded-md transition {% if request.path == '/veterinario' %}bg-amber-400 text-indigo-950{% else %}text-indigo-300 hover:text-white{% endif %}">Veterinario</a>
-        <a href="{{ url_for('usuario') }}" class="px-4 py-1.5 text-xs font-semibold rounded-md transition {% if request.path == '/usuario' %}bg-amber-400 text-indigo-950{% else %}text-indigo-300 hover:text-white{% endif %}">Usuario</a>
-        <a href="{{ url_for('admin') }}" class="px-4 py-1.5 text-xs font-semibold rounded-md transition {% if request.path == '/admin' %}bg-amber-400 text-indigo-950{% else %}text-indigo-300 hover:text-white{% endif %}">Admin</a>
+      
+      <!-- Controles de Sesión Reales (Se muestran si hay sesión) -->
+      <div class="flex items-center gap-4">
+        {% if 'usuario_id' in session %}
+          <div class="text-right">
+            <p class="text-[10px] text-indigo-300 font-bold uppercase tracking-wider leading-none">{{ session['rol'] }}</p>
+            <p class="text-sm font-black text-amber-400">{{ session.get('nombre', 'Usuario') }}</p>
+          </div>
+          <a href="{{ url_for('logout') }}" class="bg-indigo-900 hover:bg-red-500 border border-indigo-800 text-white p-2 rounded-lg transition shadow-sm" title="Cerrar Sesión">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+          </a>
+        {% endif %}
       </div>
+      
     </div>
   </header>
 

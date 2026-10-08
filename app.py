@@ -25,9 +25,10 @@ class Usuario(db.Model):
     nombre = db.Column(db.String(100), nullable=False)
     correo = db.Column(db.String(100), unique=True, nullable=True)
     codigo_empleado = db.Column(db.String(20), unique=True, nullable=True)
+    telefono = db.Column(db.String(20), nullable=True) # <-- ESTO GUARDA EL TELÉFONO
+    foto_perfil = db.Column(db.String(200), default='default_user.png') # <-- ESTO GUARDA LA FOTO
     password = db.Column(db.String(200), nullable=False)
     rol = db.Column(db.String(20), nullable=False, default='usuario')
-    # Relación: Un usuario tiene un único CV de adopción
     perfil_cv = db.relationship('PerfilAdopcion', backref='usuario', uselist=False, lazy=True)
 
 class PerfilAdopcion(db.Model):
@@ -282,6 +283,7 @@ def logout():
     session.clear()
     return redirect(url_for('inicio'))
 
+
 # ==========================================
 # 3. RUTAS DE VISUALIZACIÓN
 # ==========================================
@@ -291,34 +293,56 @@ def inicio(): return render_template('inicio.html')
 @app.route('/rescatista')
 def rescatista(): 
     if 'usuario_id' not in session or session['rol'] != 'rescatista': return redirect(url_for('login'))
+    
     rescates_db = Rescate.query.filter_by(rescatista_id=session['usuario_id']).all()
     alertas_db = Alerta.query.filter_by(estado='Pendiente').order_by(Alerta.id.desc()).all()
-    return render_template('rescatista.html', mis_rescates=rescates_db, alertas=alertas_db)
+    user_data = Usuario.query.get(session['usuario_id']) # Inyección de datos
+    
+    return render_template('rescatista.html', mis_rescates=rescates_db, alertas=alertas_db, usuario_data=user_data)
 
 @app.route('/veterinario')
 def veterinario(): 
     if 'usuario_id' not in session or session['rol'] != 'veterinario': return redirect(url_for('login'))
     
     rescates_pendientes = Rescate.query.filter_by(estado='Pendiente').all()
-    # Cargamos todos los pacientes y todas las citas pendientes
     todos_pacientes = Paciente.query.all()
     citas_pendientes = Cita.query.filter_by(estado='Pendiente').order_by(Cita.fecha.asc()).all()
-    
     hoy = datetime.utcnow().strftime('%Y-%m-%d')
-    return render_template('veterinario.html', rescates=rescates_pendientes, pacientes=todos_pacientes, citas=citas_pendientes, hoy=hoy)
+    user_data = Usuario.query.get(session['usuario_id']) # Inyección de datos
+    
+    return render_template('veterinario.html', rescates=rescates_pendientes, pacientes=todos_pacientes, citas=citas_pendientes, hoy=hoy, usuario_data=user_data)
 
 @app.route('/usuario')
 def usuario(): 
     if 'usuario_id' not in session or session['rol'] != 'usuario': return redirect(url_for('login'))
-    # Buscamos el CV en la nueva tabla
+    
     cv_actual = PerfilAdopcion.query.filter_by(usuario_id=session['usuario_id']).first()
     disponibles = Paciente.query.filter_by(disponible_adopcion="Listo para Adopción").all()
-    # NUEVO: Traemos los programas de voluntariado de la base de datos
     programas_db = ProgramaVoluntariado.query.all()
-
     info_don = InfoDonacion.query.first()
+    user_data = Usuario.query.get(session['usuario_id']) # Inyección de datos
     
-    return render_template('usuario.html', adopciones=disponibles, mi_cv=cv_actual, programas=programas_db, info_donacion=info_don)
+    return render_template('usuario.html', adopciones=disponibles, mi_cv=cv_actual, programas=programas_db, info_donacion=info_don, usuario_data=user_data)
+
+@app.route('/admin')
+def admin(): 
+    if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
+    
+    empleados_db = Usuario.query.filter(Usuario.rol.in_(['veterinario', 'rescatista'])).all()
+    pacientes_con_solicitudes = Paciente.query.filter(
+        Paciente.solicitudes_recibidas.any(estado='En Revisión') | 
+        Paciente.reclamos_recibidos.any(estado='En Revisión')
+    ).all()
+    programas_db = ProgramaVoluntariado.query.all()
+    solicitudes_vol = SolicitudVoluntariado.query.filter_by(estado='Pendiente').all()
+    info_don = InfoDonacion.query.first()
+    user_data = Usuario.query.get(session['usuario_id']) # Inyección de datos
+
+    return render_template('admin.html', empleados=empleados_db, pacientes=pacientes_con_solicitudes, programas=programas_db, voluntariados=solicitudes_vol, info_donacion=info_don, usuario_data=user_data)
+    if 'usuario_id' not in session or session['rol'] != 'rescatista': return redirect(url_for('login'))
+    rescates_db = Rescate.query.filter_by(rescatista_id=session['usuario_id']).all()
+    alertas_db = Alerta.query.filter_by(estado='Pendiente').order_by(Alerta.id.desc()).all()
+    return render_template('rescatista.html', mis_rescates=rescates_db, alertas=alertas_db)
 
 @app.route('/enviar_voluntariado', methods=['POST'])
 def enviar_voluntariado():
@@ -389,24 +413,6 @@ def enviar_voluntariado():
     db.session.commit()
     flash("¡Gracias! Tu solicitud de voluntariado ha sido enviada con éxito.", "success")
     return redirect(url_for('usuario'))
-
-@app.route('/admin')
-def admin(): 
-    if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
-    empleados_db = Usuario.query.filter(Usuario.rol.in_(['veterinario', 'rescatista'])).all()
-    
-    pacientes_con_solicitudes = Paciente.query.filter(
-        Paciente.solicitudes_recibidas.any(estado='En Revisión') | 
-        Paciente.reclamos_recibidos.any(estado='En Revisión')
-    ).all()
-    
-    # NUEVO: Traemos datos para la pestaña de Voluntariado
-    programas_db = ProgramaVoluntariado.query.all()
-    solicitudes_vol = SolicitudVoluntariado.query.filter_by(estado='Pendiente').all()
-
-    info_don = InfoDonacion.query.first()
-
-    return render_template('admin.html', empleados=empleados_db, pacientes=pacientes_con_solicitudes, programas=programas_db, voluntariados=solicitudes_vol, info_donacion=info_don)
 
 @app.route('/editar_programa', methods=['POST'])
 def editar_programa():
@@ -600,6 +606,48 @@ def crear_cita():
     db.session.commit()
     return redirect(url_for('veterinario'))
 
+@app.route('/actualizar_perfil', methods=['POST'])
+def actualizar_perfil():
+    if 'usuario_id' not in session: return redirect(url_for('login'))
+    user = Usuario.query.get(session['usuario_id'])
+    
+    if user:
+        user.nombre = request.form.get('nombre')
+        user.correo = request.form.get('correo')
+        user.telefono = request.form.get('telefono') # <-- ATRAPA EL TELÉFONO
+        
+        # LÓGICA PARA ATRAPAR Y GUARDAR LA FOTO
+        if 'foto_perfil' in request.files:
+            file = request.files['foto_perfil']
+            if file and file.filename != '':
+                filename = secure_filename(file.filename)
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+                user.foto_perfil = filename
+                
+        db.session.commit()
+        session['nombre'] = user.nombre
+        flash("Datos de perfil actualizados.", "success")
+        
+    return redirect(url_for(session['rol']))
+
+@app.route('/cambiar_password', methods=['POST'])
+def cambiar_password():
+    if 'usuario_id' not in session: return redirect(url_for('login'))
+    user = Usuario.query.get(session['usuario_id'])
+    
+    if user:
+        actual = request.form.get('password_actual')
+        nueva = request.form.get('password_nueva')
+        
+        if check_password_hash(user.password, actual):
+            user.password = generate_password_hash(nueva)
+            db.session.commit()
+            flash("Contraseña actualizada por seguridad.", "success")
+        else:
+            flash("La contraseña actual es incorrecta.", "error")
+            
+    return redirect(url_for(session['rol']))
 
 @app.route('/crear_consulta', methods=['POST'])
 def crear_consulta():
@@ -761,7 +809,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         if not Usuario.query.filter_by(rol='admin').first():
-            db.session.add(Usuario(nombre="Admin", codigo_empleado="ADMIN-001", password=generate_password_hash("123"), rol="admin"))
+            db.session.add(Usuario(nombre="Administrador Principal", correo="admin@huellitas.com", codigo_empleado="ADMIN-001", telefono="555-0000", password=generate_password_hash("123"), rol="admin"))
 
         # NUEVO: Crear los 3 programas base si no existen
         if not ProgramaVoluntariado.query.first():

@@ -13,6 +13,7 @@
     <button onclick="switchTab('usuario', 'alertas')" class="tab-btn-usuario px-5 py-4 border-b-2 flex" data-tab="alertas"><i data-lucide="siren" class="w-4 h-4 mr-2"></i> Alertas</button>
     <button onclick="switchTab('usuario', 'donaciones')" class="tab-btn-usuario px-5 py-4 border-b-2 flex" data-tab="donaciones"><i data-lucide="gift" class="w-4 h-4 mr-2"></i> Donaciones</button>
     <button onclick="switchTab('usuario', 'cv')" class="tab-btn-usuario px-5 py-4 border-b-2 flex" data-tab="cv"><i data-lucide="clipboard-type" class="w-4 h-4 mr-2"></i> Mi CV / Formulario</button>
+    <button onclick="switchTab('usuario', 'perfil')" class="tab-btn-usuario px-4 py-3 text-slate-500 font-bold flex items-center gap-2" data-tab="perfil"> Mi Perfil</button>
 
   </nav>
 
@@ -702,18 +703,24 @@
         </div>
 
         <form action="{{ url_for('registrar_donacion') }}" method="POST">
-            <button type="submit" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-4 rounded-xl shadow-md transition text-lg">Registrar Intención de Donación</button>
+            <!-- boton deshabilitado para la intencion del boton para hacer ver si podemos agregar algo extra-->
+            <!-- <button type="submit" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-4 rounded-xl shadow-md transition text-lg">Registrar Intención de Donación</button> -->
         </form>
         
       </div>
     </div>
+
   <!-- Fin de la ventana de donaciones-->
   <!-- ======================================================= -->
   <div id="usuario-mascotas" class="tab-content tab-content-usuario"><div class="bg-white rounded-xl shadow-sm p-6 text-center text-slate-500">Módulo de Mascotas (Esperando conexión)</div></div>
   <div id="usuario-shop" class="tab-content tab-content-usuario"><div class="bg-white rounded-xl shadow-sm p-6 text-center text-slate-500">Tienda de Productos (Esperando conexión)</div></div>
-  <div id="usuario-perfil" class="tab-content tab-content-usuario"><div class="bg-white rounded-xl shadow-sm p-6 text-center text-slate-500">Módulo de Perfil (Se programará próximamente)</div></div>
-
+  
 </div>
+
+  <!-- apartado de mi perfil  -->
+    <div id="usuario-perfil" class="tab-content-usuario tab-content hidden">
+      {% include 'perfil_compartido.html' %}
+    </div>
 
 <!-- ======================================================= -->
 <!-- SCRIPTS DE JAVASCRIPT (Controlan los botones de Adoptar)-->
