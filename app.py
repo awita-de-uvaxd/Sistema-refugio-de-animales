@@ -88,6 +88,71 @@ class ReclamoPropiedad(db.Model):
     paciente_obj = db.relationship('Paciente', backref='reclamos_recibidos', lazy=True)
     usuario_obj = db.relationship('Usuario', backref='reclamos_enviados', lazy=True)
 
+class ProgramaVoluntariado(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    tipo = db.Column(db.String(50), nullable=False)
+    descripcion = db.Column(db.Text, nullable=False)
+    fotos = db.Column(db.Text, nullable=True)
+
+class SolicitudVoluntariado(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    fecha = db.Column(db.DateTime, default=datetime.utcnow)
+    tipo_voluntariado = db.Column(db.String(50), nullable=False)
+    estado = db.Column(db.String(20), default="Pendiente")
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    usuario_obj = db.relationship('Usuario', backref='solicitudes_voluntariado', lazy=True)
+
+    # --- CAMPOS COMPARTIDOS ---
+    contacto_emergencia = db.Column(db.String(200))
+    turnos_disponibles = db.Column(db.String(200))
+
+    # --- 1. CAMPOS: VOLUNTARIADO OPERATIVO ---
+    tarea_popo = db.Column(db.String(20))
+    tarea_bano = db.Column(db.String(20))
+    tarea_peinar = db.Column(db.String(20))
+    tarea_corte = db.Column(db.String(20))
+    tarea_paseo = db.Column(db.String(20))
+    tarea_lavado = db.Column(db.String(20))
+    exp_peluqueria = db.Column(db.String(50))
+    fuerza_fisica = db.Column(db.String(50))
+    tetanos = db.Column(db.String(20))
+
+    # --- 2. CAMPOS: APTITUD Y CONVIVENCIA ---
+    alergias = db.Column(db.String(50))
+    reaccion_previa = db.Column(db.String(20))
+    limitaciones_fisicas = db.Column(db.String(50))
+    motivacion = db.Column(db.Text)
+    reaccion_miedo = db.Column(db.String(50))
+    accidente_actitud = db.Column(db.String(50))
+    disciplina = db.Column(db.String(50))
+    cumple_reglas = db.Column(db.String(20))
+    expectativa = db.Column(db.Text)
+
+    # --- 3. CAMPOS: APOYO TEMPORAL ---
+    horas_disponibles = db.Column(db.String(100))
+    vivienda = db.Column(db.String(50))
+    permiso = db.Column(db.String(50))
+    fotos_espacio = db.Column(db.Text) # Guardará los nombres de las 5 fotos
+    habitantes = db.Column(db.String(100))
+    edades_ninos = db.Column(db.String(100))
+    mascotas_actuales = db.Column(db.Text)
+    experiencia = db.Column(db.String(50))
+    energia_preferida = db.Column(db.String(50))
+    conductas = db.Column(db.String(50))
+    accidentes = db.Column(db.String(20))
+    lugar_dormir = db.Column(db.String(100))
+    tiempo_solo = db.Column(db.String(50))
+    transporte = db.Column(db.String(20))
+    moviliza_refugio = db.Column(db.String(20))
+
+class InfoDonacion(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    titulo = db.Column(db.String(100))
+    subtitulo = db.Column(db.Text)
+    info_bancaria = db.Column(db.String(200))
+    nombre_de = db.Column(db.String(100))
+    sede_fisica = db.Column(db.String(200))
+
 class Paciente(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False)
@@ -248,20 +313,147 @@ def usuario():
     # Buscamos el CV en la nueva tabla
     cv_actual = PerfilAdopcion.query.filter_by(usuario_id=session['usuario_id']).first()
     disponibles = Paciente.query.filter_by(disponible_adopcion="Listo para Adopción").all()
-    return render_template('usuario.html', adopciones=disponibles, mi_cv=cv_actual)
+    # NUEVO: Traemos los programas de voluntariado de la base de datos
+    programas_db = ProgramaVoluntariado.query.all()
+
+    info_don = InfoDonacion.query.first()
+    
+    return render_template('usuario.html', adopciones=disponibles, mi_cv=cv_actual, programas=programas_db, info_donacion=info_don)
+
+@app.route('/enviar_voluntariado', methods=['POST'])
+def enviar_voluntariado():
+    if 'usuario_id' not in session or session['rol'] != 'usuario': return redirect(url_for('login'))
+    
+    # Procesar arrays de checkboxes (turnos, disponibilidad, habitantes)
+    turnos = request.form.getlist('turnos[]') or request.form.getlist('disponibilidad[]')
+    turnos_str = ", ".join(turnos) if turnos else None
+    habitantes_str = ", ".join(request.form.getlist('habitantes[]')) if request.form.getlist('habitantes[]') else None
+
+    # Procesar múltiples fotos (solo para Hogar Temporal)
+    nombres_fotos = []
+    if 'fotos[]' in request.files:
+        for archivo in request.files.getlist('fotos[]'):
+            if archivo.filename != '':
+                nom_arch = secure_filename(archivo.filename)
+                archivo.save(os.path.join(app.config['UPLOAD_FOLDER'], nom_arch))
+                nombres_fotos.append(nom_arch)
+    fotos_str = ",".join(nombres_fotos) if nombres_fotos else None
+
+    nueva_solicitud = SolicitudVoluntariado(
+        tipo_voluntariado=request.form.get('tipo_voluntariado'),
+        usuario_id=session['usuario_id'],
+        contacto_emergencia=request.form.get('contacto_emergencia'),
+        turnos_disponibles=turnos_str,
+        
+        # Operativo
+        tarea_popo=request.form.get('tarea_popo'),
+        tarea_bano=request.form.get('tarea_bano'),
+        tarea_peinar=request.form.get('tarea_peinar'),
+        tarea_corte=request.form.get('tarea_corte'),
+        tarea_paseo=request.form.get('tarea_paseo'),
+        tarea_lavado=request.form.get('tarea_lavado'),
+        exp_peluqueria=request.form.get('exp_peluqueria'),
+        fuerza_fisica=request.form.get('fuerza_fisica'),
+        tetanos=request.form.get('tetanos'),
+        
+        # Convivencia
+        alergias=request.form.get('alergias'),
+        reaccion_previa=request.form.get('reaccion_previa'),
+        limitaciones_fisicas=request.form.get('limitaciones_fisicas'),
+        motivacion=request.form.get('motivacion'),
+        reaccion_miedo=request.form.get('reaccion_miedo'),
+        accidente_actitud=request.form.get('accidente_actitud'),
+        disciplina=request.form.get('disciplina'),
+        cumple_reglas=request.form.get('cumple_reglas'),
+        expectativa=request.form.get('expectativa'),
+        
+        # Temporal
+        horas_disponibles=request.form.get('horas_disponibles'),
+        vivienda=request.form.get('vivienda'),
+        permiso=request.form.get('permiso'),
+        fotos_espacio=fotos_str,
+        habitantes=habitantes_str,
+        edades_ninos=request.form.get('edades_ninos'),
+        mascotas_actuales=request.form.get('mascotas_actuales'),
+        experiencia=request.form.get('experiencia'),
+        energia_preferida=request.form.get('energia_preferida'),
+        conductas=request.form.get('conductas'),
+        accidentes=request.form.get('accidentes'),
+        lugar_dormir=request.form.get('lugar_dormir'),
+        tiempo_solo=request.form.get('tiempo_solo'),
+        transporte=request.form.get('transporte'),
+        moviliza_refugio=request.form.get('moviliza_refugio')
+    )
+    
+    db.session.add(nueva_solicitud)
+    db.session.commit()
+    flash("¡Gracias! Tu solicitud de voluntariado ha sido enviada con éxito.", "success")
+    return redirect(url_for('usuario'))
 
 @app.route('/admin')
 def admin(): 
     if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
     empleados_db = Usuario.query.filter(Usuario.rol.in_(['veterinario', 'rescatista'])).all()
     
-    # MAGIA AQUÍ: Solo traemos a los Pacientes que tengan al menos 1 adopción o 1 reclamo "En Revisión"
     pacientes_con_solicitudes = Paciente.query.filter(
         Paciente.solicitudes_recibidas.any(estado='En Revisión') | 
         Paciente.reclamos_recibidos.any(estado='En Revisión')
     ).all()
     
-    return render_template('admin.html', empleados=empleados_db, pacientes=pacientes_con_solicitudes)
+    # NUEVO: Traemos datos para la pestaña de Voluntariado
+    programas_db = ProgramaVoluntariado.query.all()
+    solicitudes_vol = SolicitudVoluntariado.query.filter_by(estado='Pendiente').all()
+
+    info_don = InfoDonacion.query.first()
+
+    return render_template('admin.html', empleados=empleados_db, pacientes=pacientes_con_solicitudes, programas=programas_db, voluntariados=solicitudes_vol, info_donacion=info_don)
+
+@app.route('/editar_programa', methods=['POST'])
+def editar_programa():
+    if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
+    
+    prog_id = request.form.get('programa_id')
+    programa = ProgramaVoluntariado.query.get(prog_id)
+    
+    if programa:
+        programa.descripcion = request.form.get('descripcion')
+        
+        # Procesar fotos nuevas y sumarlas a las existentes
+        nombres_fotos = []
+        if 'fotos_nuevas' in request.files:
+            for archivo in request.files.getlist('fotos_nuevas'):
+                if archivo.filename != '':
+                    nom_arch = secure_filename(archivo.filename)
+                    archivo.save(os.path.join(app.config['UPLOAD_FOLDER'], nom_arch))
+                    nombres_fotos.append(nom_arch)
+        
+        if nombres_fotos:
+            nuevas_fotos_str = ",".join(nombres_fotos)
+            if programa.fotos:
+                programa.fotos = f"{programa.fotos},{nuevas_fotos_str}"
+            else:
+                programa.fotos = nuevas_fotos_str
+                
+        db.session.commit()
+        flash("Sección de voluntariado actualizada con éxito.", "success")
+        
+    return redirect(url_for('admin'))
+
+@app.route('/procesar_voluntariado/<int:sol_id>/<accion>', methods=['POST'])
+def procesar_voluntariado(sol_id, accion):
+    if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
+    
+    solicitud = SolicitudVoluntariado.query.get(sol_id)
+    if solicitud:
+        if accion == 'aceptar':
+            solicitud.estado = "Aprobado"
+            flash("Voluntario aprobado y notificado.", "success")
+        elif accion == 'rechazar':
+            db.session.delete(solicitud)
+            flash("Solicitud de voluntariado rechazada.", "success")
+        db.session.commit()
+        
+    return redirect(url_for('admin'))
 
 @app.route('/procesar_adopcion/<int:solicitud_id>/<accion>', methods=['POST'])
 def procesar_adopcion(solicitud_id, accion):
@@ -303,6 +495,26 @@ def procesar_reclamo(reclamo_id, accion):
             flash("Reclamo de propiedad rechazado y eliminado.", "success")
         db.session.commit()
     return redirect(url_for('admin'))
+
+@app.route('/editar_donacion', methods=['POST'])
+def editar_donacion():
+    if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
+    info = InfoDonacion.query.first()
+    if info:
+        info.titulo = request.form.get('titulo')
+        info.subtitulo = request.form.get('subtitulo')
+        info.info_bancaria = request.form.get('info_bancaria')
+        info.nombre_de = request.form.get('nombre_de')
+        info.sede_fisica = request.form.get('sede_fisica')
+        db.session.commit()
+        flash("Información de donaciones actualizada con éxito.", "success")
+    return redirect(url_for('admin'))
+
+@app.route('/registrar_donacion', methods=['POST'])
+def registrar_donacion():
+    if 'usuario_id' not in session or session['rol'] != 'usuario': return redirect(url_for('login'))
+    flash("¡Gracias por tu intención de donar! Nos pondremos en contacto contigo pronto.", "success")
+    return redirect(url_for('usuario'))
 
 # ==========================================
 # 4. RUTAS POST (CONEXIONES Y LÓGICA)
@@ -550,5 +762,22 @@ if __name__ == '__main__':
         db.create_all()
         if not Usuario.query.filter_by(rol='admin').first():
             db.session.add(Usuario(nombre="Admin", codigo_empleado="ADMIN-001", password=generate_password_hash("123"), rol="admin"))
+
+        # NUEVO: Crear los 3 programas base si no existen
+        if not ProgramaVoluntariado.query.first():
+            db.session.add(ProgramaVoluntariado(tipo='Coexistencia', descripcion='Ven a pasar un rato agradable con nuestros animales. Ayúdalos a socializar, dales cariño y acompáñalos. ¡Ideal para relajarte y dar amor sin llevarlos a casa!'))
+            db.session.add(ProgramaVoluntariado(tipo='Hogar Temporal', descripcion='Abre las puertas de tu casa temporalmente (3 a 7 días). Dale a un perrito o gatito la oportunidad de dormir en un hogar calientito mientras le encontramos su familia definitiva.'))
+            db.session.add(ProgramaVoluntariado(tipo='Apoyo Operativo', descripcion='Únete al equipo del refugio. Ayúdanos a bañar, alimentar, pasear y mantener limpias las áreas. Trabajo físico, pero con la mejor recompensa del mundo.'))
+
+        # NUEVO: Crear información de donación por defecto
+        if not InfoDonacion.query.first():
+            db.session.add(InfoDonacion(
+                titulo="Apoya la Causa",
+                subtitulo="Aceptamos donaciones monetarias o insumos físicos (alimentos, cobijas, juguetes).",
+                info_bancaria="Banco Nacional: Cuenta Monetaria #000-123456-7",
+                nombre_de="A Nombre De: Asociación Huellitas de Amor",
+                sede_fisica="Sede Recepción Comida: Calle Principal 12-45 Zona 10"
+            ))
+        
             db.session.commit()
     app.run(debug=True)

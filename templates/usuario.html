@@ -1,8 +1,5 @@
 {% extends "base.html" %}
 {% block content %}
-<!-- Librería para generación de documentos PDF del Shop -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
 <div class="w-full">
   
   <!-- ======================================================= -->
@@ -10,12 +7,13 @@
   <!-- ======================================================= -->
   <nav class="flex overflow-x-auto border-b border-slate-200 text-sm font-medium mb-6 bg-white rounded-t-xl shadow-sm scroll-hide">
     <button onclick="switchTab('usuario', 'adoptar')" class="tab-btn-usuario px-5 py-4 border-b-2 flex active" data-tab="adoptar"><i data-lucide="heart" class="w-4 h-4 mr-2"></i> Adoptar</button>
-    <button onclick="switchTab('usuario', 'alertas')" class="tab-btn-usuario px-5 py-4 border-b-2 flex" data-tab="alertas"><i data-lucide="siren" class="w-4 h-4 mr-2"></i> Alertas</button>
-    <button onclick="switchTab('usuario', 'cv')" class="tab-btn-usuario px-5 py-4 border-b-2 flex" data-tab="cv"><i data-lucide="clipboard-type" class="w-4 h-4 mr-2"></i> Mi CV / Formulario</button>
     <button onclick="switchTab('usuario', 'mascotas')" class="tab-btn-usuario px-5 py-4 border-b-2 flex" data-tab="mascotas"><i data-lucide="dog" class="w-4 h-4 mr-2"></i> Mis Mascotas</button>
-    <button onclick="switchTab('usuario', 'donaciones')" class="tab-btn-usuario px-5 py-4 border-b-2 flex" data-tab="donaciones"><i data-lucide="gift" class="w-4 h-4 mr-2"></i> Donaciones</button>
+    <button onclick="switchTab('usuario', 'shop')" class="tab-btn-usuario px-5 py-4 border-b-2 flex" data-tab="shop"><i data-lucide="shopping-bag" class="w-4 h-4 mr-2"></i> Shop</button>    
     <button onclick="switchTab('usuario', 'voluntariado')" class="tab-btn-usuario px-5 py-4 border-b-2 flex" data-tab="voluntariado"><i data-lucide="users" class="w-4 h-4 mr-2"></i> Voluntariado</button>
-  <button onclick="switchTab('usuario', 'shop')" class="tab-btn-usuario px-5 py-4 border-b-2 flex" data-tab="shop"><i data-lucide="shopping-bag" class="w-4 h-4 mr-2"></i> Shop</button>
+    <button onclick="switchTab('usuario', 'alertas')" class="tab-btn-usuario px-5 py-4 border-b-2 flex" data-tab="alertas"><i data-lucide="siren" class="w-4 h-4 mr-2"></i> Alertas</button>
+    <button onclick="switchTab('usuario', 'donaciones')" class="tab-btn-usuario px-5 py-4 border-b-2 flex" data-tab="donaciones"><i data-lucide="gift" class="w-4 h-4 mr-2"></i> Donaciones</button>
+    <button onclick="switchTab('usuario', 'cv')" class="tab-btn-usuario px-5 py-4 border-b-2 flex" data-tab="cv"><i data-lucide="clipboard-type" class="w-4 h-4 mr-2"></i> Mi CV / Formulario</button>
+
   </nav>
 
   <!-- ======================================================= -->
@@ -354,222 +352,365 @@
     </div>
   </div>
    <!-- FIn de pestaña 3                                       -->
+  
 
-   
+<!-- ======================================================= -->
+  <!-- PESTAÑA VOLUNTARIADO: LA VITRINA INTERACTIVA            -->
+  <!-- ======================================================= -->
+    <div id="usuario-voluntariado" class="tab-content tab-content-usuario hidden">
+      <div class="max-w-6xl mx-auto">
+        
+        <!-- 1. TARJETAS SUPERIORES (MASTER) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          {% if programas %}
+            {% for prog in programas %}
+              <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex flex-col items-center text-center transition hover:shadow-md">
+                <h3 class="text-lg font-black text-slate-800 mb-2">{{ loop.index }}. {{ prog.tipo }}</h3>
+                <p class="text-xs text-slate-500 mb-6 flex-grow line-clamp-2">{{ prog.descripcion }}</p>
+                <button onclick="mostrarDetalleVoluntariado('detalle-prog-{{ prog.id }}')" class="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-2.5 rounded-lg transition text-sm">Ver mas</button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        </div>
+
+        <!-- 2. SECCIONES INFERIORES DINÁMICAS (DETAIL) Y MODALES -->
+        <div id="contenedor-detalles-voluntariado">
+          {% if programas %}
+            {% for prog in programas %}
+              
+              <!-- VISTA DETALLADA OCULTA (Se muestra al darle a "Ver mas") -->
+              <div id="detalle-prog-{{ prog.id }}" class="seccion-detalle-vol hidden space-y-6">
+                
+                <div class="text-center mb-8">
+                  <h2 class="text-3xl font-black text-indigo-900 italic">Conoce mas de: {{ prog.tipo }}</h2>
+                  <div class="text-indigo-300 mt-2"><i data-lucide="arrow-down" class="w-6 h-6 mx-auto animate-bounce"></i></div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+                  <!-- Columna Izquierda: Texto y Botón -->
+                  <div class="flex flex-col justify-between space-y-6">
+                    <div class="text-sm text-slate-700 leading-relaxed bg-slate-50 p-6 rounded-xl border border-slate-100">
+                      * {{ prog.descripcion }}
+                    </div>
+                    <button onclick="abrirModalVoluntariado('{{ prog.id }}')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-md transition text-lg flex items-center justify-center gap-2">
+                      <i data-lucide="file-text" class="w-5 h-5"></i> Llenar Formulario
+                    </button>
+                  </div>
+                  
+                  <!-- Columna Derecha: Galería de Fotos -->
+                  <div class="grid grid-cols-2 gap-3">
+                    {% if prog.fotos %}
+                      {% set fotos_array = prog.fotos.split(',') %}
+                      {% for f in fotos_array %}
+                        <div class="rounded-xl overflow-hidden shadow-sm h-32 {% if loop.index == 1 %}col-span-2 h-48{% endif %}">
+                          <img src="{{ url_for('static', filename='uploads/' ~ f) }}" class="w-full h-full object-cover hover:scale-105 transition duration-500">
+                        </div>
+                      {% endfor %}
+                    {% else %}
+                      <div class="col-span-2 h-48 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 border-2 border-dashed border-slate-300">
+                        <p class="text-sm font-bold">Galería pendiente de actualización</p>
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+
+              </div>
+              
+              <!-- ======================================================= -->
+              <!-- EL MODAL DEL FORMULARIO ESPECÍFICO (Se abre con el botón)-->
+              <!-- ======================================================= -->
+              <div id="modal-vol-{{ prog.id }}" class="hidden">
+                <h2 class="text-2xl font-black text-indigo-900 mb-2">Solicitud: {{ prog.tipo }}</h2>
+                <p class="text-sm text-slate-500 mb-6 border-b pb-4">Por favor, completa la siguiente evaluación para postularte.</p>
+                
+                <!-- Formulario Maestro (enctype requerido para fotos) -->
+                <form action="{{ url_for('enviar_voluntariado') }}" method="POST" enctype="multipart/form-data" class="space-y-4 text-sm text-slate-700 max-h-[65vh] overflow-y-auto custom-scroll pr-2">
+                  <input type="hidden" name="tipo_voluntariado" value="{{ prog.tipo }}">
+                  
+                  <!-- PREGUNTA COMPARTIDA -->
+                  <div>
+                    <label class="block font-bold mb-1">Contacto de emergencia (Nombre y teléfono):</label>
+                    <input type="text" name="contacto_emergencia" required class="w-full p-2 border border-slate-300 rounded-lg outline-none">
+                  </div>
+
+                  <!-- ========================================== -->
+                  <!-- FORMULARIO 1: APOYO OPERATIVO -->
+                  {% if prog.tipo == 'Apoyo Operativo' %}
+                    <fieldset class="border border-slate-200 p-4 rounded-xl">
+                      <legend class="font-bold text-indigo-800 px-2">Disposición para Tareas Físicas</legend>
+                      <table class="w-full text-left text-xs mt-2 border-collapse">
+                        <thead>
+                          <tr class="bg-slate-100"><th class="p-2 border">Tarea</th><th class="p-2 border text-center">Sí</th><th class="p-2 border text-center">Tal vez</th><th class="p-2 border text-center">No</th></tr>
+                        </thead>
+                        <tbody>
+                          <tr><td class="p-2 border">Recoger heces y limpiar caniles</td><td class="p-2 border text-center"><input type="radio" name="tarea_popo" value="si" required></td><td class="p-2 border text-center"><input type="radio" name="tarea_popo" value="tal_vez"></td><td class="p-2 border text-center"><input type="radio" name="tarea_popo" value="no"></td></tr>
+                          <tr><td class="p-2 border">Bañar perros o gatos</td><td class="p-2 border text-center"><input type="radio" name="tarea_bano" value="si" required></td><td class="p-2 border text-center"><input type="radio" name="tarea_bano" value="tal_vez"></td><td class="p-2 border text-center"><input type="radio" name="tarea_bano" value="no"></td></tr>
+                          <tr><td class="p-2 border">Peinar pelaje con nudos</td><td class="p-2 border text-center"><input type="radio" name="tarea_peinar" value="si" required></td><td class="p-2 border text-center"><input type="radio" name="tarea_peinar" value="tal_vez"></td><td class="p-2 border text-center"><input type="radio" name="tarea_peinar" value="no"></td></tr>
+                          <tr><td class="p-2 border">Corte higiénico/estético</td><td class="p-2 border text-center"><input type="radio" name="tarea_corte" value="si" required></td><td class="p-2 border text-center"><input type="radio" name="tarea_corte" value="tal_vez"></td><td class="p-2 border text-center"><input type="radio" name="tarea_corte" value="no"></td></tr>
+                          <tr><td class="p-2 border">Pasear perros con fuerza</td><td class="p-2 border text-center"><input type="radio" name="tarea_paseo" value="si" required></td><td class="p-2 border text-center"><input type="radio" name="tarea_paseo" value="tal_vez"></td><td class="p-2 border text-center"><input type="radio" name="tarea_paseo" value="no"></td></tr>
+                          <tr><td class="p-2 border">Lavado y desinfección</td><td class="p-2 border text-center"><input type="radio" name="tarea_lavado" value="si" required></td><td class="p-2 border text-center"><input type="radio" name="tarea_lavado" value="tal_vez"></td><td class="p-2 border text-center"><input type="radio" name="tarea_lavado" value="no"></td></tr>
+                        </tbody>
+                      </table>
+                    </fieldset>
+
+                    <fieldset class="border border-slate-200 p-4 rounded-xl mt-4">
+                      <legend class="font-bold text-indigo-800 px-2">Experiencia y Capacidad Física</legend>
+                      <label class="block font-bold mt-2">¿Experiencia en peluquería canina o máquinas de corte?</label>
+                      <select name="exp_peluqueria" required class="w-full p-2 border rounded-lg mt-1">
+                        <option value="">-- Selecciona --</option>
+                        <option value="profesional">Sí, soy profesional / estilista</option>
+                        <option value="empirico">Sí, experiencia empírica</option>
+                        <option value="ninguna">No, pero deseo aprender</option>
+                      </select>
+
+                      <label class="block font-bold mt-4">¿Capacidad de estar de pie 3-4 hrs y levantar 40 lbs?</label>
+                      <div class="space-y-1 mt-1">
+                        <label class="flex items-center gap-2"><input type="radio" name="fuerza_fisica" value="si" required> Sí, sin inconvenientes</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="fuerza_fisica" value="limitado"> Tengo limitaciones pero puedo hacer tareas ligeras</label>
+                      </div>
+                    </fieldset>
+
+                    <fieldset class="border border-slate-200 p-4 rounded-xl mt-4">
+                      <legend class="font-bold text-indigo-800 px-2">Disponibilidad</legend>
+                      <label class="block font-bold mt-2">Turnos de apoyo preferidos:</label>
+                      <div class="space-y-1 mt-1">
+                        <label class="flex items-center gap-2"><input type="checkbox" name="turnos[]" value="manana"> Mañanas (8:00 AM - 12:00 PM)</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" name="turnos[]" value="tarde"> Tardes (1:00 PM - 5:00 PM)</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" name="turnos[]" value="fines_semana"> Fines de semana exclusivamente</label>
+                      </div>
+
+                      <label class="block font-bold mt-4">¿Vacuna contra el tétanos al día?</label>
+                      <div class="space-y-1 mt-1">
+                        <label class="flex items-center gap-2"><input type="radio" name="tetanos" value="si" required> Sí, vigente</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="tetanos" value="no"> No / No estoy seguro</label>
+                      </div>
+                    </fieldset>
+
+                  <!-- ========================================== -->
+                  <!-- FORMULARIO 2: COEXISTENCIA -->
+                  {% elif prog.tipo == 'Coexistencia' %}
+                    <fieldset class="border border-slate-200 p-4 rounded-xl mt-4">
+                      <legend class="font-bold text-indigo-800 px-2">Salud y Alergias</legend>
+                      <label class="block font-bold mt-2">¿Padeces alergia al pelo/caspa de perros o gatos?</label>
+                      <div class="space-y-1 mt-1">
+                        <label class="flex items-center gap-2"><input type="radio" name="alergias" value="no" required> No, sin alergias</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="alergias" value="si_controlada"> Sí, controlada</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="alergias" value="si_severa"> Sí, severa</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="alergias" value="no_sabe"> No estoy seguro</label>
+                      </div>
+
+                      <label class="block font-bold mt-4">¿Has convivido con animales en espacios cerrados sin síntomas?</label>
+                      <div class="space-y-1 mt-1">
+                        <label class="flex items-center gap-2"><input type="radio" name="reaccion_previa" value="si" required> Sí, sin problemas</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="reaccion_previa" value="no"> No, presento síntomas</label>
+                      </div>
+
+                      <label class="block font-bold mt-4">¿Limitaciones físicas para sostener o caminar animales?</label>
+                      <select name="limitaciones_fisicas" required class="w-full p-2 border rounded-lg mt-1">
+                        <option value="">-- Selecciona --</option>
+                        <option value="ninguna">Ninguna</option>
+                        <option value="leve">Leve (prefiero animales de baja energía)</option>
+                        <option value="moderada">Moderada (interacción tranquila/sentado)</option>
+                      </select>
+                    </fieldset>
+
+                    <fieldset class="border border-slate-200 p-4 rounded-xl mt-4">
+                      <legend class="font-bold text-indigo-800 px-2">Actitudes y Tolerancia</legend>
+                      <label class="block font-bold mt-2">Motivación principal:</label>
+                      <textarea name="motivacion" rows="2" required class="w-full p-2 border rounded-lg mt-1"></textarea>
+
+                      <label class="block font-bold mt-4">Si un perro asustado te gruñe levemente, ¿cómo reaccionas?</label>
+                      <div class="space-y-1 mt-1">
+                        <label class="flex items-center gap-2"><input type="radio" name="reaccion_miedo" value="distancia" required> Le doy su espacio y espero</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="reaccion_miedo" value="forzar"> Intento acariciarlo rápido</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="reaccion_miedo" value="corregir"> Le hablo fuerte</label>
+                      </div>
+
+                      <label class="block font-bold mt-4">Si ocurre un accidente (orina, brinca sucio):</label>
+                      <div class="space-y-1 mt-1">
+                        <label class="flex items-center gap-2"><input type="radio" name="accidente_actitud" value="comprensivo" required> Soy comprensivo/a</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="accidente_actitud" value="molesto"> Me molesto pero lo ignoro</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="accidente_actitud" value="incomodo"> Me resulta inaceptable</label>
+                      </div>
+
+                      <label class="block font-bold mt-4">Postura respecto a la disciplina:</label>
+                      <div class="space-y-1 mt-1">
+                        <label class="flex items-center gap-2"><input type="radio" name="disciplina" value="positivo" required> Solo refuerzo positivo</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="disciplina" value="firme"> Corrección verbal firme</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="disciplina" value="tradicional"> Castigos o regaños</label>
+                      </div>
+                    </fieldset>
+
+                    <fieldset class="border border-slate-200 p-4 rounded-xl mt-4">
+                      <legend class="font-bold text-indigo-800 px-2">Normas</legend>
+                      <label class="block font-bold mt-2">¿Dispuesto a seguir estrictamente protocolos de seguridad?</label>
+                      <div class="space-y-1 mt-1">
+                        <label class="flex items-center gap-2"><input type="radio" name="cumple_reglas" value="si" required> Sí</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="cumple_reglas" value="no"> No</label>
+                      </div>
+
+                      <label class="block font-bold mt-4">¿Qué esperas aprender/lograr?</label>
+                      <input type="text" name="expectativa" required class="w-full p-2 border rounded-lg mt-1">
+                    </fieldset>
+
+                  <!-- ========================================== -->
+                  <!-- FORMULARIO 3: HOGAR TEMPORAL -->
+                  {% elif prog.tipo == 'Hogar Temporal' %}
+                    <fieldset class="border border-slate-200 p-4 rounded-xl mt-4">
+                      <legend class="font-bold text-indigo-800 px-2">Disponibilidad</legend>
+                      <label class="block font-bold mt-2">Disponibilidad de tiempo (máx 4 días):</label>
+                      <div class="space-y-1 mt-1">
+                        <label class="flex items-center gap-2"><input type="checkbox" name="disponibilidad[]" value="1_a_2_dias"> 1 a 2 días</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" name="disponibilidad[]" value="3_a_4_dias"> 3 a 4 días</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" name="disponibilidad[]" value="fines_semana"> Fines de semana</label>
+                      </div>
+
+                      <label class="block font-bold mt-4">Horas al día para paseos y juego:</label>
+                      <input type="text" name="horas_disponibles" required class="w-full p-2 border rounded-lg mt-1">
+                    </fieldset>
+
+                    <fieldset class="border border-slate-200 p-4 rounded-xl mt-4">
+                      <legend class="font-bold text-indigo-800 px-2">Espacio y Convivencia</legend>
+                      <label class="block font-bold mt-2">Tipo de vivienda:</label>
+                      <div class="space-y-1 mt-1">
+                        <label class="flex items-center gap-2"><input type="radio" name="vivienda" value="casa_jardin" required> Casa con jardín/patio</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="vivienda" value="casa_sin_patio"> Casa sin patio</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="vivienda" value="departamento"> Departamento</label>
+                      </div>
+
+                      <label class="block font-bold mt-4">¿Permiten animales?</label>
+                      <div class="space-y-1 mt-1">
+                        <label class="flex items-center gap-2"><input type="radio" name="permiso" value="propio" required> Propio</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="permiso" value="rentado"> Rentado</label>
+                      </div>
+
+                      <label class="block font-bold mt-4">Fotos del espacio (máx. 5):</label>
+                      <input type="file" id="fotos_{{ prog.id }}" name="fotos[]" accept="image/*" multiple required class="w-full text-xs text-slate-500 mt-1 file:bg-indigo-100 file:text-indigo-700 file:border-0 file:py-1 file:px-3 file:rounded-lg cursor-pointer">
+                      
+                      <label class="block font-bold mt-4">Personas que habitan:</label>
+                      <div class="space-y-1 mt-1">
+                        <label class="flex items-center gap-2"><input type="checkbox" name="habitantes[]" value="adultos"> Solo adultos</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" name="habitantes[]" value="ninos"> Niños</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" name="habitantes[]" value="mayores"> Adultos mayores</label>
+                      </div>
+
+                      <label class="block font-bold mt-4">Edades de los niños (si aplica):</label>
+                      <input type="text" name="edades_ninos" class="w-full p-2 border rounded-lg mt-1">
+
+                      <label class="block font-bold mt-4">Otras mascotas actuales:</label>
+                      <textarea name="mascotas_actuales" rows="2" class="w-full p-2 border rounded-lg mt-1"></textarea>
+                    </fieldset>
+
+                    <fieldset class="border border-slate-200 p-4 rounded-xl mt-4">
+                      <legend class="font-bold text-indigo-800 px-2">Logística</legend>
+                      <label class="block font-bold mt-2">Experiencia previa:</label>
+                      <select name="experiencia" required class="w-full p-2 border rounded-lg mt-1">
+                        <option value="">-- Selecciona --</option>
+                        <option value="ninguna">Ninguna</option>
+                        <option value="basica">Básica</option>
+                        <option value="avanzada">Avanzada</option>
+                      </select>
+
+                      <label class="block font-bold mt-4">Energía preferida:</label>
+                      <select name="energia_preferida" required class="w-full p-2 border rounded-lg mt-1">
+                        <option value="">-- Selecciona --</option>
+                        <option value="tranquilo">Tranquilo / Senior</option>
+                        <option value="medio">Energía media</option>
+                        <option value="activo">Cachorro / Muy activo</option>
+                      </select>
+
+                      <label class="block font-bold mt-4">Lugar donde dormirá:</label>
+                      <input type="text" name="lugar_dormir" required class="w-full p-2 border rounded-lg mt-1">
+
+                      <label class="block font-bold mt-4">Tiempo máximo solo al día:</label>
+                      <input type="text" name="tiempo_solo" required class="w-full p-2 border rounded-lg mt-1">
+
+                      <label class="block font-bold mt-4">Conductas a trabajar:</label>
+                      <div class="space-y-1 mt-1">
+                        <label class="flex items-center gap-2"><input type="radio" name="conductas" value="si_puedo" required> Sí puedo</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="conductas" value="solo_sociables"> Solo sociables</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="conductas" value="requiero_guia"> Requiero guía</label>
+                      </div>
+
+                      <label class="block font-bold mt-4">¿Comprendes accidentes en adaptación?</label>
+                      <div class="space-y-1 mt-1">
+                        <label class="flex items-center gap-2"><input type="radio" name="accidentes" value="si" required> Sí</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="accidentes" value="no"> No</label>
+                      </div>
+
+                      <label class="block font-bold mt-4">¿Transporte para urgencias?</label>
+                      <div class="space-y-1 mt-1">
+                        <label class="flex items-center gap-2"><input type="radio" name="transporte" value="si" required> Sí</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="transporte" value="no"> No</label>
+                      </div>
+
+                      <label class="block font-bold mt-4">Traslado al refugio:</label>
+                      <div class="space-y-1 mt-1">
+                        <label class="flex items-center gap-2"><input type="radio" name="moviliza_refugio" value="si" required> Yo me movilizo</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="moviliza_refugio" value="no"> Requiero apoyo</label>
+                      </div>
+                    </fieldset>
+                  {% endif %}
+
+                  <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-md transition text-lg mt-6 flex justify-center items-center gap-2">
+                    <i data-lucide="send" class="w-5 h-5"></i> Enviar Solicitud a Administración
+                  </button>
+                </form>
+              </div>
+              
+            {% endfor %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  <!-- fin de la pestaña de voluntariado -->
+
+
+
+  <!--Inicio de la ventana de donaciones -->
+     <!-- PESTAÑA DONACIONES -->
+    <div id="usuario-donaciones" class="tab-content tab-content-usuario hidden">
+      <div class="max-w-xl mx-auto bg-white p-10 rounded-[2rem] shadow-sm border border-slate-100 text-center mt-4">
+        
+        <div class="text-rose-500 mb-6 flex justify-center">
+            <i data-lucide="heart-handshake" class="w-16 h-16"></i>
+        </div>
+        
+        <h2 class="text-3xl font-black text-slate-800 mb-3">{{ info_donacion.titulo }}</h2>
+        <p class="text-sm text-slate-500 mb-8 px-4">{{ info_donacion.subtitulo }}</p>
+
+        <!-- Caja de Información -->
+        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-6 text-sm text-left space-y-3 mb-8">
+            <p>
+              <strong class="text-slate-800">
+                {{ info_donacion.info_bancaria.split(':')[0] if ':' in info_donacion.info_bancaria else 'Info Bancaria' }}:
+              </strong> 
+              {{ info_donacion.info_bancaria.split(':')[1] if ':' in info_donacion.info_bancaria else info_donacion.info_bancaria }}
+            </p>
+            <p>
+              <strong class="text-slate-800">
+                {{ info_donacion.nombre_de.split(':')[0] if ':' in info_donacion.nombre_de else 'Nombre De' }}:
+              </strong> 
+              {{ info_donacion.nombre_de.split(':')[1] if ':' in info_donacion.nombre_de else info_donacion.nombre_de }}
+            </p>
+            <p>
+              <strong class="text-slate-800">
+                {{ info_donacion.sede_fisica.split(':')[0] if ':' in info_donacion.sede_fisica else 'Sede Física' }}:
+              </strong> 
+              {{ info_donacion.sede_fisica.split(':')[1] if ':' in info_donacion.sede_fisica else info_donacion.sede_fisica }}
+            </p>
+        </div>
+
+        <form action="{{ url_for('registrar_donacion') }}" method="POST">
+            <button type="submit" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-4 rounded-xl shadow-md transition text-lg">Registrar Intención de Donación</button>
+        </form>
+        
+      </div>
+    </div>
+  <!-- Fin de la ventana de donaciones-->
   <!-- ======================================================= -->
   <div id="usuario-mascotas" class="tab-content tab-content-usuario"><div class="bg-white rounded-xl shadow-sm p-6 text-center text-slate-500">Módulo de Mascotas (Esperando conexión)</div></div>
-  <div id="usuario-donaciones" class="tab-content tab-content-usuario"><div class="bg-white rounded-xl shadow-sm p-6 text-center text-slate-500">Módulo de Donaciones (Esperando conexión)</div></div>
-  <div id="usuario-voluntariado" class="tab-content tab-content-usuario"><div class="bg-white rounded-xl shadow-sm p-6 text-center text-slate-500">Módulo de Voluntariado (Esperando conexión)</div></div>
-
- <!-- ======================================================= -->
-  <!-- PESTAÑA SHOP INTEGRADA                                  -->
-  <!-- ======================================================= -->
-  <div id="usuario-shop" class="tab-content tab-content-usuario">
-    <!-- Header de la Tienda -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm rounded-xl mb-4">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center gap-2">
-                <span class="text-2xl">🐾</span>
-                <h1 class="font-black text-xl text-purple-primary tracking-tight">Huellitas <span class="text-xs font-semibold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Portal Cliente</span></h1>
-            </div>
-            
-            <nav class="flex items-center gap-2">
-                <button onclick="toggleSeguimientoModal()" id="nav-seguimiento" class="px-3.5 py-2 rounded-xl font-bold text-xs bg-purple-100 text-purple-700 hover:bg-purple-200 transition flex items-center gap-1.5">
-                    📦 <span>Mi Pedido</span>
-                </button>
-            </nav>
-        </div>
-    </header>
-
-    <!-- Cuerpo principal de la Tienda -->
-    <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-        <section id="sec-catalogo" class="space-y-6 relative">
-            <div class="flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                <input type="text" id="catalogo-search" oninput="filtrarCatalogo()" placeholder="Buscar alimento, juguetes, medicina..." class="w-full md:w-80 px-4 py-2 border rounded-xl text-xs outline-purple-primary">
-                <div class="flex flex-wrap items-center gap-2">
-                    <button onclick="filtrarCategoria('Todos')" class="px-3 py-1.5 rounded-lg font-bold text-xs bg-purple-primary text-white">Todos</button>
-                    <button onclick="filtrarCategoria('Comida')" class="px-3 py-1.5 rounded-lg font-bold text-xs bg-slate-100 text-slate-600 hover:bg-slate-200">Comida</button>
-                    <button onclick="filtrarCategoria('Medicina')" class="px-3 py-1.5 rounded-lg font-bold text-xs bg-slate-100 text-slate-600 hover:bg-slate-200">Medicina</button>
-                    <button onclick="filtrarCategoria('Juguetes')" class="px-3 py-1.5 rounded-lg font-bold text-xs bg-slate-100 text-slate-600 hover:bg-slate-200">Juguetes</button>
-                    <button onclick="filtrarCategoria('Accesorios')" class="px-3 py-1.5 rounded-lg font-bold text-xs bg-slate-100 text-slate-600 hover:bg-slate-200">Accesorios</button>
-                </div>
-            </div>
-
-            <div id="catalogo-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
-
-            <!-- Botón flotante de Carrito en la esquina inferior derecha -->
-            <button onclick="toggleCartModal()" class="fixed bottom-6 right-6 z-40 bg-purple-primary text-white p-4 rounded-full shadow-2xl hover:bg-purple-dark transition flex items-center justify-center group">
-                <span class="text-xl">🛒</span>
-                <span id="cart-badge" class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">0</span>
-            </button>
-        </section>
-    </main>
-  </div>
-
-  <div id="usuario-perfil" class="tab-content tab-content-usuario"><div class="bg-white rounded-xl shadow-sm p-6 text-center text-slate-500">Módulo de Perfil (Se programará próximamente)</div></div>
-
-</div>
-
-<!-- ======================================================= -->
-<!-- MODALES Y PLANTILLAS DE LA TIENDA                       -->
-<!-- ======================================================= -->
-<!-- MODAL MI PEDIDO / SEGUIMIENTO -->
-<div id="modal-seguimiento" class="fixed inset-0 bg-slate-900/50 hidden z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto shadow-2xl relative">
-        <div class="flex justify-between items-center border-b pb-3">
-            <h3 class="font-black text-slate-800 text-base">Rastrear Estado de Pedido</h3>
-            <button onclick="toggleSeguimientoModal()" class="text-slate-400 font-bold hover:text-slate-600 text-lg">✕</button>
-        </div>
-
-        <div class="text-center space-y-4">
-            <p class="text-xs text-slate-500">Ingresa tu código de pedido para ver el avance en tiempo real.</p>
-            
-            <div class="flex gap-2 max-w-md mx-auto">
-                <input type="text" id="input-search-order" placeholder="Ingresa tu ID (ej: PED-1001)" class="w-full p-2 border rounded-xl text-xs outline-purple-primary">
-                <button onclick="buscarOrdenCliente()" class="px-4 py-2 bg-purple-primary text-white font-bold text-xs rounded-xl">Buscar</button>
-            </div>
-
-            <div id="tracking-info-container" class="space-y-4 pt-2 border-t">
-                <p id="tracking-code" class="text-xs text-purple-primary font-bold">Código: Ninguno activo</p>
-                <p id="order-status-msg" class="text-xs text-slate-500">Realiza un pedido para ver el avance del estado en vivo.</p>
-
-                <!-- Barra de 5 Pasos -->
-                <div class="grid grid-cols-5 gap-2 text-[10px] font-bold">
-                    <div id="step-1" class="bg-slate-200 text-slate-500 py-2.5 rounded-xl shadow-sm">1. Tomando</div>
-                    <div id="step-2" class="bg-slate-200 text-slate-500 py-2.5 rounded-xl shadow-sm">2. Aceptado</div>
-                    <div id="step-3" class="bg-slate-200 text-slate-500 py-2.5 rounded-xl shadow-sm">3. Procesando</div>
-                    <div id="step-4" class="bg-slate-200 text-slate-500 py-2.5 rounded-xl shadow-sm">4. Empacando</div>
-                    <div id="step-5" class="bg-slate-200 text-slate-500 py-2.5 rounded-xl shadow-sm">5. Finalizar</div>
-                </div>
-
-                <div class="flex flex-wrap justify-center gap-3 pt-4 border-t">
-                    <button id="btn-dl-orden" onclick="descargarDocumentoCliente('ORDEN_COMPRA')" class="px-4 py-2 bg-slate-800 text-white font-bold text-xs rounded-xl hover:bg-slate-900 transition">
-                        📄 Descargar Orden de Compra
-                    </button>
-                    <button id="btn-dl-factura" disabled onclick="descargarDocumentoCliente('FACTURA')" class="px-4 py-2 bg-emerald-600 text-white font-bold text-xs rounded-xl disabled:bg-slate-300 disabled:cursor-not-allowed hover:bg-emerald-700 transition">
-                        🧾 Descargar Factura Oficial
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL CARRITO -->
-<div id="modal-carrito" class="fixed inset-0 bg-slate-900/50 hidden z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div class="flex justify-between items-center border-b pb-3">
-            <h3 class="font-black text-slate-800">Carrito de Compras</h3>
-            <button onclick="toggleCartModal()" class="text-slate-400 font-bold hover:text-slate-600">✕</button>
-        </div>
-
-        <div id="cart-items-list" class="space-y-2"></div>
-
-        <div class="space-y-2 border-t pt-3">
-            <label class="block text-xs font-bold text-slate-700">Tipo de Entrega</label>
-            <div class="grid grid-cols-2 gap-2 text-xs">
-                <label class="flex items-center gap-2 p-2 border rounded-xl cursor-pointer">
-                    <input type="radio" name="delivery-option" value="domicilio" checked onchange="toggleEntregaCampos()">
-                    <span class="font-semibold">Servicio a Domicilio (Q35.00)</span>
-                </label>
-                <label class="flex items-center gap-2 p-2 border rounded-xl cursor-pointer">
-                    <input type="radio" name="delivery-option" value="tienda" onchange="toggleEntregaCampos()">
-                    <span class="font-semibold">Recoger en Tienda (Q0.00)</span>
-                </label>
-            </div>
-        </div>
-
-        <div id="campos-domicilio" class="space-y-2 text-xs border-t pt-2">
-            <input type="text" id="recibe-nombre" placeholder="Nombre completo *" class="w-full p-2 border rounded-xl">
-            <input type="tel" id="recibe-telefono" placeholder="Teléfono *" class="w-full p-2 border rounded-xl">
-            <input type="text" id="recibe-direccion" placeholder="Dirección exacta *" class="w-full p-2 border rounded-xl">
-
-            <label class="block font-bold text-slate-700 pt-2">Método de Pago</label>
-            <div class="grid grid-cols-2 gap-2">
-                <label class="flex items-center gap-2 p-2 border rounded-xl cursor-pointer">
-                    <input type="radio" name="metodo-pago" value="tarjeta" checked onchange="toggleFormaPago()">
-                    <span>Tarjeta</span>
-                </label>
-                <label class="flex items-center gap-2 p-2 border rounded-xl cursor-pointer">
-                    <input type="radio" name="metodo-pago" value="deposito" onchange="toggleFormaPago()">
-                    <span>Transferencia</span>
-                </label>
-            </div>
-
-            <div id="form-tarjeta" class="space-y-2 pt-1 bg-purple-50 p-3 rounded-xl border border-purple-200">
-                <input type="text" id="card-holder" placeholder="Nombre en tarjeta *" class="w-full p-2 border bg-white rounded-xl text-xs">
-                <input type="text" id="card-number" maxlength="16" placeholder="Número de tarjeta (16 dígitos) *" class="w-full p-2 border bg-white rounded-xl text-xs">
-                <div class="grid grid-cols-2 gap-2">
-                    <input type="text" id="card-exp" placeholder="MM/AA *" class="p-2 border bg-white rounded-xl text-xs">
-                    <input type="password" id="card-cvv" placeholder="CVV *" class="p-2 border bg-white rounded-xl text-xs">
-                </div>
-            </div>
-
-            <div id="info-deposito" class="hidden space-y-2 pt-1 bg-purple-50 p-3 rounded-xl text-xs text-purple-900 border border-purple-200">
-                <label class="block font-bold">Cuenta Banco Refugio:</label>
-                <select id="deposito-banco" class="w-full p-2 border rounded-xl bg-white text-xs font-semibold">
-                    <option value="Banco Industrial (012-345678-9)">Banco Industrial - Cta: 012-345678-9</option>
-                    <option value="BAC Credomatic (901-234567-8)">BAC Credomatic - Cta: 901-234567-8</option>
-                </select>
-                <div class="grid grid-cols-2 gap-2 pt-1">
-                    <input type="number" step="0.01" id="deposito-monto" placeholder="Monto Q *" class="p-2 border bg-white rounded-xl text-xs">
-                    <input type="text" id="deposito-ref" placeholder="No. Referencia *" class="p-2 border bg-white rounded-xl text-xs">
-                </div>
-            </div>
-        </div>
-
-        <div id="warning-recoger" class="hidden space-y-2 border-t pt-2">
-            <input type="text" id="recibe-nombre-tienda" placeholder="Tu Nombre completo *" class="w-full p-2 border rounded-xl text-xs">
-            <input type="tel" id="recibe-telefono-tienda" placeholder="Teléfono de contacto *" class="w-full p-2 border rounded-xl text-xs">
-            <div class="bg-amber-50 p-3 rounded-xl text-xs text-amber-800 border border-amber-200">
-                Pagas directamente en el refugio cuando tu pedido esté en <strong>5. Finalizar</strong> (se realiza el cobro en Caja Refugio).
-            </div>
-        </div>
-
-        <div class="border-t pt-3 space-y-1 text-xs">
-            <div class="flex justify-between text-slate-600"><span>Productos:</span><span id="cart-subtotal" class="font-bold">Q0.00</span></div>
-            <div class="flex justify-between text-slate-600"><span>Envío:</span><span id="cart-shipping" class="font-bold text-purple-700">Q35.00</span></div>
-            <div class="flex justify-between text-slate-800 font-black text-sm border-t pt-2 mt-1"><span>Total:</span><span id="cart-total" class="text-purple-primary">Q0.00</span></div>
-        </div>
-
-        <button onclick="procesarOrden()" class="w-full py-3 bg-purple-primary text-white rounded-xl font-bold text-xs hover:bg-purple-dark transition">Confirmar Orden</button>
-    </div>
-</div>
-
-<!-- PLANTILLA PDF OCULTA -->
-<div class="hidden">
-    <div id="pdf-template" class="p-8 bg-white text-slate-800 space-y-4 max-w-xl text-xs">
-        <div class="flex justify-between items-center border-b pb-4">
-            <div>
-                <h1 class="text-xl font-black text-purple-600">Huellitas Refugio</h1>
-                <p id="pdf-doc-title" class="text-xs font-bold text-slate-700 uppercase">Comprobante de Compra</p>
-            </div>
-            <div class="text-right">
-                <p id="pdf-ord-id" class="font-bold text-sm">#PED-0000</p>
-                <p id="pdf-date" class="text-[10px] text-slate-400">Fecha: --/--/----</p>
-            </div>
-        </div>
-        <div id="pdf-client-box" class="bg-slate-50 p-3 rounded-xl border text-[11px] space-y-1"></div>
-        <table class="w-full text-left border-collapse">
-            <thead>
-                <tr class="border-b text-slate-500 text-[10px] uppercase">
-                    <th class="py-1">Código</th>
-                    <th class="py-1">Producto</th>
-                    <th class="py-1 text-center">Cant</th>
-                    <th class="py-1 text-right">Precio</th>
-                    <th class="py-1 text-right">Subtotal</th>
-                </tr>
-            </thead>
-            <tbody id="pdf-items-body" class="divide-y text-[11px]"></tbody>
-        </table>
-        <div class="border-t pt-2 text-right space-y-1 text-[11px]">
-            <p>Subtotal: <span id="pdf-subtotal" class="font-bold">Q0.00</span></p>
-            <p>Envío: <span id="pdf-shipping" class="font-bold">Q0.00</span></p>
-            <p class="font-black text-sm border-t pt-1 mt-1">Total General: <span id="pdf-total" class="text-purple-700">Q0.00</span></p>
-        </div>
-    </div>
-</div>
-
+  <div id="usuario-shop" class="tab-content tab-content-usuario"><div class="bg-white rounded-xl shadow-sm p-6 text-center text-slate-500">Tienda de Productos (Esperando conexión)</div></div>
   <div id="usuario-perfil" class="tab-content tab-content-usuario"><div class="bg-white rounded-xl shadow-sm p-6 text-center text-slate-500">Módulo de Perfil (Se programará próximamente)</div></div>
 
 </div>
@@ -578,6 +719,9 @@
 <!-- SCRIPTS DE JAVASCRIPT (Controlan los botones de Adoptar)-->
 <!-- ======================================================= -->
 <script>
+
+// Lógica para limitar a 5 fotos en el formulario de Hogar Temporal
+ 
   function abrirPerfilAdopcion(mascotaId) {
     const contenidoHTML = document.getElementById('perfil-mascota-' + mascotaId).innerHTML;
     openModal(contenidoHTML);
@@ -590,270 +734,47 @@
     alert("Función de Solicitud de Adopción en construcción. Se dirigirá al formulario.");
   }
 
-function iniciarReclamo(mascotaId) {
-     closeModal();
-     openModal(`
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-bold text-red-600 flex items-center gap-2"><i data-lucide="shield-alert"></i> Reclamo de Propiedad (ID #` + mascotaId + `)</h2>
-      </div>
-      <p class="text-sm text-slate-600 mb-6">Por favor, proporciona datos precisos que demuestren de manera contundente que eres el dueño original de este animal.</p>
-      
-      <form action="/crear_reclamo/` + mascotaId + `" method="POST" enctype="multipart/form-data" class="space-y-4 border border-indigo-100 p-4 rounded-xl">
-        <h3 class="text-indigo-800 font-bold mb-2">Datos de Reclamo Oficial</h3>
-        <div><label class="block text-sm font-semibold mb-1 text-slate-700">¿A qué nombre exacto responde?</label><input type="text" name="nombre_responde" required class="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-indigo-500"></div>
-        <div><label class="block text-sm font-semibold mb-1 text-slate-700">Marcas únicas (cicatrices, manchas específicas)</label><textarea name="marcas" required rows="3" class="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-indigo-500"></textarea></div>
-        <div><label class="block text-sm font-semibold mb-1 text-slate-700">Sube fotografías de ti junto al animal</label><input type="file" name="evidencia_dueno" multiple accept="image/*" class="w-full border border-slate-300 rounded-lg p-1.5 text-xs bg-white text-slate-500"></div>
-        <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-xl shadow-md transition mt-4">Enviar Evidencia Oficial de Reclamo</button>
-      </form>
-    `);
-    lucide.createIcons();
-    }
-
-    /* --- FUNCIONES Y LÓGICA DEL SHOP (SIN DATOS DE EJEMPLO) --- */
-    const productosIniciales = [];
-
-    let productos = JSON.parse(localStorage.getItem('huellitas_productos')) || productosIniciales;
-    let historialVentas = JSON.parse(localStorage.getItem('huellitas_historial')) || [];
-    let carrito = [];
-    let ordenActivaSeguimiento = null;
-
-    // Sincronización en tiempo real
-    window.addEventListener('storage', (e) => {
-        if(e.key === 'huellitas_productos' || e.key === 'huellitas_historial') {
-            productos = JSON.parse(localStorage.getItem('huellitas_productos')) || [];
-            historialVentas = JSON.parse(localStorage.getItem('huellitas_historial')) || [];
-            renderizarCatalogo(productos);
-            
-            if(ordenActivaSeguimiento) {
-                const act = historialVentas.find(o => o.id === ordenActivaSeguimiento.id);
-                if(act) {
-                    ordenActivaSeguimiento = act;
-                    actualizarBarraProgresivaCliente(act);
-                }
-            }
-        }
-    });
-
-    window.addEventListener('DOMContentLoaded', () => {
-        renderizarCatalogo(productos);
-    });
-
-    function toggleSeguimientoModal() {
-        const modal = document.getElementById('modal-seguimiento');
-        if(modal) modal.classList.toggle('hidden');
-    }
-
-    function renderizarCatalogo(lista) {
-        const grid = document.getElementById('catalogo-grid');
-        if(!grid) return;
-        const visibles = lista.filter(p => p.visible);
-        if(visibles.length === 0) { 
-            grid.innerHTML = `<p class="col-span-full text-center text-xs text-slate-400 py-8">No hay productos disponibles.</p>`; 
-            return; 
-        }
-        grid.innerHTML = visibles.map(p => `
-            <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col justify-between">
-                <img src="${p.img}" class="w-full h-36 object-cover">
-                <div class="p-4 space-y-2 flex-1 flex flex-col justify-between">
-                    <div>
-                        <span class="text-[10px] font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">${p.categoria}</span>
-                        <h3 class="font-bold text-sm text-slate-800 mt-1">${p.nombre}</h3>
-                    </div>
-                    <div class="flex justify-between items-center pt-2 border-t">
-                        <span class="font-black text-slate-800">Q${p.precio.toFixed(2)}</span>
-                        <button onclick="agregarAlCarrito('${p.id}')" ${p.stock <= 0 ? 'disabled' : ''} class="px-3 py-1.5 bg-purple-primary text-white rounded-xl font-bold text-xs hover:bg-purple-dark transition disabled:bg-slate-300">
-                            ${p.stock > 0 ? '+ Agregar' : 'Agotado'}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    function filtrarCatalogo() { 
-        const input = document.getElementById('catalogo-search');
-        if(input) renderizarCatalogo(productos.filter(p => p.nombre.toLowerCase().includes(input.value.toLowerCase()))); 
-    }
-
-    function filtrarCategoria(c) { renderizarCatalogo(c === 'Todos' ? productos : productos.filter(p => p.categoria === c)); }
-
-    function toggleCartModal() { 
-        const modal = document.getElementById('modal-carrito');
-        if(modal) modal.classList.toggle('hidden'); 
-    }
-
-    function agregarAlCarrito(id) {
-        const p = productos.find(x => x.id === id);
-        if(!p) return;
-        const item = carrito.find(x => x.id === id);
-        if(item) { 
-            if(item.cantidad < p.stock) item.cantidad++; 
-            else alert('Límite alcanzado'); 
-        } else {
-            carrito.push({ id: p.id, nombre: p.nombre, precio: p.precio, cantidad: 1 });
-        }
-        actualizarCarritoUI();
-    }
-
-    function cambiarCantidadCarrito(id, d) {
-        const item = carrito.find(x => x.id === id);
-        if(!item) return;
-        item.cantidad += d;
-        if(item.cantidad <= 0) carrito = carrito.filter(x => x.id !== id);
-        actualizarCarritoUI();
-    }
-
-    function actualizarCarritoUI() {
-        const totalCant = carrito.reduce((a, b) => a + b.cantidad, 0);
-        const badge = document.getElementById('cart-badge');
-        if(badge) badge.innerText = totalCant;
-
-        const list = document.getElementById('cart-items-list');
-        if(list) {
-            list.innerHTML = carrito.length === 0 ? `<p class="text-center text-xs text-slate-400 py-4">El carrito está vacío.</p>` :
-                carrito.map(i => `
-                    <div class="flex justify-between items-center text-xs bg-slate-50 p-3 rounded-xl border">
-                        <div><h4 class="font-bold">${i.nombre}</h4><p class="text-slate-400">Q${i.precio.toFixed(2)} c/u</p></div>
-                        <div class="flex items-center gap-2">
-                            <button onclick="cambiarCantidadCarrito('${i.id}', -1)" class="px-2 bg-white border font-bold rounded">-</button>
-                            <span class="font-bold">${i.cantidad}</span>
-                            <button onclick="cambiarCantidadCarrito('${i.id}', 1)" class="px-2 bg-white border font-bold rounded">+</button>
-                            <span class="font-bold ml-2">Q${(i.precio * i.cantidad).toFixed(2)}</span>
-                        </div>
-                    </div>
-                `).join('');
-        }
+  function iniciarReclamo(mascotaId) {
+      closeModal();
+      openModal(`
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-bold text-red-600 flex items-center gap-2"><i data-lucide="shield-alert"></i> Reclamo de Propiedad (ID #` + mascotaId + `)</h2>
+        </div>
+        <p class="text-sm text-slate-600 mb-6">Por favor, proporciona datos precisos que demuestren de manera contundente que eres el dueño original de este animal.</p>
         
-        const sub = carrito.reduce((a, b) => a + (b.precio * b.cantidad), 0);
-        const devElem = document.querySelector('input[name="delivery-option"]:checked');
-        const dev = devElem ? devElem.value : 'domicilio';
-        const ship = dev === 'domicilio' ? 35.00 : 0.00;
-        
-        const elSub = document.getElementById('cart-subtotal');
-        const elShip = document.getElementById('cart-shipping');
-        const elTotal = document.getElementById('cart-total');
-        if(elSub) elSub.innerText = `Q${sub.toFixed(2)}`;
-        if(elShip) elShip.innerText = `Q${ship.toFixed(2)}`;
-        if(elTotal) elTotal.innerText = `Q${(sub + ship).toFixed(2)}`;
+        <form action="/crear_reclamo/` + mascotaId + `" method="POST" enctype="multipart/form-data" class="space-y-4 border border-indigo-100 p-4 rounded-xl">
+          <h3 class="text-indigo-800 font-bold mb-2">Datos de Reclamo Oficial</h3>
+          <div><label class="block text-sm font-semibold mb-1 text-slate-700">¿A qué nombre exacto responde?</label><input type="text" name="nombre_responde" required class="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-indigo-500"></div>
+          <div><label class="block text-sm font-semibold mb-1 text-slate-700">Marcas únicas (cicatrices, manchas específicas)</label><textarea name="marcas" required rows="3" class="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-indigo-500"></textarea></div>
+          <div><label class="block text-sm font-semibold mb-1 text-slate-700">Sube fotografías de ti junto al animal</label><input type="file" name="evidencia_dueno" multiple accept="image/*" class="w-full border border-slate-300 rounded-lg p-1.5 text-xs bg-white text-slate-500"></div>
+          <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-xl shadow-md transition mt-4">Enviar Evidencia Oficial de Reclamo</button>
+        </form>
+      `);
+      lucide.createIcons();
     }
 
-    function toggleEntregaCampos() {
-        const devElem = document.querySelector('input[name="delivery-option"]:checked');
-        const dev = devElem ? devElem.value : 'domicilio';
-        const camposDom = document.getElementById('campos-domicilio');
-        const warningRec = document.getElementById('warning-recoger');
-        if(camposDom) camposDom.classList.toggle('hidden', dev !== 'domicilio');
-        if(warningRec) warningRec.classList.toggle('hidden', dev === 'domicilio');
-        actualizarCarritoUI();
-    }
+function mostrarDetalleVoluntariado(idDetalle) {
+      document.querySelectorAll('.seccion-detalle-vol').forEach(el => el.classList.add('hidden'));
+      document.getElementById(idDetalle).classList.remove('hidden');
+      document.getElementById(idDetalle).scrollIntoView({ behavior: 'smooth' });
+  }
 
-    function toggleFormaPago() {
-        const pagoElem = document.querySelector('input[name="metodo-pago"]:checked');
-        const m = pagoElem ? pagoElem.value : 'tarjeta';
-        const formTarj = document.getElementById('form-tarjeta');
-        const infoDep = document.getElementById('info-deposito');
-        if(formTarj) formTarj.classList.toggle('hidden', m !== 'tarjeta');
-        if(infoDep) infoDep.classList.toggle('hidden', m === 'tarjeta');
-    }
+  function abrirModalVoluntariado(progId) {
+      const html = document.getElementById('modal-vol-' + progId).innerHTML;
+      openModal(html);
+      lucide.createIcons();
+  }
 
-    function procesarOrden() {
-        if(carrito.length === 0) return alert('El carrito está vacío');
-        const devElem = document.querySelector('input[name="delivery-option"]:checked');
-        const dev = devElem ? devElem.value : 'domicilio';
-        let nom, tel, dir, met, estP;
+  document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('input[type="file"][multiple]').forEach(input => {
+          input.addEventListener('change', function() {
+              if (this.files.length > 5) {
+                  alert('Solo puedes seleccionar un máximo de 5 fotografías del espacio.');
+                  this.value = ''; 
+              }
+          });
+      });
+  });
 
-        if(dev === 'domicilio') {
-            nom = document.getElementById('recibe-nombre')?.value.trim();
-            tel = document.getElementById('recibe-telefono')?.value.trim();
-            dir = document.getElementById('recibe-direccion')?.value.trim();
-            if(!nom || !tel || !dir) return alert('Campos obligatorios incompletos');
-            
-            const pagoElem = document.querySelector('input[name="metodo-pago"]:checked');
-            const m = pagoElem ? pagoElem.value : 'tarjeta';
-            met = m === 'tarjeta' ? 'Tarjeta en Línea' : 'Transferencia';
-            estP = `PENDIENTE DE VERIFICACIÓN (${m === 'tarjeta' ? 'Tarjeta' : 'Transferencia'})`;
-        } else {
-            nom = document.getElementById('recibe-nombre-tienda')?.value.trim() || 'Cliente Presencial';
-            tel = document.getElementById('recibe-telefono-tienda')?.value.trim() || 'N/A';
-            dir = 'Recoger en Recepción';
-            met = 'Pago Pendiente en Recepción';
-            estP = 'PENDIENTE DE COBRO EN TIENDA';
-        }
-
-        const sub = carrito.reduce((a, b) => a + (b.precio * b.cantidad), 0);
-        const env = dev === 'domicilio' ? 35.00 : 0.00;
-        const orden = {
-            id: "PED-" + Math.floor(1000 + Math.random() * 9000),
-            fecha: new Date().toLocaleDateString('es-GT'),
-            clienteNombre: nom, clienteTel: tel, clienteDir: dir,
-            itemsDetalle: JSON.parse(JSON.stringify(carrito)),
-            subtotal: sub, envio: env, total: sub + env,
-            tipo: dev === 'domicilio' ? 'Domicilio' : 'Tienda',
-            metodoPago: met, estadoPago: estP, estadoOrden: '1. Tomando',
-            stockDescontado: false
-        };
-
-        historialVentas.unshift(orden);
-        localStorage.setItem('huellitas_historial', JSON.stringify(historialVentas));
-        
-        ordenActivaSeguimiento = orden;
-        toggleCartModal();
-        carrito = [];
-        actualizarCarritoUI();
-        toggleSeguimientoModal();
-        actualizarBarraProgresivaCliente(orden);
-        alert(`Orden ${orden.id} creada con éxito.`);
-    }
-
-    function buscarOrdenCliente() {
-        const input = document.getElementById('input-search-order');
-        if(!input) return;
-        const q = input.value.trim().toUpperCase();
-        const o = historialVentas.find(x => x.id === q);
-        if(o) { ordenActivaSeguimiento = o; actualizarBarraProgresivaCliente(o); }
-        else alert('Orden no encontrada');
-    }
-
-    function actualizarBarraProgresivaCliente(orden) {
-        const code = document.getElementById('tracking-code');
-        const msg = document.getElementById('order-status-msg');
-        if(code) code.innerText = `Código: ${orden.id}`;
-        if(msg) msg.innerHTML = `Orden <strong>${orden.id}</strong> (${orden.tipo}) - Estado: <strong class="text-purple-primary">${orden.estadoOrden}</strong> | Pago: <strong>${orden.estadoPago}</strong>`;
-        
-        const steps = ["1. Tomando", "2. Aceptado", "3. Procesando", "4. Empacando", "5. Finalizar"];
-        const idx = steps.findIndex(s => orden.estadoOrden.includes(s.split('.')[0]));
-
-        for(let i=1; i<=5; i++) {
-            const stepElem = document.getElementById(`step-${i}`);
-            if(stepElem) {
-                stepElem.className = (i - 1 <= idx) ? "bg-purple-primary text-white py-2.5 rounded-xl shadow-sm font-bold" : "bg-slate-200 text-slate-500 py-2.5 rounded-xl shadow-sm";
-            }
-        }
-
-        const btnFactura = document.getElementById('btn-dl-factura');
-        if(btnFactura) {
-            if(orden.estadoPago.includes('PAGADO')) btnFactura.removeAttribute('disabled');
-            else btnFactura.setAttribute('disabled', 'true');
-        }
-    }
-
-    function descargarDocumentoCliente(tipo) {
-        if(!ordenActivaSeguimiento) return;
-        const o = ordenActivaSeguimiento;
-        document.getElementById('pdf-doc-title').innerText = tipo === 'ORDEN_COMPRA' ? "Orden de Compra" : "Factura Oficial de Compra";
-        document.getElementById('pdf-ord-id').innerText = `#${o.id}`;
-        document.getElementById('pdf-date').innerText = `Fecha: ${o.fecha}`;
-        document.getElementById('pdf-client-box').innerHTML = `<p><strong>Cliente:</strong> ${o.clienteNombre}</p><p><strong>Tipo:</strong> ${o.tipo}</p><p><strong>Estado Pago:</strong> ${o.estadoPago}</p>`;
-        document.getElementById('pdf-items-body').innerHTML = o.itemsDetalle.map(i => `<tr><td class="py-1">${i.id}</td><td class="py-1">${i.nombre}</td><td class="py-1 text-center">${i.cantidad}</td><td class="py-1 text-right">Q${i.precio.toFixed(2)}</td><td class="py-1 text-right">Q${(i.precio*i.cantidad).toFixed(2)}</td></tr>`).join('');
-        document.getElementById('pdf-subtotal').innerText = `Q${o.subtotal.toFixed(2)}`;
-        document.getElementById('pdf-shipping').innerText = `Q${o.envio.toFixed(2)}`;
-        document.getElementById('pdf-total').innerText = `Q${o.total.toFixed(2)}`;
-
-        const el = document.getElementById('pdf-template');
-        if(el && el.parentElement) {
-            el.parentElement.classList.remove('hidden');
-            html2pdf().from(el).save(`${tipo}_${o.id}.pdf`).then(() => el.parentElement.classList.add('hidden'));
-        }
-    }
 </script>
 {% endblock %}
