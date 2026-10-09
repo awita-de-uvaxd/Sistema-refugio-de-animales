@@ -753,20 +753,31 @@
             <div id="catalogo-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {% if productos %}
                 {% for prod in productos %}
-                <!-- AGREGAR data-nombre Y data-categoria AQUÍ -->
-                <div data-nombre="{{ prod.nombre }}" data-categoria="{{ prod.categoria }}" class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col justify-between">
-                    {% if prod.foto %}
-                    <img src="{{ url_for('static', filename='uploads/' ~ prod.foto) }}" class="w-full h-36 object-cover">
-                    {% else %}
-                    <img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=300" class="w-full h-36 object-cover">
-                    {% endif %}
-                    <div class="p-4 space-y-2 flex-1 flex flex-col justify-between">
+                <!-- TARJETA DEL PRODUCTO -->
+                <div data-nombre="{{ prod.nombre }}" data-categoria="{{ prod.categoria }}" class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col justify-between hover:shadow-md transition">
+                    
+                    <!-- Clic en imagen o título abre la descripción y sugerencias -->
+                    <div class="cursor-pointer relative" onclick="abrirModalDetalle('{{ prod.id }}')">
+                        {% if prod.foto %}
+                        <img src="{{ url_for('static', filename='uploads/' ~ prod.foto) }}" class="w-full h-40 object-cover">
+                        {% else %}
+                        <img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=300" class="w-full h-40 object-cover">
+                        {% endif %}
+                        <span class="absolute top-2 left-2 text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-full shadow-sm">{{ prod.categoria }}</span>
+                    </div>
+
+                    <div class="p-4 space-y-3 flex-1 flex flex-col justify-between">
                         <div>
-                            <span class="text-[10px] font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">{{ prod.categoria }}</span>
-                            <h3 class="font-bold text-sm text-slate-800 mt-1">{{ prod.nombre }}</h3>
+                            <h3 class="font-bold text-sm text-slate-800 cursor-pointer hover:text-indigo-600 transition" onclick="abrirModalDetalle('{{ prod.id }}')">{{ prod.nombre }}</h3>
+                            <p class="text-xs text-slate-500 line-clamp-2 mt-1">{{ prod.descripcion or 'Sin descripción disponible.' }}</p>
                         </div>
-                        <div class="flex justify-between items-center pt-2 border-t">
-                            <span class="font-black text-slate-800">Q{{ "%.2f"|format(prod.precio) }}</span>
+                        
+                        <div class="flex justify-between items-center pt-2 border-t border-slate-100">
+                            <div>
+                                <span class="text-[10px] text-slate-400 block uppercase font-bold">Precio</span>
+                                <span class="font-black text-slate-800 text-base">Q{{ "%.2f"|format(prod.precio) }}</span>
+                            </div>
+                            <!-- Botón visible de Agregar al Carrito -->
                             <button 
                               data-id="{{ prod.id }}"
                               data-nombre="{{ prod.nombre }}"
@@ -774,11 +785,80 @@
                               data-stock="{{ prod.stock }}"
                               onclick="prepararAgregarCarrito(this)" 
                               {% if prod.stock <= 0 %}disabled{% endif %} 
-                              class="px-3 py-1.5 bg-purple-primary text-white rounded-xl font-bold text-xs hover:bg-purple-dark transition disabled:bg-slate-300">
-                                {% if prod.stock > 0 %}+ Agregar{% else %}Agotado{% endif %}
+                              class="px-3.5 py-2 bg-indigo-600 text-white rounded-xl font-bold text-xs hover:bg-indigo-700 transition disabled:bg-slate-300 shadow-sm flex items-center gap-1">
+                                {% if prod.stock > 0 %}<i data-lucide="plus" class="w-3.5 h-3.5"></i> Agregar{% else %}Agotado{% endif %}
                             </button>
                         </div>
                     </div>
+
+                    <!-- PLANTILLA OCULTA: DESCRIPCIÓN COMPLETA Y PRODUCTOS SUGERIDOS -->
+                    <div id="detalle-prod-data-{{ prod.id }}" class="hidden">
+                        <div class="space-y-4">
+                            <div class="flex flex-col md:flex-row gap-6">
+                                <div class="w-full md:w-1/2 h-56 rounded-2xl overflow-hidden border border-slate-200">
+                                    {% if prod.foto %}
+                                    <img src="{{ url_for('static', filename='uploads/' ~ prod.foto) }}" class="w-full h-full object-cover">
+                                    {% else %}
+                                    <img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=300" class="w-full h-full object-cover">
+                                    {% endif %}
+                                </div>
+                                <div class="w-full md:w-1/2 flex flex-col justify-between space-y-3">
+                                    <div>
+                                        <span class="text-xs font-bold bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-full">{{ prod.categoria }}</span>
+                                        <h2 class="text-xl font-black text-slate-800 mt-2">{{ prod.nombre }}</h2>
+                                        <p class="text-xs text-slate-500 mt-1">Stock disponible: <strong class="text-indigo-600">{{ prod.stock }} unidades</strong></p>
+                                    </div>
+
+                                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                        <h4 class="text-xs font-bold text-slate-700 mb-1">Descripción:</h4>
+                                        <p class="text-xs text-slate-600 leading-relaxed">{{ prod.descripcion or 'Este producto no cuenta con una descripción detallada por el momento.' }}</p>
+                                    </div>
+
+                                    <div class="flex items-center justify-between pt-2 border-t">
+                                        <div>
+                                            <span class="text-xs text-slate-400 block">Precio:</span>
+                                            <span class="text-2xl font-black text-indigo-900">Q{{ "%.2f"|format(prod.precio) }}</span>
+                                        </div>
+                                        <button 
+                                          data-id="{{ prod.id }}"
+                                          data-nombre="{{ prod.nombre }}"
+                                          data-precio="{{ prod.precio }}"
+                                          data-stock="{{ prod.stock }}"
+                                          onclick="prepararAgregarCarrito(this); closeModal();"
+                                          {% if prod.stock <= 0 %}disabled{% endif %}
+                                          class="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-2">
+                                            <i data-lucide="shopping-bag" class="w-4 h-4"></i> Añadir al Carrito
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SECCIÓN DE PRODUCTOS SUGERIDOS / RELACIONADOS -->
+                            <div class="border-t pt-4 mt-6">
+                                <h4 class="font-bold text-xs text-slate-700 mb-3 flex items-center gap-1.5 uppercase tracking-wider">
+                                    <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i> Sugerencias de la Tienda
+                                </h4>
+                                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    {% for sug in productos %}
+                                        {% if sug.id != prod.id %}
+                                        <div onclick="closeModal(); abrirModalDetalle('{{ sug.id }}');" class="border rounded-xl p-2 bg-slate-50 hover:bg-indigo-50/50 transition text-xs flex flex-col justify-between cursor-pointer">
+                                            <div class="h-20 rounded-lg overflow-hidden mb-2">
+                                                {% if sug.foto %}
+                                                <img src="{{ url_for('static', filename='uploads/' ~ sug.foto) }}" class="w-full h-full object-cover">
+                                                {% else %}
+                                                <img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=300" class="w-full h-full object-cover">
+                                                {% endif %}
+                                            </div>
+                                            <p class="font-bold text-slate-800 truncate">{{ sug.nombre }}</p>
+                                            <p class="text-indigo-600 font-bold mt-1">Q{{ "%.2f"|format(sug.precio) }}</p>
+                                        </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
                 {% endfor %}
               {% else %}
@@ -1106,18 +1186,41 @@ function mostrarDetalleVoluntariado(idDetalle) {
         if(modal) modal.classList.toggle('hidden'); 
     }
 
-    function agregarAlCarrito(id) {
-        const p = productos.find(x => x.id === id);
-        if(!p) return;
-        const item = carrito.find(x => x.id === id);
-        if(item) { 
-            if(item.cantidad < p.stock) item.cantidad++; 
-            else alert('Límite alcanzado'); 
-        } else {
-            carrito.push({ id: p.id, nombre: p.nombre, precio: p.precio, cantidad: 1 });
-        }
-        actualizarCarritoUI();
+    // Abre la modal con la descripción del producto y sugerencias
+function abrirModalDetalle(prodId) {
+    const elem = document.getElementById('detalle-prod-data-' + prodId);
+    if (elem) {
+        openModal(elem.innerHTML);
+        lucide.createIcons();
     }
+}
+
+// Extrae los datos HTML seguros del botón
+function prepararAgregarCarrito(btn) {
+    const id = btn.dataset.id;
+    const nombre = btn.dataset.nombre;
+    const precio = parseFloat(btn.dataset.precio);
+    const stockMax = parseInt(btn.dataset.stock);
+
+    agregarAlCarrito(id, nombre, precio, stockMax);
+}
+
+// Agrega el item a la lista del carrito y actualiza la UI
+function agregarAlCarrito(id, nombre, precio, stockMax) {
+    const itemExistente = carrito.find(i => i.id === id);
+    if (itemExistente) {
+        if (itemExistente.cantidad < stockMax) {
+            itemExistente.cantidad += 1;
+        } else {
+            alert('Alcanzaste la cantidad máxima disponible en inventario para este producto.');
+            return;
+        }
+    } else {
+        carrito.push({ id, nombre, precio, cantidad: 1 });
+    }
+    actualizarCarritoUI();
+    alert(`¡"${nombre}" se agregó al carrito de compras!`);
+}
 
     function cambiarCantidadCarrito(id, d) {
         const item = carrito.find(x => x.id === id);
