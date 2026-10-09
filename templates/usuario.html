@@ -750,7 +750,41 @@
                 </div>
             </div>
 
-            <div id="catalogo-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+            <div id="catalogo-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {% if productos %}
+                {% for prod in productos %}
+                <!-- AGREGAR data-nombre Y data-categoria AQUÍ -->
+                <div data-nombre="{{ prod.nombre }}" data-categoria="{{ prod.categoria }}" class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col justify-between">
+                    {% if prod.foto %}
+                    <img src="{{ url_for('static', filename='uploads/' ~ prod.foto) }}" class="w-full h-36 object-cover">
+                    {% else %}
+                    <img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=300" class="w-full h-36 object-cover">
+                    {% endif %}
+                    <div class="p-4 space-y-2 flex-1 flex flex-col justify-between">
+                        <div>
+                            <span class="text-[10px] font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">{{ prod.categoria }}</span>
+                            <h3 class="font-bold text-sm text-slate-800 mt-1">{{ prod.nombre }}</h3>
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t">
+                            <span class="font-black text-slate-800">Q{{ "%.2f"|format(prod.precio) }}</span>
+                            <button 
+                              data-id="{{ prod.id }}"
+                              data-nombre="{{ prod.nombre }}"
+                              data-precio="{{ prod.precio }}"
+                              data-stock="{{ prod.stock }}"
+                              onclick="prepararAgregarCarrito(this)" 
+                              {% if prod.stock <= 0 %}disabled{% endif %} 
+                              class="px-3 py-1.5 bg-purple-primary text-white rounded-xl font-bold text-xs hover:bg-purple-dark transition disabled:bg-slate-300">
+                                {% if prod.stock > 0 %}+ Agregar{% else %}Agotado{% endif %}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+              {% else %}
+                <p class="col-span-full text-center text-xs text-slate-400 py-8">No hay productos disponibles en la tienda.</p>
+              {% endif %}
+            </div>
 
             <!-- Botón flotante de Carrito en la esquina inferior derecha -->
             <button onclick="toggleCartModal()" class="fixed bottom-6 right-6 z-40 bg-purple-primary text-white p-4 rounded-full shadow-2xl hover:bg-purple-dark transition flex items-center justify-center group">
@@ -1005,9 +1039,7 @@ function mostrarDetalleVoluntariado(idDetalle) {
         }
     });
 
-    window.addEventListener('DOMContentLoaded', () => {
-        renderizarCatalogo(productos);
-    });
+  
 
     function toggleSeguimientoModal() {
         const modal = document.getElementById('modal-seguimiento');
@@ -1043,11 +1075,32 @@ function mostrarDetalleVoluntariado(idDetalle) {
 
     function filtrarCatalogo() { 
         const input = document.getElementById('catalogo-search');
-        if(input) renderizarCatalogo(productos.filter(p => p.nombre.toLowerCase().includes(input.value.toLowerCase()))); 
+        const query = input ? input.value.toLowerCase() : '';
+        const tarjetas = document.querySelectorAll('#catalogo-grid > div[data-nombre]');
+
+        tarjetas.forEach(card => {
+            const nombre = card.getAttribute('data-nombre').toLowerCase();
+            if (nombre.includes(query)) {
+                card.classList.remove('hidden');
+            } else {
+                card.classList.add('hidden');
+            }
+        });
     }
 
-    function filtrarCategoria(c) { renderizarCatalogo(c === 'Todos' ? productos : productos.filter(p => p.categoria === c)); }
+    function filtrarCategoria(cat) { 
+        const tarjetas = document.querySelectorAll('#catalogo-grid > div[data-categoria]');
 
+        tarjetas.forEach(card => {
+            const categoria = card.getAttribute('data-categoria');
+            if (cat === 'Todos' || categoria === cat) {
+                card.classList.remove('hidden');
+            } else {
+                card.classList.add('hidden');
+            }
+        });
+    }
+    
     function toggleCartModal() { 
         const modal = document.getElementById('modal-carrito');
         if(modal) modal.classList.toggle('hidden'); 

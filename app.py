@@ -227,9 +227,12 @@ class Rescate(db.Model):
 class ProductoShop(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False)
+    categoria = db.Column(db.String(50), default='Comida')
     precio = db.Column(db.Float, nullable=False)
-    descripcion = db.Column(db.Text)
-    foto = db.Column(db.Text)
+    stock = db.Column(db.Integer, default=0)
+    descripcion = db.Column(db.Text, nullable=True)
+    foto = db.Column(db.Text, nullable=True)
+    visible = db.Column(db.Boolean, default=True)
 
 class Pedido(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -321,8 +324,9 @@ def usuario():
     programas_db = ProgramaVoluntariado.query.all()
     info_don = InfoDonacion.query.first()
     user_data = Usuario.query.get(session['usuario_id']) # Inyección de datos
+    productos_db = ProductoShop.query.filter_by(visible=True).all()
     
-    return render_template('usuario.html', adopciones=disponibles, mi_cv=cv_actual, programas=programas_db, info_donacion=info_don, usuario_data=user_data)
+    return render_template('usuario.html', adopciones=disponibles, mi_cv=cv_actual, programas=programas_db, info_donacion=info_don, usuario_data=user_data, productos=productos_db)
 
 @app.route('/admin')
 def admin(): 
@@ -336,9 +340,11 @@ def admin():
     programas_db = ProgramaVoluntariado.query.all()
     solicitudes_vol = SolicitudVoluntariado.query.filter_by(estado='Pendiente').all()
     info_don = InfoDonacion.query.first()
+    productos_db = ProductoShop.query.all()
+    pedidos_db = Pedido.query.all() 
     user_data = Usuario.query.get(session['usuario_id']) # Inyección de datos
 
-    return render_template('admin.html', empleados=empleados_db, pacientes=pacientes_con_solicitudes, programas=programas_db, voluntariados=solicitudes_vol, info_donacion=info_don, usuario_data=user_data)
+    return render_template('admin.html', empleados=empleados_db, pacientes=pacientes_con_solicitudes, programas=programas_db, voluntariados=solicitudes_vol, info_donacion=info_don, productos=productos_db, pedidos=pedidos_db, usuario_data=user_data)
     if 'usuario_id' not in session or session['rol'] != 'rescatista': return redirect(url_for('login'))
     rescates_db = Rescate.query.filter_by(rescatista_id=session['usuario_id']).all()
     alertas_db = Alerta.query.filter_by(estado='Pendiente').order_by(Alerta.id.desc()).all()
@@ -804,6 +810,37 @@ def crear_reclamo(paciente_id):
     db.session.commit()
     flash("Reclamo de propiedad enviado con éxito.", "success")
     return redirect(url_for('usuario'))
+@app.route('/crear_producto', methods=['POST'])
+def crear_producto():
+    if 'usuario_id' not in session or session['rol'] != 'admin': 
+        return redirect(url_for('login'))
+    
+    nombre = request.form.get('nombre')
+    categoria = request.form.get('categoria')
+    precio = float(request.form.get('precio', 0))
+    stock = int(request.form.get('stock', 0))
+    descripcion = request.form.get('descripcion', '')
+    
+    nombre_foto = None
+    if 'foto' in request.files:
+        archivo = request.files['foto']
+        if archivo.filename != '':
+            nombre_foto = secure_filename(archivo.filename)
+            archivo.save(os.path.join(app.config['UPLOAD_FOLDER'], nombre_foto))
+            
+    nuevo_prod = ProductoShop(
+        nombre=nombre,
+        categoria=categoria,
+        precio=precio,
+        stock=stock,
+        descripcion=descripcion,
+        foto=nombre_foto
+    )
+    
+    db.session.add(nuevo_prod)
+    db.session.commit()
+    flash("Producto creado e ingresado a la tienda con éxito.", "success")
+    return redirect(url_for('admin'))
 
 if __name__ == '__main__':
     with app.app_context():
