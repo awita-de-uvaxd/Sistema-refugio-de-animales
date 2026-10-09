@@ -7,6 +7,12 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
+
+    .mask-edges {
+        -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+        mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+    }
+
     .tab-content { display: none; }
     .tab-content.active { display: block; }
     .scroll-hide::-webkit-scrollbar { display: none; }
@@ -33,32 +39,79 @@
     </div>
   </div>
 
-  <!-- Header Dinámico y Limpio -->
-  <header class="bg-indigo-950 text-white shadow-lg sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-4">
+
+  <!-- Header Dinámico y Multirrol -->
+  <header class="text-white shadow-lg sticky top-0 z-40 transition-colors duration-500 overflow-hidden" style="background-color: {{ config_sitio.color_fondo if config_sitio else '#1e1b4b' }};">
+    
+    <!-- Renderizador del Banner según el Estilo Elegido -->
+    {% if config_sitio and config_sitio.banner %}
+      <div class="absolute inset-0 pointer-events-none opacity-40 mask-edges z-0 flex items-center justify-center overflow-hidden">
+        {% set banners = config_sitio.banner.split(',') %}
+        
+        {% if config_sitio.banner_style == 'mosaic' %}
+          <!-- Estilo Mosaico -->
+          <div class="w-full h-full" style="background-image: url('{{ url_for('static', filename='uploads/' ~ banners[0]) }}'); background-repeat: repeat; background-size: {{ config_sitio.mosaic_size }}px;"></div>
+        
+        {% elif config_sitio.banner_style == 'static' %}
+          <!-- Estilo Estático (Cubre todo el espacio) -->
+          <img src="{{ url_for('static', filename='uploads/' ~ banners[0]) }}" class="w-full h-full object-cover">
+        
+        {% else %}
+          <!-- Estilo Carrusel -->
+          {% for b in banners %}
+            <img src="{{ url_for('static', filename='uploads/' ~ b) }}" class="banner-slide absolute w-full h-full object-cover transition-opacity duration-1000 {% if not loop.first %}opacity-0{% else %}opacity-100{% endif %}">
+          {% endfor %}
+        {% endif %}
+      </div>
       
-      <!-- Logotipo y Título -->
+      <!-- Script del Carrusel (Solo si es slideshow y hay más de 1 foto) -->
+      {% if config_sitio.banner_style == 'slideshow' and banners|length > 1 %}
+        <script>
+          document.addEventListener('DOMContentLoaded', () => {
+            let slideIndex = 0;
+            const slides = document.querySelectorAll('.banner-slide');
+            if (slides.length > 1) {
+              setInterval(() => {
+                slides[slideIndex].classList.remove('opacity-100');
+                slides[slideIndex].classList.add('opacity-0');
+                slideIndex = (slideIndex + 1) % slides.length;
+                slides[slideIndex].classList.remove('opacity-0');
+                slides[slideIndex].classList.add('opacity-100');
+              }, 4000);
+            }
+          });
+        </script>
+      {% endif %}
+    {% endif %}
+
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-4 min-h-[70px] relative z-10">
+      <!-- Logotipo y Título Modificables -->
       <div class="flex items-center gap-3">
-        <div class="bg-amber-400 p-2 rounded-xl text-indigo-950"><i data-lucide="paw-print" class="w-6 h-6"></i></div>
+        <div class="bg-white/10 rounded-xl text-white backdrop-blur-sm border border-white/20 flex items-center justify-center overflow-hidden shadow-sm transition-all" style="width: {{ config_sitio.logo_size if config_sitio else 45 }}px; height: {{ config_sitio.logo_size if config_sitio else 45 }}px; padding: 4px;">
+          {% if config_sitio and config_sitio.logo %}
+            <img src="{{ url_for('static', filename='uploads/' ~ config_sitio.logo) }}" class="w-full h-full object-contain">
+          {% else %}
+            <i data-lucide="paw-print" class="w-full h-full text-amber-400 drop-shadow-md"></i>
+          {% endif %}
+        </div>
         <div>
-          <h1 class="font-bold text-xl leading-none tracking-tight">Huellitas de Amor</h1>
-          <span class="text-xs text-indigo-300">v5.0 - Entorno Python</span>
+          <h1 class="font-bold text-xl leading-none tracking-tight drop-shadow-md">{{ config_sitio.titulo if config_sitio else 'Huellitas de Amor' }}</h1>
+          <span class="text-xs opacity-90 font-medium tracking-wide drop-shadow-md">{{ config_sitio.eslogan if config_sitio else 'v5.0 - Entorno Python' }}</span>
         </div>
       </div>
       
-      <!-- Controles de Sesión Reales (Se muestran si hay sesión) -->
+      <!-- Controles de Sesión -->
       <div class="flex items-center gap-4">
         {% if 'usuario_id' in session %}
-          <div class="text-right">
-            <p class="text-[10px] text-indigo-300 font-bold uppercase tracking-wider leading-none">{{ session['rol'] }}</p>
+          <div class="text-right drop-shadow-md">
+            <p class="text-[10px] text-white/70 font-bold uppercase tracking-wider leading-none">{{ session['rol'] }}</p>
             <p class="text-sm font-black text-amber-400">{{ session.get('nombre', 'Usuario') }}</p>
           </div>
-          <a href="{{ url_for('logout') }}" class="bg-indigo-900 hover:bg-red-500 border border-indigo-800 text-white p-2 rounded-lg transition shadow-sm" title="Cerrar Sesión">
+          <a href="{{ url_for('logout') }}" class="bg-black/20 hover:bg-red-500/90 backdrop-blur-sm border border-white/20 text-white p-2 rounded-lg transition shadow-sm" title="Cerrar Sesión">
             <i data-lucide="log-out" class="w-4 h-4"></i>
           </a>
         {% endif %}
       </div>
-      
     </div>
   </header>
 
