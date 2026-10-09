@@ -20,6 +20,18 @@ db = SQLAlchemy(app)
 # ==========================================
 # 1. MODELOS DE BASE DE DATOS
 # ==========================================
+class ConfigSitio(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    rol_destino = db.Column(db.String(20), unique=True, nullable=False) # 'global', 'admin', 'usuario', 'veterinario', 'rescatista', 'inicio'
+    titulo = db.Column(db.String(100), default="Huellitas de Amor")
+    eslogan = db.Column(db.String(100), default="v5.0 - Entorno Python")
+    color_fondo = db.Column(db.String(20), default="#1e1b4b")
+    logo = db.Column(db.String(200), nullable=True)
+    logo_size = db.Column(db.Integer, default=45)
+    banner = db.Column(db.Text, nullable=True)
+    banner_style = db.Column(db.String(20), default='slideshow') # 'static', 'mosaic', 'slideshow'
+    mosaic_size = db.Column(db.Integer, default=150)
+      
 class Usuario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False)
@@ -241,6 +253,63 @@ class Pedido(db.Model):
 # ==========================================
 # 2. RUTAS DE AUTENTICACIÓN
 # ==========================================
+@app.context_processor
+def inject_config():
+    # Detecta qué rol está viendo la pantalla (si no hay sesión, es 'inicio')
+    rol_actual = session.get('rol', 'inicio')
+    
+    # 1. Busca si hay una configuración específica para este rol
+    config = ConfigSitio.query.filter_by(rol_destino=rol_actual).first()
+    
+    # 2. Si no hay una específica, usa la configuración 'global' por defecto
+    if not config:
+        config = ConfigSitio.query.filter_by(rol_destino='global').first()
+        
+    return dict(config_sitio=config)
+
+@app.route('/editar_apariencia', methods=['POST'])
+def editar_apariencia():
+    if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
+    
+    rol_destino = request.form.get('rol_destino', 'global')
+    
+    # Busca la config del rol, si no existe, la crea
+    config = ConfigSitio.query.filter_by(rol_destino=rol_destino).first()
+    if not config:
+        config = ConfigSitio(rol_destino=rol_destino)
+        db.session.add(config)
+        
+    config.titulo = request.form.get('titulo')
+    config.eslogan = request.form.get('eslogan')
+    config.color_fondo = request.form.get('color_fondo')
+    config.logo_size = int(request.form.get('logo_size', 45))
+    config.banner_style = request.form.get('banner_style', 'slideshow')
+    config.mosaic_size = int(request.form.get('mosaic_size', 150))
+
+    if 'logo' in request.files and request.files['logo'].filename != '':
+        file = request.files['logo']
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        config.logo = filename
+        
+    if 'banner' in request.files:
+        nombres_banners = []
+        for file in request.files.getlist('banner'):
+            if file.filename != '':
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                nombres_banners.append(filename)
+        if nombres_banners:
+            config.banner = ",".join(nombres_banners)
+
+    # Si eligió "Global" y marcó la casilla de sobrescribir, borramos las configuraciones individuales
+    if rol_destino == 'global' and request.form.get('forzar_global') == 'si':
+        ConfigSitio.query.filter(ConfigSitio.rol_destino != 'global').delete()
+
+    db.session.commit()
+    flash(f"Apariencia actualizada para el grupo: {rol_destino.upper()}", "success")
+    return redirect(url_for('admin'))
+
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
     if request.method == 'POST':
@@ -826,6 +895,10 @@ if __name__ == '__main__':
                 nombre_de="A Nombre De: Asociación Huellitas de Amor",
                 sede_fisica="Sede Recepción Comida: Calle Principal 12-45 Zona 10"
             ))
-        
+
+        # NUEVO: Crear la configuración Global por defecto
+        if not ConfigSitio.query.filter_by(rol_destino='global').first():
+            db.session.add(ConfigSitio(rol_destino='global', titulo="Huellitas de Amor", eslogan="v5.0 - Entorno Python", color_fondo="#1e1b4b", logo_size=45))
+
             db.session.commit()
     app.run(debug=True)
