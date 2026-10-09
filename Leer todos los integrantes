@@ -74,6 +74,7 @@ Roles Asignados para Modularizacion
                     1. si es por adopcion en la ficha de mi mascota una vez se acepta la solicitud que se realizo debe mostrar la ficha de alerta que se genero con el usuario 
                         debe aparecer toda la informacion de cada consulta, hasta arriba el apartado de cambiar nombre, ver el ID, y dentro del expediente un boton para ver la alerta 
                     2. para animales creados con dueño crear un boton en la pestaña de mis mascotas que solicite el codigo y contraseña para poder vincular la mascota al perfil 
+            13. modificacion o agregado para apariencia del proyecto en si 
 
     }
 
