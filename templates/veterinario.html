@@ -6,6 +6,7 @@
     <button onclick="switchTab('veterinario', 'nueva')" class="tab-btn-veterinario px-5 py-4 border-b-2 flex" data-tab="nueva"><i data-lucide="stethoscope" class="w-4 h-4 mr-2"></i> Nueva Consulta</button>
     <button onclick="switchTab('veterinario', 'buscar')" class="tab-btn-veterinario px-5 py-4 border-b-2 flex" data-tab="buscar"><i data-lucide="search" class="w-4 h-4 mr-2"></i> Buscar Paciente</button>
     <button onclick="switchTab('veterinario', 'citas')" class="tab-btn-veterinario px-5 py-4 border-b-2 flex" data-tab="citas"><i data-lucide="calendar" class="w-4 h-4 mr-2"></i> Citas Agendadas</button>
+    <button onclick="switchTab('veterinario', 'perfil')" class="tab-btn-main px-5 py-4 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex" data-tab="perfil"> Mi Perfil</button>
   </nav>
 
   <!-- PESTAÑA 1: PANEL DE CONTROL -->
@@ -335,8 +336,12 @@
         {% endif %}
       </div>
     </div>
+    </div>
   </div>
-</div>
+
+  <div id="veterinario-perfil" class="tab-content tab-content-veterinario hidden">
+      {% include 'perfil_compartido.html' %}
+  </div>
 
 <script>
   let sintomas = [];
@@ -374,7 +379,9 @@
       renderSintomas();
     }
   }
+  
   function removeSintoma(index) { sintomas.splice(index, 1); renderSintomas(); }
+  
   function renderSintomas() {
     document.getElementById('contenedor-sintomas').innerHTML = sintomas.map((s, i) => `<span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 shadow-sm">${s} <i data-lucide="x" class="w-3 h-3 cursor-pointer hover:text-red-500" onclick="removeSintoma(${i})"></i></span>`).join('');
     lucide.createIcons();
@@ -390,7 +397,9 @@
       renderVacunas();
     }
   }
+  
   function removeVacuna(index) { vacunas.splice(index, 1); renderVacunas(); }
+  
   function renderVacunas() {
     document.getElementById('lista-vacunas').innerHTML = vacunas.map((v, i) => `<div class="flex justify-between items-center bg-white border border-emerald-100 p-3 rounded-lg text-sm shadow-sm"><div class="flex items-center gap-2"><i data-lucide="syringe" class="w-4 h-4 text-emerald-600"></i><span class="font-bold text-emerald-800">${v.nombre}</span><span class="text-xs text-slate-500 ml-2">Freq: ${v.frecuencia}</span></div><div class="flex gap-3 items-center"><span class="text-xs font-mono bg-slate-100 px-2 py-1 rounded">Aplicación: ${v.fecha}</span><button type="button" onclick="removeVacuna(${i})" class="text-red-500 hover:bg-red-50 p-1 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div></div>`).join('');
     lucide.createIcons();

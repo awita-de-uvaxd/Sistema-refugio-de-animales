@@ -1,0 +1,73 @@
+<div class="max-w-5xl mx-auto space-y-6 mt-4">
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    
+    <!-- COLUMNA IZQUIERDA: TARJETA DE IDENTIDAD -->
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center text-center h-fit">
+      <div class="w-32 h-32 rounded-full border-4 border-indigo-50 shadow-md overflow-hidden mb-4 bg-slate-100 flex items-center justify-center">
+        {% if usuario_data.foto_perfil and usuario_data.foto_perfil != 'default_user.png' %}
+          <img src="{{ url_for('static', filename='uploads/' ~ usuario_data.foto_perfil) }}" class="w-full h-full object-cover">
+        {% else %}
+          <i data-lucide="user" class="w-12 h-12 text-slate-300"></i>
+        {% endif %}
+      </div>
+      <h2 class="text-xl font-black text-slate-800">{{ usuario_data.nombre }}</h2>
+      <span class="mt-2 text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-indigo-100 text-indigo-800">{{ usuario_data.rol }}</span>
+      {% if usuario_data.codigo_empleado %}
+        <p class="text-sm font-mono text-slate-500 mt-3 border-t pt-3 w-full">Cód: {{ usuario_data.codigo_empleado }}</p>
+      {% endif %}
+    </div>
+
+    <!-- COLUMNA DERECHA: FORMULARIOS DE EDICIÓN -->
+    <div class="md:col-span-2 space-y-6">
+      
+      <!-- Datos Básicos -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h3 class="font-bold text-lg text-indigo-900 mb-4 border-b pb-2"><i data-lucide="settings" class="w-5 h-5 inline mr-1"></i> Configuración de Cuenta</h3>
+        
+        <!-- IMPORTANTE: El enctype="multipart/form-data" permite enviar fotos -->
+        <form action="{{ url_for('actualizar_perfil') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-1">Nombre Completo</label>
+              <input type="text" name="nombre" value="{{ usuario_data.nombre }}" required class="w-full p-2.5 border rounded-xl text-sm outline-indigo-600 bg-slate-50">
+            </div>
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-1">Teléfono</label>
+              <!-- Aseguramos el name="telefono" -->
+              <input type="text" name="telefono" value="{{ usuario_data.telefono or '' }}" class="w-full p-2.5 border rounded-xl text-sm outline-indigo-600 bg-slate-50">
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block text-sm font-bold text-slate-700 mb-1">Correo Electrónico</label>
+              <input type="email" name="correo" value="{{ usuario_data.correo or '' }}" class="w-full p-2.5 border rounded-xl text-sm outline-indigo-600 bg-slate-50">
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block text-sm font-bold text-slate-700 mb-1">Actualizar Foto de Perfil</label>
+              <input type="file" name="foto_perfil" accept="image/*" class="w-full text-sm text-slate-500 file:bg-indigo-50 file:text-indigo-700 file:font-bold file:border-0 file:px-4 file:py-2.5 file:rounded-xl border border-slate-200 rounded-xl p-1.5 cursor-pointer">
+            </div>
+          </div>
+          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-md transition mt-2">Guardar Cambios de Perfil</button>
+        </form>
+      </div>
+
+      <!-- Seguridad -->
+      <div class="bg-white p-6 rounded-2xl border border-red-100 shadow-sm">
+        <h3 class="font-bold text-lg text-red-700 mb-4 border-b border-red-100 pb-2"><i data-lucide="lock" class="w-5 h-5 inline mr-1"></i> Seguridad</h3>
+        <form action="{{ url_for('cambiar_password') }}" method="POST" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-1">Contraseña Actual</label>
+              <input type="password" name="password_actual" required class="w-full p-2.5 border rounded-xl text-sm outline-red-500 bg-slate-50">
+            </div>
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-1">Nueva Contraseña</label>
+              <input type="password" name="password_nueva" required class="w-full p-2.5 border rounded-xl text-sm outline-red-500 bg-slate-50">
+            </div>
+          </div>
+          <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3.5 rounded-xl shadow-md transition mt-2">Actualizar Contraseña</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
