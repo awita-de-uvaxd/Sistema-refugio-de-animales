@@ -348,26 +348,41 @@
   let vacunas = [];
   const fechaHoy = "{{ hoy }}"; 
 
-  // --- VISOR DE IMÁGENES EN VIVO ---
-  function previewImage(event, imgId, containerId) {
-    const img = document.getElementById(imgId);
-    const container = document.getElementById(containerId);
-    if(event.target.files.length > 0){
-      img.src = URL.createObjectURL(event.target.files[0]);
-      container.classList.remove('hidden');
-    } else {
-      container.classList.add('hidden');
-    }
+ // --- EVIDENCIA (FOTOS MÚLTIPLES CON X PARA QUITAR) ---
+  //PROBLEMA: antes, al elegir fotos solo sw mostraba miniaturas y no habia
+  //forma de quitar una foto sin regargar o volver a elegir de nuevo
+  //SOLUCION: se guarda la lista de fotos en un Data Transfer (una lista
+  //de archivos que si se puede modificar)
+  let evidenciaDT = new DataTransfer();
+
+  // Se ejecuta cada vez que el usuario elige fotos (onchange del input).
+  function previewMultipleImages(event, containerId) {
+  // Suma las fotos nuevas a las que ya estaban
+    Array.from(event.target.files).forEach(f => evidenciaDT.items.add(f));
+    event.target.files = evidenciaDT.files;
+    renderEvidencia(containerId);
   }
 
-  function previewMultipleImages(event, containerId) {
-    const container = document.getElementById(containerId);
-    container.innerHTML = '';
-    for(let i=0; i<event.target.files.length; i++) {
-      const url = URL.createObjectURL(event.target.files[i]);
-      container.innerHTML += `<div class="w-20 h-20 flex-shrink-0 border-2 border-indigo-100 rounded-lg overflow-hidden shadow-sm"><img src="${url}" class="w-full h-full object-cover"></div>`;
-    }
+  // Se ejecuta al hacer clic en la X de una foto (index = posición de la foto).
+  function removeEvidencia(index, containerId) {
+    const nuevo = new DataTransfer();
+    Array.from(evidenciaDT.files).forEach((f, i) => { if (i !== index) nuevo.items.add(f); });
+    evidenciaDT = nuevo;
+    document.querySelector('input[name="evidencia_fotos"]').files = evidenciaDT.files;
+    renderEvidencia(containerId);
   }
+  // Dibuja las miniaturas con su X. Funciona igual que renderSintomas().
+  function renderEvidencia(containerId) {
+    document.getElementById(containerId).innerHTML = Array.from(evidenciaDT.files).map((f, i) => `
+      <div class="relative w-20 h-20 flex-shrink-0 border-2 border-indigo-100 rounded-lg overflow-hidden shadow-sm">
+        <img src="${URL.createObjectURL(f)}" class="w-full h-full object-cover">
+        <button type="button" onclick="removeEvidencia(${i}, '${containerId}')" class="absolute top-1 right-1 bg-indigo-100 text-indigo-800 rounded-full p-1 shadow-sm hover:bg-red-100 hover:text-red-500">
+          <i data-lucide="x" class="w-3 h-3"></i>
+        </button>
+      </div>`).join('');
+    lucide.createIcons();
+  }
+//-------------------------------------------------------------------------------------
 
   // --- SÍNTOMAS ---
   function addSintoma() {
@@ -447,9 +462,16 @@
     const contenedorPrevias = document.getElementById('historial-vacunas-previas');
     contenedorPrevias.innerHTML = '';
     
+    //ESTE ERA EL OTRO PROBLEMA: al hacer seguimiento, si el paciente ya tenía fotos, se mostraban en el visor pero no se podían quitar.
     // Limpiamos los visores de fotos por si acaso
     document.getElementById('preview-perfil-container').classList.add('hidden');
-    document.getElementById('preview-evidencia-container').innerHTML = '';
+    evidenciaDT = new DataTransfer();
+    document.querySelector('input[name="evidencia_fotos"]').value = '';
+    
+    <!--esta parte es de las especies/////////////////////////////////-->
+    document.getElementById('caja-nueva-especie').classList.add('hidden'); // oculta la cajita de especie nueva
+    <!--esta parte es de las especies/////////////////////////////////-->
+    //--------------------------------
     
     if(tipo === 'Rescate') {
       document.getElementById('lbl-id').textContent = rescateId;
