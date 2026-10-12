@@ -411,7 +411,8 @@
                         </div>
                       {% endfor %}
                     {% else %}
-                      <div class="col-span-2 h-48 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 border-2 border-dashed border-slate-300">
+                      
+                    <div class="col-span-2 h-48 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 border-2 border-dashed border-slate-300">
                         <p class="text-sm font-bold">Galería pendiente de actualización</p>
                       </div>
                     {% endif %}
@@ -894,8 +895,10 @@
             <p class="text-xs text-slate-500">Ingresa tu código de pedido para ver el avance en tiempo real.</p>
             
             <div class="flex gap-2 max-w-md mx-auto">
-                <input type="text" id="input-search-order" placeholder="Ingresa tu ID (ej: PED-1001)" class="w-full p-2 border rounded-xl text-xs outline-purple-primary">
-                <button onclick="buscarOrdenCliente()" class="px-4 py-2 bg-purple-primary text-white font-bold text-xs rounded-xl">Buscar</button>
+                <input type="text" id="input-search-order" placeholder="Ingresa tu ID (ej: PED-1001)" class="w-full p-2.5 border rounded-xl text-xs outline-indigo-600 bg-slate-50">
+                <button onclick="buscarOrdenCliente()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-1.5 shrink-0">
+                    <i data-lucide="search" class="w-4 h-4"></i> Buscar
+                </button>
             </div>
 
             <div id="tracking-info-container" class="space-y-4 pt-2 border-t">
@@ -924,6 +927,7 @@
     </div>
 </div>
 
+<!-- MODAL CARRITO -->
 <!-- MODAL CARRITO -->
 <div id="modal-carrito" class="fixed inset-0 bg-slate-900/50 hidden z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -995,48 +999,100 @@
             </div>
         </div>
 
-        <div class="border-t pt-3 space-y-1 text-xs">
-            <div class="flex justify-between text-slate-600"><span>Productos:</span><span id="cart-subtotal" class="font-bold">Q0.00</span></div>
-            <div class="flex justify-between text-slate-600"><span>Envío:</span><span id="cart-shipping" class="font-bold text-purple-700">Q35.00</span></div>
-            <div class="flex justify-between text-slate-800 font-black text-sm border-t pt-2 mt-1"><span>Total:</span><span id="cart-total" class="text-purple-primary">Q0.00</span></div>
+        <!-- OPCIÓN FACTURA / NIT -->
+        <div class="border-t pt-3 space-y-2 text-xs">
+            <label class="flex items-center justify-between p-2.5 border rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition">
+                <span class="font-bold text-slate-700">¿Deseas factura con NIT?</span>
+                <input type="checkbox" id="requiere-factura" class="w-4 h-4 accent-indigo-600 rounded cursor-pointer" onchange="toggleNitCampo()">
+            </label>
+            
+            <div id="campo-nit-container" class="hidden pt-1">
+                <input type="text" id="recibe-nit" placeholder="Ingresa tu NIT (Ej. 1234567-8) *" class="w-full p-2 border rounded-xl text-xs bg-white font-medium uppercase">
+            </div>
         </div>
 
-        <button onclick="procesarOrden()" class="w-full py-3 bg-purple-primary text-white rounded-xl font-bold text-xs hover:bg-purple-dark transition">Confirmar Orden</button>
+        <!-- TOTALES DEL CARRITO -->
+        <div class="border-t pt-3 space-y-1 text-xs">
+            <div class="flex justify-between text-slate-600"><span>Productos:</span><span id="cart-subtotal" class="font-bold">Q0.00</span></div>
+            <div class="flex justify-between text-slate-600"><span>Envío:</span><span id="cart-shipping" class="font-bold text-indigo-700">Q35.00</span></div>
+            <div class="flex justify-between text-slate-800 font-black text-sm border-t pt-2 mt-1"><span>Total:</span><span id="cart-total" class="text-indigo-600">Q0.00</span></div>
+        </div>
+
+        <!-- BOTÓN DE PROCESAR ORDEN -->
+        <div class="sticky bottom-0 bg-white pt-3 border-t mt-3">
+            <button onclick="procesarOrden()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+                <i data-lucide="check-circle" class="w-4 h-4"></i> Confirmar Orden y Procesar Compra
+            </button>
+        </div>
     </div>
 </div>
 
-<!-- PLANTILLA PDF OCULTA -->
-<div class="hidden">
-    <div id="pdf-template" class="p-8 bg-white text-slate-800 space-y-4 max-w-xl text-xs">
-        <div class="flex justify-between items-center border-b pb-4">
-            <div>
-                <h1 class="text-xl font-black text-purple-600">Huellitas Refugio</h1>
-                <p id="pdf-doc-title" class="text-xs font-bold text-slate-700 uppercase">Comprobante de Compra</p>
-            </div>
-            <div class="text-right">
-                <p id="pdf-ord-id" class="font-bold text-sm">#PED-0000</p>
-                <p id="pdf-date" class="text-[10px] text-slate-400">Fecha: --/--/----</p>
-            </div>
+<!-- PLANTILLA PDF OCULTA FORMATO A4 COMPLETO -->
+<div style="position: absolute; left: -9999px; top: 0;">
+  <div id="pdf-template" style="width: 794px; min-height: 1123px; padding: 48px; background: #ffffff; color: #1e293b; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+    
+    <!-- CONTENIDO PRINCIPAL (ENCABEZADO, CLIENTE Y TABLA) -->
+    <div style="flex-grow: 1;">
+      
+      <!-- Encabezado con Logotipo/Nombre y Correlativo -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 24px;">
+        <div>
+          <h1 style="font-size: 30px; font-weight: 900; color: #4f46e5; margin: 0; line-height: 1.1;">Huellitas Refugio</h1>
+          <p id="pdf-doc-title" style="font-size: 13px; font-weight: 800; color: #64748b; margin-top: 6px; text-transform: uppercase; letter-spacing: 1px;">ORDEN DE COMPRA</p>
         </div>
-        <div id="pdf-client-box" class="bg-slate-50 p-3 rounded-xl border text-[11px] space-y-1"></div>
-        <table class="w-full text-left border-collapse">
-            <thead>
-                <tr class="border-b text-slate-500 text-[10px] uppercase">
-                    <th class="py-1">Código</th>
-                    <th class="py-1">Producto</th>
-                    <th class="py-1 text-center">Cant</th>
-                    <th class="py-1 text-right">Precio</th>
-                    <th class="py-1 text-right">Subtotal</th>
-                </tr>
-            </thead>
-            <tbody id="pdf-items-body" class="divide-y text-[11px]"></tbody>
-        </table>
-        <div class="border-t pt-2 text-right space-y-1 text-[11px]">
-            <p>Subtotal: <span id="pdf-subtotal" class="font-bold">Q0.00</span></p>
-            <p>Envío: <span id="pdf-shipping" class="font-bold">Q0.00</span></p>
-            <p class="font-black text-sm border-t pt-1 mt-1">Total General: <span id="pdf-total" class="text-purple-700">Q0.00</span></p>
+        <div style="text-align: right;">
+          <p id="pdf-ord-id" style="font-size: 24px; font-weight: 900; color: #0f172a; margin: 0;">#PED-0000</p>
+          <p id="pdf-date" style="font-size: 12px; font-weight: 600; color: #64748b; margin-top: 4px;">Fecha: --/--/----</p>
         </div>
+      </div>
+
+      <!-- Caja de Datos del Cliente y Sello de Estado -->
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; margin-bottom: 28px; display: flex; justify-content: space-between; align-items: center;">
+        <div id="pdf-client-box" style="font-size: 13px; line-height: 1.8; color: #334155;">
+          <!-- Se completa automáticamente por JS -->
+        </div>
+        
+        <!-- Sello de Estado (Pendiente por pagar / Cancelado) -->
+        <div id="pdf-status-badge" style="padding: 10px 18px; border-radius: 12px; font-weight: 900; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">
+          PENDIENTE POR PAGAR
+        </div>
+      </div>
+
+      <!-- Tabla Detallada de Productos -->
+      <table style="width: 100%; text-align: left; border-collapse: collapse; margin-top: 10px;">
+        <thead>
+          <tr style="border-bottom: 2px solid #cbd5e1; color: #475569; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">
+            <th style="padding: 12px 8px;">CÓDIGO</th>
+            <th style="padding: 12px 8px;">DESCRIPCIÓN DEL PRODUCTO</th>
+            <th style="padding: 12px 8px; text-align: center;">CANT</th>
+            <th style="padding: 12px 8px; text-align: right;">PRECIO UNIT.</th>
+            <th style="padding: 12px 8px; text-align: right;">SUBTOTAL</th>
+          </tr>
+        </thead>
+        <tbody id="pdf-items-body" style="font-size: 13px; color: #334155;">
+          <!-- Filas inyectadas por JS -->
+        </tbody>
+      </table>
     </div>
+
+    <!-- PIE DE PÁGINA (TOTALES Y NOTA FIJA) -->
+    <div style="border-top: 2px solid #e2e8f0; padding-top: 20px; margin-top: 30px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+        <div style="max-width: 380px; font-size: 11px; color: #64748b; line-height: 1.5; font-style: italic;">
+          <p style="margin: 0;">Gracias por apoyar a nuestra asociación. Cada compra contribuye directamente al rescate y cuidado de animales desamparados.</p>
+        </div>
+        
+        <div style="text-align: right; font-size: 13px; line-height: 1.8;">
+          <p style="margin: 0; color: #64748b;">Subtotal Productos: <span id="pdf-subtotal" style="font-weight: 700; color: #0f172a;">Q0.00</span></p>
+          <p style="margin: 0; color: #64748b;">Gastos de Envío: <span id="pdf-shipping" style="font-weight: 700; color: #0f172a;">Q0.00</span></p>
+          <div style="border-top: 1px solid #cbd5e1; margin-top: 6px; padding-top: 6px;">
+            <p style="font-size: 20px; font-weight: 900; color: #0f172a; margin: 0;">Total: <span id="pdf-total" style="color: #4f46e5;">Q0.00</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
 </div>
 
   <!-- apartado de mi perfil  -->
@@ -1180,6 +1236,20 @@ function mostrarDetalleVoluntariado(idDetalle) {
             }
         });
     }
+
+    function toggleNitCampo() {
+      const container = document.getElementById('campo-nit-container');
+      const checkbox = document.getElementById('requiere-factura');
+      if (container && checkbox) {
+        if (checkbox.checked) {
+          container.classList.remove('hidden');
+        } else {
+          container.classList.add('hidden');
+          const nitInput = document.getElementById('recibe-nit');
+          if (nitInput) nitInput.value = '';
+        }
+      }
+    }
     
     function toggleCartModal() { 
         const modal = document.getElementById('modal-carrito');
@@ -1307,11 +1377,25 @@ function agregarAlCarrito(id, nombre, precio, stockMax) {
             estP = 'PENDIENTE DE COBRO EN TIENDA';
         }
 
+        // =========================================================
+        // CAPTURA DEL NIT O CONSUMIDOR FINAL
+        // =========================================================
+        const chkFactura = document.getElementById('requiere-factura');
+        const inputNit = document.getElementById('recibe-nit');
+        let nitRegistrado = 'Consumidor Final';
+
+        if (chkFactura && chkFactura.checked && inputNit && inputNit.value.trim() !== '') {
+            nitRegistrado = inputNit.value.trim().toUpperCase();
+        }
+        // =========================================================
+
         const sub = carrito.reduce((a, b) => a + (b.precio * b.cantidad), 0);
         const env = dev === 'domicilio' ? 35.00 : 0.00;
+
         const orden = {
             id: "PED-" + Math.floor(1000 + Math.random() * 9000),
             fecha: new Date().toLocaleDateString('es-GT'),
+            nit: nitRegistrado, // <-- AQUÍ SE GUARDA EL NIT EN LA ORDEN
             clienteNombre: nom, clienteTel: tel, clienteDir: dir,
             itemsDetalle: JSON.parse(JSON.stringify(carrito)),
             subtotal: sub, envio: env, total: sub + env,
@@ -1353,7 +1437,7 @@ function agregarAlCarrito(id, nombre, precio, stockMax) {
         for(let i=1; i<=5; i++) {
             const stepElem = document.getElementById(`step-${i}`);
             if(stepElem) {
-                stepElem.className = (i - 1 <= idx) ? "bg-purple-primary text-white py-2.5 rounded-xl shadow-sm font-bold" : "bg-slate-200 text-slate-500 py-2.5 rounded-xl shadow-sm";
+                stepElem.className = (i - 1 <= idx) ? "bg-indigo-600 text-white py-2.5 rounded-xl shadow-sm font-bold" : "bg-slate-200 text-slate-500 py-2.5 rounded-xl shadow-sm";
             }
         }
 
@@ -1364,35 +1448,138 @@ function agregarAlCarrito(id, nombre, precio, stockMax) {
         }
     }
 
-    function descargarDocumentoCliente(tipo) {
-        if(!ordenActivaSeguimiento) return;
-        const o = ordenActivaSeguimiento;
-        document.getElementById('pdf-doc-title').innerText = tipo === 'ORDEN_COMPRA' ? "Orden de Compra" : "Factura Oficial de Compra";
-        document.getElementById('pdf-ord-id').innerText = `#${o.id}`;
-        document.getElementById('pdf-date').innerText = `Fecha: ${o.fecha}`;
-        document.getElementById('pdf-client-box').innerHTML = `<p><strong>Cliente:</strong> ${o.clienteNombre}</p><p><strong>Tipo:</strong> ${o.tipo}</p><p><strong>Estado Pago:</strong> ${o.estadoPago}</p>`;
-        document.getElementById('pdf-items-body').innerHTML = o.itemsDetalle.map(i => `<tr><td class="py-1">${i.id}</td><td class="py-1">${i.nombre}</td><td class="py-1 text-center">${i.cantidad}</td><td class="py-1 text-right">Q${i.precio.toFixed(2)}</td><td class="py-1 text-right">Q${(i.precio*i.cantidad).toFixed(2)}</td></tr>`).join('');
-        document.getElementById('pdf-subtotal').innerText = `Q${o.subtotal.toFixed(2)}`;
-        document.getElementById('pdf-shipping').innerText = `Q${o.envio.toFixed(2)}`;
-        document.getElementById('pdf-total').innerText = `Q${o.total.toFixed(2)}`;
+  function descargarDocumentoCliente(tipo) {
+  if (!ordenActivaSeguimiento) {
+    return alert('Por favor, busca tu pedido antes de descargar.');
+  }
+  const o = ordenActivaSeguimiento;
 
-        const el = document.getElementById('pdf-template');
-        if(el && el.parentElement) {
-            el.parentElement.classList.remove('hidden');
-            html2pdf().from(el).save(`${tipo}_${o.id}.pdf`).then(() => el.parentElement.classList.add('hidden'));
-        }
-    }  
+  const wrapper = document.getElementById('pdf-render-wrapper');
+  if (wrapper) wrapper.style.display = 'block';
 
-  document.addEventListener('DOMContentLoaded', () => {
-      document.querySelectorAll('input[type="file"][multiple]').forEach(input => {
-          input.addEventListener('change', function() {
-              if (this.files.length > 5) {
-                  alert('Solo puedes seleccionar un máximo de 5 fotografías del espacio.');
-                  this.value = ''; 
-              }
-          });
-      });
+  const titleEl = document.getElementById('pdf-doc-title');
+  const ordIdEl = document.getElementById('pdf-ord-id');
+  const dateEl = document.getElementById('pdf-date');
+  const clientBox = document.getElementById('pdf-client-box');
+  const statusBadge = document.getElementById('pdf-status-badge');
+  const itemsBody = document.getElementById('pdf-items-body');
+  const subtotalEl = document.getElementById('pdf-subtotal');
+  const shippingEl = document.getElementById('pdf-shipping');
+  const totalEl = document.getElementById('pdf-total');
+
+  if (ordIdEl) ordIdEl.innerText = `#${o.id || 'PED-0000'}`;
+  if (dateEl) dateEl.innerText = `Fecha: ${o.fecha || new Date().toLocaleDateString('es-GT')}`;
+
+  // Determinación de dirección: Soporta "A Domicilio" y "Recoger en Tienda"
+  let direccionTexto = 'Recoger en Recepción';
+  if (o.clienteDir && o.clienteDir.trim() !== '' && o.clienteDir !== 'N/A' && o.clienteDir !== 'Recoger en Recepción') {
+    direccionTexto = o.clienteDir;
+  } else if (o.tipoEntrega === 'domicilio') {
+    direccionTexto = 'Envío a Domicilio';
+  }
+
+  const clienteNombre = o.clienteNombre || 'Cliente';
+  const clienteTel = o.clienteTel || 'N/A';
+  const nitCliente = o.nit || o.clienteNit || 'Consumidor Final';
+
+  // 1. ORDEN DE COMPRA (Amarillo - Pendiente por Pagar)
+  if (tipo === 'ORDEN_COMPRA') {
+    if (titleEl) titleEl.innerText = "ORDEN DE COMPRA";
+    if (statusBadge) {
+      statusBadge.innerText = "PENDIENTE POR PAGAR";
+      statusBadge.style.backgroundColor = "#FEF3C7";
+      statusBadge.style.color = "#92400E";
+      statusBadge.style.border = "1px solid #FCD34D";
+    }
+    if (clientBox) {
+      clientBox.innerHTML = `
+        <p style="margin:2px 0;"><strong>Cliente:</strong> ${clienteNombre}</p>
+        <p style="margin:2px 0;"><strong>NIT:</strong> ${nitCliente}</p>
+        <p style="margin:2px 0;"><strong>Dirección:</strong> ${direccionTexto}</p>
+        <p style="margin:2px 0;"><strong>Teléfono:</strong> ${clienteTel}</p>
+        <p style="margin:2px 0;"><strong>Estado de Cuenta:</strong> <span style="color:#B45309; font-weight:bold;">Cuenta Pendiente por Pagar</span></p>
+      `;
+    }
+  } 
+  // 2. FACTURA OFICIAL DE COMPRA (Verde - Pagado / Cancelado)
+  else {
+    if (titleEl) titleEl.innerText = "FACTURA OFICIAL DE COMPRA";
+    if (statusBadge) {
+      statusBadge.innerText = "PAGADO / CANCELADO";
+      statusBadge.style.backgroundColor = "#D1FAE5";
+      statusBadge.style.color = "#065F46";
+      statusBadge.style.border = "1px solid #6EE7B7";
+    }
+    const metodoPago = o.metodoPago || 'Presencial (Tarjeta POS)';
+    if (clientBox) {
+      clientBox.innerHTML = `
+        <p style="margin:2px 0;"><strong>Cliente:</strong> ${clienteNombre}</p>
+        <p style="margin:2px 0;"><strong>NIT:</strong> ${nitCliente}</p>
+        <p style="margin:2px 0;"><strong>Dirección:</strong> ${direccionTexto}</p>
+        <p style="margin:2px 0;"><strong>Teléfono:</strong> ${clienteTel}</p>
+        <p style="margin:2px 0;"><strong>Estado de Cuenta:</strong> <span style="color:#047857; font-weight:bold;">Cuenta Pagada y Cancelada (${metodoPago})</span></p>
+      `;
+    }
+  }
+
+  // Carga de productos
+  const items = o.itemsDetalle || [];
+  if (itemsBody) {
+    itemsBody.innerHTML = items.map(i => {
+      const precio = parseFloat(i.precio || 0);
+      const cant = parseInt(i.cantidad || 1);
+      const sub = precio * cant;
+      return `
+        <tr style="border-bottom: 1px solid #f1f5f9;">
+          <td style="padding: 12px 8px; font-weight: 600; color: #64748b;">${i.id || 'PROD'}</td>
+          <td style="padding: 12px 8px; font-weight: 700; color: #0f172a;">${i.nombre}</td>
+          <td style="padding: 12px 8px; text-align: center; font-weight: 600;">${cant}</td>
+          <td style="padding: 12px 8px; text-align: right; color: #475569;">Q${precio.toFixed(2)}</td>
+          <td style="padding: 12px 8px; text-align: right; font-weight: 700; color: #0f172a;">Q${sub.toFixed(2)}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  const subtotal = parseFloat(o.subtotal || (o.total - (o.envio || 0)));
+  const envio = parseFloat(o.envio || 0);
+  const total = parseFloat(o.total || 0);
+
+  if (subtotalEl) subtotalEl.innerText = `Q${subtotal.toFixed(2)}`;
+  if (shippingEl) shippingEl.innerText = `Q${envio.toFixed(2)}`;
+  if (totalEl) totalEl.innerText = `Q${total.toFixed(2)}`;
+
+  const element = document.getElementById('pdf-template');
+
+  const opt = {
+    margin:       0,
+    filename:     `${tipo}_${o.id}.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
+    jsPDF:        { unit: 'pt', format: 'a4', orientation: 'portrait' }
+  };
+
+  html2pdf().set(opt).from(element).save().then(() => {
+    if (wrapper) wrapper.style.display = 'none';
+  }).catch(() => {
+    if (wrapper) wrapper.style.display = 'none';
   });
+}
+
+function toggleNitCampo() {
+  const checkbox = document.getElementById('requiere-factura');
+  const container = document.getElementById('campo-nit-container');
+  if (checkbox && container) {
+    if (checkbox.checked) {
+      container.classList.remove('hidden');
+      document.getElementById('recibe-nit')?.focus();
+    } else {
+      container.classList.add('hidden');
+      const nitInput = document.getElementById('recibe-nit');
+      if (nitInput) nitInput.value = '';
+    }
+  }
+}
 
 </script>
 {% endblock %}
