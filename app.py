@@ -175,6 +175,8 @@ class Paciente(db.Model):
     disponible_adopcion = db.Column(db.String(20), default="En Observación")
     dueno_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
     rescate_id = db.Column(db.Integer, db.ForeignKey('rescate.id'), nullable=True)
+    codigo_acceso = db.Column(db.String(20), unique=True, nullable=True)
+    password_acceso = db.Column(db.String(20), nullable=True)
     rescate_obj = db.relationship('Rescate', backref='paciente_asociado', lazy=True)
     consultas = db.relationship('ConsultaMedica', backref='paciente_obj', lazy=True, order_by='ConsultaMedica.id.desc()')
     citas = db.relationship('Cita', backref='paciente_obj', lazy=True)
@@ -392,10 +394,13 @@ def usuario():
     disponibles = Paciente.query.filter_by(disponible_adopcion="Listo para Adopción").all()
     programas_db = ProgramaVoluntariado.query.all()
     info_don = InfoDonacion.query.first()
-    user_data = Usuario.query.get(session['usuario_id']) # Inyección de datos
+    user_data = Usuario.query.get(session['usuario_id'])
     productos_db = ProductoShop.query.filter_by(visible=True).all()
     
-    return render_template('usuario.html', adopciones=disponibles, mi_cv=cv_actual, programas=programas_db, info_donacion=info_don, usuario_data=user_data, productos=productos_db)
+    # ESTA ES LA LÍNEA QUE FALTABA: Busca las mascotas del usuario actual
+    mis_mascotas = Paciente.query.filter_by(dueno_id=session['usuario_id']).all()
+    
+    return render_template('usuario.html', adopciones=disponibles, mi_cv=cv_actual, programas=programas_db, info_donacion=info_don, usuario_data=user_data, productos=productos_db, mis_mascotas=mis_mascotas)
 
 @app.route('/admin')
 def admin(): 
@@ -600,6 +605,27 @@ def registrar_donacion():
 # ==========================================
 # 4. RUTAS POST (CONEXIONES Y LÓGICA)
 # ==========================================
+
+from flask import jsonify # <-- Asegúrate de que esto esté arriba junto a los otros imports de Flask
+
+@app.route('/vincular_mascota', methods=['POST'])
+def vincular_mascota():
+    if 'usuario_id' not in session or session['rol'] != 'usuario': 
+        return jsonify({'status': 'error', 'message': 'No autorizado'})
+        
+    codigo = request.form.get('codigo')
+    password = request.form.get('password')
+    
+    paciente = Paciente.query.filter_by(codigo_acceso=codigo, password_acceso=password).first()
+    if paciente:
+        paciente.dueno_id = session['usuario_id']
+        paciente.codigo_acceso = None # Borramos credenciales por seguridad
+        paciente.password_acceso = None
+        db.session.commit()
+        return jsonify({'status': 'success', 'message': 'Mascota vinculada exitosamente'})
+    else:
+        return jsonify({'status': 'error', 'message': 'Credenciales incorrectas'})
+    
 @app.route('/crear_empleado', methods=['POST'])
 def crear_empleado():
     if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
@@ -746,7 +772,9 @@ def crear_consulta():
             sexo=request.form.get('sexo'), 
             disponible_adopcion=request.form.get('adopcion_status', 'No Aplica'),
             foto=foto_perfil,
-            rescate_id=rescate_id
+            rescate_id=rescate_id,
+            codigo_acceso=request.form.get('codigo_acceso'),    # NUEVO
+            password_acceso=request.form.get('password_acceso')
         )
         db.session.add(nuevo_paciente)
         db.session.commit()
@@ -879,6 +907,7 @@ def crear_reclamo(paciente_id):
     db.session.commit()
     flash("Reclamo de propiedad enviado con éxito.", "success")
     return redirect(url_for('usuario'))
+
 @app.route('/crear_producto', methods=['POST'])
 def crear_producto():
     if 'usuario_id' not in session or session['rol'] != 'admin': 
@@ -910,6 +939,24 @@ def crear_producto():
     db.session.commit()
     flash("Producto creado e ingresado a la tienda con éxito.", "success")
     return redirect(url_for('admin'))
+
+
+@app.route('/editar_mascota/<int:paciente_id>', methods=['POST'])
+def editar_mascota(paciente_id):
+    if 'usuario_id' not in session or session['rol'] != 'usuario': return redirect(url_for('login'))
+    paciente = Paciente.query.get(paciente_id)
+    
+    if paciente and paciente.dueno_id == session['usuario_id']:
+        paciente.nombre = request.form.get('nombre')
+        if 'foto' in request.files and request.files['foto'].filename != '':
+            file = request.files['foto']
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            paciente.foto = filename
+        db.session.commit()
+        flash("Perfil de tu mascota actualizado.", "success")
+        
+    return redirect(url_for('usuario'))
 
 if __name__ == '__main__':
     with app.app_context():
