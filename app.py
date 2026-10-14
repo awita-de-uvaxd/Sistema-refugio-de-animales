@@ -827,6 +827,39 @@ def crear_consulta():
     db.session.commit()
     return redirect(url_for('veterinario'))
 
+# ==========================================
+# RUTA API PARA AUTOCOMPLETAR FORMULARIOS
+# ==========================================
+@app.route('/api/obtener_config_rol/<rol>', methods=['GET'])
+def obtener_config_rol(rol):
+    if 'usuario_id' not in session or session['rol'] != 'admin':
+        return jsonify({'status': 'error', 'message': 'No autorizado'}), 403
+
+    # Buscamos la configuración de ese rol específico
+    config = ConfigSitio.query.filter_by(rol_destino=rol).first()
+    
+    # Si ese rol no tiene configuración propia aún, le mandamos la "global" para que no parta de cero
+    if not config:
+        config = ConfigSitio.query.filter_by(rol_destino='global').first()
+
+    # Si por alguna razón extrema no hay ni global, devolvemos vacío
+    if not config:
+        return jsonify({'status': 'vacio'})
+
+    # Empaquetamos los datos en formato JSON para mandarlos al navegador
+    datos = {
+        'status': 'success',
+        'titulo': config.titulo,
+        'eslogan': config.eslogan,
+        'color_fondo': config.color_fondo,
+        'logo_size': config.logo_size,
+        'banner_style': config.banner_style,
+        'mosaic_size': config.mosaic_size,
+        'logo': config.logo,       # NUEVO: Mandamos el nombre del archivo del logo
+        'banner': config.banner
+    }
+    return jsonify(datos)
+
 # === RUTAS DEL USUARIO ===
 @app.route('/actualizar_cv', methods=['POST'])
 def actualizar_cv():
