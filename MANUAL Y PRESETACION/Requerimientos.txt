@@ -1,0 +1,12 @@
+cosas que quiero que tenga 
+PRESENTACION 
+-nuestros nombres 
+-transiciones 
+-una buena presentacion, colores, tipo de letra y todo 
+reitero en decir que es una presentacion simple en contenido mas no en presentacion 
+
+MANUAL DE USUARIO 
+-decoracion formal de las hojas
+-detalle del paso a paso de cada una de las formas de ir entre cada una de las partes 
+-explicaciones principales 
+esto es unicamente de UX de usuario, de como usarlo, no quiero que metan nada relacionado al codigo 
