@@ -853,6 +853,7 @@
 <!--fin del apartado de donaciones-->
 
 <!-- Pestaña Principal: APARIENCIA Y TEMÁTICAS MULTIRROL -->
+<!-- Pestaña Principal: APARIENCIA Y TEMÁTICAS MULTIRROL -->
     <div id="admin-apariencia" class="tab-content-main hidden">
       <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm max-w-4xl mx-auto">
         
@@ -883,27 +884,34 @@
             </div>
           </div>
 
-          <!-- Textos y Color -->
+          <!-- Textos y Color (Se añadieron los id) -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-xl border border-slate-200">
             <div class="space-y-4">
-              <div><label class="block text-sm font-bold text-slate-700 mb-1">Nombre de la Plataforma</label><input type="text" name="titulo" placeholder="Ej. Huellitas de Amor" required class="w-full p-2.5 border rounded-xl text-sm bg-white"></div>
-              <div><label class="block text-sm font-bold text-slate-700 mb-1">Eslogan / Mensaje Especial</label><input type="text" name="eslogan" placeholder="Ej. ¡Feliz Navidad! o Cierren el baño" required class="w-full p-2.5 border rounded-xl text-sm bg-white"></div>
+              <div><label class="block text-sm font-bold text-slate-700 mb-1">Nombre de la Plataforma</label><input type="text" id="titulo" name="titulo" placeholder="Ej. Huellitas de Amor" required class="w-full p-2.5 border rounded-xl text-sm bg-white"></div>
+              <div><label class="block text-sm font-bold text-slate-700 mb-1">Eslogan / Mensaje Especial</label><input type="text" id="eslogan" name="eslogan" placeholder="Ej. ¡Feliz Navidad! o Cierren el baño" required class="w-full p-2.5 border rounded-xl text-sm bg-white"></div>
             </div>
             <div class="flex flex-col items-center justify-center space-y-2">
               <label class="block text-sm font-bold text-slate-700">Color del Header</label>
-              <input type="color" name="color_fondo" value="#1e1b4b" class="w-24 h-24 p-1 bg-white border rounded-2xl cursor-pointer shadow-sm">
+              <input type="color" id="color_fondo" name="color_fondo" value="#1e1b4b" class="w-24 h-24 p-1 bg-white border rounded-2xl cursor-pointer shadow-sm">
             </div>
           </div>
 
-          <!-- Archivos Multimedia -->
+          <!-- Archivos Multimedia (Se añadieron los id) -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Logo -->
             <div class="border border-slate-200 rounded-xl p-5 shadow-sm bg-white">
               <h4 class="font-bold text-sm text-indigo-900 mb-1"><i data-lucide="image" class="inline w-4 h-4"></i> Logotipo</h4>
+              
+              <!-- NUEVO: Contenedor para mostrar el logo actual -->
+              <div id="preview-logo-container" class="hidden mb-3 p-2 bg-slate-50 border border-slate-100 rounded-lg flex items-center gap-3">
+                  <img id="preview-logo-img" src="" class="w-12 h-12 object-contain bg-slate-200 rounded">
+                  <span class="text-xs text-slate-500">Logo actual guardado</span>
+              </div>
+
               <input type="file" name="logo" accept="image/*" class="w-full text-xs text-slate-500 file:bg-indigo-50 file:text-indigo-700 file:font-bold file:border-0 file:px-3 file:py-1.5 file:rounded-lg cursor-pointer mb-4">
               <div class="border-t pt-3">
                 <label class="block text-xs font-bold text-slate-700 mb-1">Tamaño del Logo</label>
-                <input type="range" name="logo_size" min="30" max="150" value="45" class="w-full accent-indigo-600">
+                <input type="range" id="logo_size" name="logo_size" min="30" max="150" value="45" class="w-full accent-indigo-600">
               </div>
             </div>
 
@@ -911,17 +919,24 @@
             <div class="border border-indigo-200 rounded-xl p-5 shadow-sm bg-indigo-50/30">
               <h4 class="font-bold text-sm text-indigo-900 mb-2"><i data-lucide="clapperboard" class="inline w-4 h-4"></i> Banner Temático</h4>
               
+                <div id="preview-banner-container" class="hidden mb-3 p-2 bg-indigo-100/50 border border-indigo-100 rounded-lg">
+                  <p class="text-[10px] font-bold text-indigo-800 uppercase mb-1">Banner(s) actual(es):</p>
+                  <div id="preview-banner-grid" class="flex gap-2 overflow-x-auto pb-1">
+                      <!-- Aquí se inyectarán las imágenes del banner con JS -->
+                  </div>
+              </div>
+
               <div class="flex gap-2 mb-3 bg-white p-2 rounded-lg border text-xs font-bold">
-                <label class="cursor-pointer"><input type="radio" name="banner_style" value="static" onchange="toggleMosaic()" class="mr-1">Estático</label>
-                <label class="cursor-pointer"><input type="radio" name="banner_style" value="slideshow" onchange="toggleMosaic()" checked class="mr-1">Carrusel</label>
-                <label class="cursor-pointer"><input type="radio" name="banner_style" value="mosaic" onchange="toggleMosaic()" class="mr-1">Mosaico</label>
+                <label class="cursor-pointer"><input type="radio" id="banner_static" name="banner_style" value="static" onchange="toggleMosaic()" class="mr-1">Estático</label>
+                <label class="cursor-pointer"><input type="radio" id="banner_slideshow" name="banner_style" value="slideshow" onchange="toggleMosaic()" checked class="mr-1">Carrusel</label>
+                <label class="cursor-pointer"><input type="radio" id="banner_mosaic" name="banner_style" value="mosaic" onchange="toggleMosaic()" class="mr-1">Mosaico</label>
               </div>
 
               <input type="file" name="banner" accept="image/*" multiple class="w-full text-xs text-slate-500 file:bg-indigo-600 file:text-white file:font-bold file:border-0 file:px-3 file:py-1.5 file:rounded-lg cursor-pointer mb-3">
               
               <div id="box-mosaic" class="hidden border-t border-indigo-100 pt-3">
                 <label class="block text-xs font-bold text-indigo-900 mb-1">Tamaño del Patrón Mosaico</label>
-                <input type="range" name="mosaic_size" min="50" max="400" value="150" class="w-full accent-amber-500">
+                <input type="range" id="mosaic_size" name="mosaic_size" min="50" max="400" value="150" class="w-full accent-amber-500">
               </div>
             </div>
           </div>
@@ -932,17 +947,78 @@
     </div>
 
   <script>
-    // Mostrar/Ocultar el checkbox de "Forzar Global"
     function toggleGlobalForzar() {
-      const isGlobal = document.getElementById('select-rol').value === 'global';
+      const selectRol = document.getElementById('select-rol');
+      const rolElegido = selectRol.value;
+      const isGlobal = rolElegido === 'global';
+      
       document.getElementById('box-forzar-global').classList.toggle('hidden', !isGlobal);
+
+      // Aquí está la reactividad: busca la información y la pone en las cajas
+      fetch('/api/obtener_config_rol/' + rolElegido)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                document.getElementById('titulo').value = data.titulo || '';
+                document.getElementById('eslogan').value = data.eslogan || '';
+                document.getElementById('color_fondo').value = data.color_fondo || '#1e1b4b';
+                
+                document.getElementById('logo_size').value = data.logo_size || 45;
+                document.getElementById('mosaic_size').value = data.mosaic_size || 150;
+
+                const radios = document.getElementsByName('banner_style');
+                for (let i = 0; i < radios.length; i++) {
+                    if (radios[i].value === data.banner_style) {
+                        radios[i].checked = true;
+                        break;
+                    }
+                }
+                
+                toggleMosaic();
+
+                // --- NUEVO: VISTA PREVIA DEL LOGO ---
+                const logoContainer = document.getElementById('preview-logo-container');
+                const logoImg = document.getElementById('preview-logo-img');
+                if (data.logo && data.logo !== 'None') {
+                    // Construimos la URL hacia la carpeta de Flask
+                    logoImg.src = "/static/uploads/" + data.logo;
+                    logoContainer.classList.remove('hidden');
+                } else {
+                    logoContainer.classList.add('hidden');
+                    logoImg.src = "";
+                }
+
+                // --- NUEVO: VISTA PREVIA DEL BANNER ---
+                const bannerContainer = document.getElementById('preview-banner-container');
+                const bannerGrid = document.getElementById('preview-banner-grid');
+                bannerGrid.innerHTML = ''; // Limpiamos banners anteriores
+                
+                if (data.banner && data.banner !== 'None') {
+                    // Como el banner puede tener varias fotos separadas por comas (para el carrusel)
+                    const fotosBanner = data.banner.split(',');
+                    fotosBanner.forEach(foto => {
+                        if(foto.trim() !== '') {
+                            bannerGrid.innerHTML += `<img src="/static/uploads/${foto}" class="w-16 h-12 object-cover rounded shadow-sm border border-indigo-200 flex-shrink-0">`;
+                        }
+                    });
+                    bannerContainer.classList.remove('hidden');
+                } else {
+                    bannerContainer.classList.add('hidden');
+                }
+            }
+        })
+        .catch(error => console.error('Error al cargar la configuración:', error));
     }
     
-    // Mostrar/Ocultar el control de tamaño del Mosaico
     function toggleMosaic() {
       const isMosaic = document.querySelector('input[name="banner_style"]:checked').value === 'mosaic';
       document.getElementById('box-mosaic').classList.toggle('hidden', !isMosaic);
     }
+
+    // Al cargar la pestaña, se llama la función para que no empiece en blanco
+    document.addEventListener('DOMContentLoaded', () => {
+        toggleGlobalForzar();
+    });
   </script>
 <!-- final de apariencia y tematicas-->
 
