@@ -1,4 +1,5 @@
 import os
+from flask import send_from_directory
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -7,11 +8,17 @@ from datetime import datetime
 import json
 
 app = Flask(__name__)
+@app.route('/js/<path:filename>')
+def serve_js(filename):
+    return send_from_directory(
+        os.path.join(app.root_path, 'js'),
+        filename
+    )
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///huellitas.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.secret_key = 'huellitas_secreto_2026'
 
-# NUEVO: Configuración para guardar imágenes
+# NUEVO: Configuración para guardar imágenes    
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True) # Crea la carpeta automáticamente si no existe
 
