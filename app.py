@@ -1,4 +1,5 @@
 import os
+from flask import send_from_directory
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -7,11 +8,17 @@ from datetime import datetime
 import json
 
 app = Flask(__name__)
+@app.route('/js/<path:filename>')
+def serve_js(filename):
+    return send_from_directory(
+        os.path.join(app.root_path, 'js'),
+        filename
+    )
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///huellitas.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.secret_key = 'huellitas_secreto_2026'
 
-# NUEVO: Configuración para guardar imágenes
+# NUEVO: Configuración para guardar imágenes    
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True) # Crea la carpeta automáticamente si no existe
 
@@ -175,6 +182,8 @@ class Paciente(db.Model):
     disponible_adopcion = db.Column(db.String(20), default="En Observación")
     dueno_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
     rescate_id = db.Column(db.Integer, db.ForeignKey('rescate.id'), nullable=True)
+    codigo_acceso = db.Column(db.String(20), unique=True, nullable=True)
+    password_acceso = db.Column(db.String(20), nullable=True)
     rescate_obj = db.relationship('Rescate', backref='paciente_asociado', lazy=True)
     consultas = db.relationship('ConsultaMedica', backref='paciente_obj', lazy=True, order_by='ConsultaMedica.id.desc()')
     citas = db.relationship('Cita', backref='paciente_obj', lazy=True)
@@ -245,7 +254,6 @@ class ProductoShop(db.Model):
     descripcion = db.Column(db.Text, nullable=True)
     foto = db.Column(db.Text, nullable=True)
     visible = db.Column(db.Boolean, default=True)
-    fecha_vencimiento = db.Column(db.String(20), nullable=True)
 
 class Pedido(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -393,14 +401,13 @@ def usuario():
     disponibles = Paciente.query.filter_by(disponible_adopcion="Listo para Adopción").all()
     programas_db = ProgramaVoluntariado.query.all()
     info_don = InfoDonacion.query.first()
-    user_data = Usuario.query.get(session['usuario_id']) # Inyección de datos
-    hoy = datetime.utcnow().strftime('%Y-%m-%d')
-    # Filtro de seguridad: excluir productos cuya fecha sea igual o menor a hoy
-    productos_db = [p for p in ProductoShop.query.filter_by(visible=True).all() if not p.fecha_vencimiento or p.fecha_vencimiento > hoy]
-
-    return render_template('usuario.html', adopciones=disponibles, mi_cv=cv_actual, programas=programas_db, info_donacion=info_don, usuario_data=user_data, productos=productos_db, hoy=hoy)
-
-   
+    user_data = Usuario.query.get(session['usuario_id'])
+    productos_db = ProductoShop.query.filter_by(visible=True).all()
+    
+    # ESTA ES LA LÍNEA QUE FALTABA: Busca las mascotas del usuario actual
+    mis_mascotas = Paciente.query.filter_by(dueno_id=session['usuario_id']).all()
+    
+    return render_template('usuario.html', adopciones=disponibles, mi_cv=cv_actual, programas=programas_db, info_donacion=info_don, usuario_data=user_data, productos=productos_db, mis_mascotas=mis_mascotas)
 
 @app.route('/admin')
 def admin(): 
@@ -605,6 +612,27 @@ def registrar_donacion():
 # ==========================================
 # 4. RUTAS POST (CONEXIONES Y LÓGICA)
 # ==========================================
+
+from flask import jsonify # <-- Asegúrate de que esto esté arriba junto a los otros imports de Flask
+
+@app.route('/vincular_mascota', methods=['POST'])
+def vincular_mascota():
+    if 'usuario_id' not in session or session['rol'] != 'usuario': 
+        return jsonify({'status': 'error', 'message': 'No autorizado'})
+        
+    codigo = request.form.get('codigo')
+    password = request.form.get('password')
+    
+    paciente = Paciente.query.filter_by(codigo_acceso=codigo, password_acceso=password).first()
+    if paciente:
+        paciente.dueno_id = session['usuario_id']
+        paciente.codigo_acceso = None # Borramos credenciales por seguridad
+        paciente.password_acceso = None
+        db.session.commit()
+        return jsonify({'status': 'success', 'message': 'Mascota vinculada exitosamente'})
+    else:
+        return jsonify({'status': 'error', 'message': 'Credenciales incorrectas'})
+    
 @app.route('/crear_empleado', methods=['POST'])
 def crear_empleado():
     if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
@@ -751,7 +779,9 @@ def crear_consulta():
             sexo=request.form.get('sexo'), 
             disponible_adopcion=request.form.get('adopcion_status', 'No Aplica'),
             foto=foto_perfil,
-            rescate_id=rescate_id
+            rescate_id=rescate_id,
+            codigo_acceso=request.form.get('codigo_acceso'),    # NUEVO
+            password_acceso=request.form.get('password_acceso')
         )
         db.session.add(nuevo_paciente)
         db.session.commit()
@@ -803,6 +833,39 @@ def crear_consulta():
 
     db.session.commit()
     return redirect(url_for('veterinario'))
+
+# ==========================================
+# RUTA API PARA AUTOCOMPLETAR FORMULARIOS
+# ==========================================
+@app.route('/api/obtener_config_rol/<rol>', methods=['GET'])
+def obtener_config_rol(rol):
+    if 'usuario_id' not in session or session['rol'] != 'admin':
+        return jsonify({'status': 'error', 'message': 'No autorizado'}), 403
+
+    # Buscamos la configuración de ese rol específico
+    config = ConfigSitio.query.filter_by(rol_destino=rol).first()
+    
+    # Si ese rol no tiene configuración propia aún, le mandamos la "global" para que no parta de cero
+    if not config:
+        config = ConfigSitio.query.filter_by(rol_destino='global').first()
+
+    # Si por alguna razón extrema no hay ni global, devolvemos vacío
+    if not config:
+        return jsonify({'status': 'vacio'})
+
+    # Empaquetamos los datos en formato JSON para mandarlos al navegador
+    datos = {
+        'status': 'success',
+        'titulo': config.titulo,
+        'eslogan': config.eslogan,
+        'color_fondo': config.color_fondo,
+        'logo_size': config.logo_size,
+        'banner_style': config.banner_style,
+        'mosaic_size': config.mosaic_size,
+        'logo': config.logo,       # NUEVO: Mandamos el nombre del archivo del logo
+        'banner': config.banner
+    }
+    return jsonify(datos)
 
 # === RUTAS DEL USUARIO ===
 @app.route('/actualizar_cv', methods=['POST'])
@@ -884,130 +947,60 @@ def crear_reclamo(paciente_id):
     db.session.commit()
     flash("Reclamo de propiedad enviado con éxito.", "success")
     return redirect(url_for('usuario'))
+
 @app.route('/crear_producto', methods=['POST'])
 def crear_producto():
     if 'usuario_id' not in session or session['rol'] != 'admin': 
         return redirect(url_for('login'))
-
+    
     nombre = request.form.get('nombre')
     categoria = request.form.get('categoria')
     precio = float(request.form.get('precio', 0))
     stock = int(request.form.get('stock', 0))
     descripcion = request.form.get('descripcion', '')
-    fecha_vencimiento = request.form.get('fecha_vencimiento') if categoria in ['Comida', 'Medicina'] else None
-
+    
     nombre_foto = None
     if 'foto' in request.files:
         archivo = request.files['foto']
         if archivo.filename != '':
             nombre_foto = secure_filename(archivo.filename)
             archivo.save(os.path.join(app.config['UPLOAD_FOLDER'], nombre_foto))
-
+            
     nuevo_prod = ProductoShop(
         nombre=nombre,
         categoria=categoria,
         precio=precio,
         stock=stock,
         descripcion=descripcion,
-        foto=nombre_foto,
-        fecha_vencimiento=fecha_vencimiento
+        foto=nombre_foto
     )
-
+    
     db.session.add(nuevo_prod)
     db.session.commit()
     flash("Producto creado e ingresado a la tienda con éxito.", "success")
     return redirect(url_for('admin'))
 
-@app.route('/editar_producto/<int:prod_id>', methods=['POST'])
-def editar_producto(prod_id):
-    if 'usuario_id' not in session or session['rol'] != 'admin': 
-        return {"status": "error", "message": "No autorizado"}, 403
 
-    prod = ProductoShop.query.get(prod_id)
-    if prod:
-        try:
-            data = request.get_json() if request.is_json else request.form
-            if 'stock' in data:
-                prod.stock = int(data.get('stock'))
-            if 'precio' in data:
-                prod.precio = float(data.get('precio'))
-            if 'visible' in data:
-                vis = data.get('visible')
-                if isinstance(vis, bool):
-                    prod.visible = vis
-                elif isinstance(vis, str):
-                    prod.visible = vis.lower() in ['true', '1', 'yes']
-            if 'fecha_vencimiento' in data:
-                prod.fecha_vencimiento = data.get('fecha_vencimiento')
-            db.session.commit()
-            return {"status": "ok"}, 200
-        except Exception as e:
-            db.session.rollback()
-            return {"status": "error", "message": str(e)}, 500
-
-    return {"status": "error", "message": "Producto no encontrado"}, 404
-
-@app.route('/descontar_stock', methods=['POST'])
-def descontar_stock():
-    data = request.get_json()
-    items = data.get('items', [])
-    for item in items:
-        # Extraer ID numérico
-        prod_id = int(''.join(filter(str.isdigit, str(item['id']))))
-        prod = ProductoShop.query.get(prod_id)
-        if prod:
-            prod.stock = max(0, prod.stock - int(item['cantidad']))
-    db.session.commit()
-    return {"status": "ok"}, 200
-
-@app.route('/eliminar_producto/<int:prod_id>', methods=['POST'])
-def eliminar_producto(prod_id):
-    if 'usuario_id' not in session or session['rol'] != 'admin': 
-        return {"status": "error", "message": "No autorizado"}, 403
+@app.route('/editar_mascota/<int:paciente_id>', methods=['POST'])
+def editar_mascota(paciente_id):
+    if 'usuario_id' not in session or session['rol'] != 'usuario': return redirect(url_for('login'))
+    paciente = Paciente.query.get(paciente_id)
     
-    prod = ProductoShop.query.get(prod_id)
-    if prod:
-        try:
-            db.session.delete(prod)
-            db.session.commit()
-            return {"status": "ok"}, 200
-        except Exception as e:
-            db.session.rollback()
-            return {"status": "error", "message": str(e)}, 500
-            
-    return {"status": "error", "message": "Producto no encontrado"}, 404
-
-@app.route('/obtener_productos', methods=['GET'])
-def obtener_productos():
-    prods = ProductoShop.query.all()
-    hoy = datetime.utcnow().strftime('%Y-%m-%d')
-    lista = []
-    for p in prods:
-        lista.append({
-            'id': f"PROD-{p.id}",
-            'nombre': p.nombre,
-            'categoria': p.categoria,
-            'precio': p.precio,
-            'stock': p.stock,
-            'visible': p.visible,
-            'fecha_vencimiento': p.fecha_vencimiento,
-            'img': f"/static/uploads/{p.foto}" if p.foto else "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=300"
-        })
-    return {"status": "ok", "productos": lista, "hoy": hoy}, 200
+    if paciente and paciente.dueno_id == session['usuario_id']:
+        paciente.nombre = request.form.get('nombre')
+        if 'foto' in request.files and request.files['foto'].filename != '':
+            file = request.files['foto']
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            paciente.foto = filename
+        db.session.commit()
+        flash("Perfil de tu mascota actualizado.", "success")
+        
+    return redirect(url_for('usuario'))
 
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-
-        # --- MIGRACIÓN AUTO: Agrega la columna 'fecha_vencimiento' si la tabla ya existía ---
-        try:
-            with db.engine.connect() as conn:
-                conn.execute(db.text("ALTER TABLE producto_shop ADD COLUMN fecha_vencimiento VARCHAR(20);"))
-                conn.commit()
-        except Exception:
-            pass  # Si la columna ya existe, no hace nada y continúa normalmente
-        # --------------------------------------------------------------------------------------
-
         if not Usuario.query.filter_by(rol='admin').first():
             db.session.add(Usuario(nombre="Administrador Principal", correo="admin@huellitas.com", codigo_empleado="ADMIN-001", telefono="555-0000", password=generate_password_hash("123"), rol="admin"))
 
@@ -1031,5 +1024,5 @@ if __name__ == '__main__':
         if not ConfigSitio.query.filter_by(rol_destino='global').first():
             db.session.add(ConfigSitio(rol_destino='global', titulo="Huellitas de Amor", eslogan="v5.0 - Entorno Python", color_fondo="#1e1b4b", logo_size=45))
 
-        db.session.commit()
+            db.session.commit()
     app.run(debug=True)
