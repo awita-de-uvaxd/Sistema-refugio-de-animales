@@ -245,6 +245,7 @@ class ProductoShop(db.Model):
     descripcion = db.Column(db.Text, nullable=True)
     foto = db.Column(db.Text, nullable=True)
     visible = db.Column(db.Boolean, default=True)
+    fecha_vencimiento = db.Column(db.String(20), nullable=True)
 
 class Pedido(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -393,9 +394,13 @@ def usuario():
     programas_db = ProgramaVoluntariado.query.all()
     info_don = InfoDonacion.query.first()
     user_data = Usuario.query.get(session['usuario_id']) # Inyección de datos
-    productos_db = ProductoShop.query.filter_by(visible=True).all()
-    
-    return render_template('usuario.html', adopciones=disponibles, mi_cv=cv_actual, programas=programas_db, info_donacion=info_don, usuario_data=user_data, productos=productos_db)
+    hoy = datetime.utcnow().strftime('%Y-%m-%d')
+    # Filtro de seguridad: excluir productos cuya fecha sea igual o menor a hoy
+    productos_db = [p for p in ProductoShop.query.filter_by(visible=True).all() if not p.fecha_vencimiento or p.fecha_vencimiento > hoy]
+
+    return render_template('usuario.html', adopciones=disponibles, mi_cv=cv_actual, programas=programas_db, info_donacion=info_don, usuario_data=user_data, productos=productos_db, hoy=hoy)
+
+   
 
 @app.route('/admin')
 def admin(): 
@@ -883,37 +888,126 @@ def crear_reclamo(paciente_id):
 def crear_producto():
     if 'usuario_id' not in session or session['rol'] != 'admin': 
         return redirect(url_for('login'))
-    
+
     nombre = request.form.get('nombre')
     categoria = request.form.get('categoria')
     precio = float(request.form.get('precio', 0))
     stock = int(request.form.get('stock', 0))
     descripcion = request.form.get('descripcion', '')
-    
+    fecha_vencimiento = request.form.get('fecha_vencimiento') if categoria in ['Comida', 'Medicina'] else None
+
     nombre_foto = None
     if 'foto' in request.files:
         archivo = request.files['foto']
         if archivo.filename != '':
             nombre_foto = secure_filename(archivo.filename)
             archivo.save(os.path.join(app.config['UPLOAD_FOLDER'], nombre_foto))
-            
+
     nuevo_prod = ProductoShop(
         nombre=nombre,
         categoria=categoria,
         precio=precio,
         stock=stock,
         descripcion=descripcion,
-        foto=nombre_foto
+        foto=nombre_foto,
+        fecha_vencimiento=fecha_vencimiento
     )
-    
+
     db.session.add(nuevo_prod)
     db.session.commit()
     flash("Producto creado e ingresado a la tienda con éxito.", "success")
     return redirect(url_for('admin'))
 
+@app.route('/editar_producto/<int:prod_id>', methods=['POST'])
+def editar_producto(prod_id):
+    if 'usuario_id' not in session or session['rol'] != 'admin': 
+        return {"status": "error", "message": "No autorizado"}, 403
+
+    prod = ProductoShop.query.get(prod_id)
+    if prod:
+        try:
+            data = request.get_json() if request.is_json else request.form
+            if 'stock' in data:
+                prod.stock = int(data.get('stock'))
+            if 'precio' in data:
+                prod.precio = float(data.get('precio'))
+            if 'visible' in data:
+                vis = data.get('visible')
+                if isinstance(vis, bool):
+                    prod.visible = vis
+                elif isinstance(vis, str):
+                    prod.visible = vis.lower() in ['true', '1', 'yes']
+            if 'fecha_vencimiento' in data:
+                prod.fecha_vencimiento = data.get('fecha_vencimiento')
+            db.session.commit()
+            return {"status": "ok"}, 200
+        except Exception as e:
+            db.session.rollback()
+            return {"status": "error", "message": str(e)}, 500
+
+    return {"status": "error", "message": "Producto no encontrado"}, 404
+
+@app.route('/descontar_stock', methods=['POST'])
+def descontar_stock():
+    data = request.get_json()
+    items = data.get('items', [])
+    for item in items:
+        # Extraer ID numérico
+        prod_id = int(''.join(filter(str.isdigit, str(item['id']))))
+        prod = ProductoShop.query.get(prod_id)
+        if prod:
+            prod.stock = max(0, prod.stock - int(item['cantidad']))
+    db.session.commit()
+    return {"status": "ok"}, 200
+
+@app.route('/eliminar_producto/<int:prod_id>', methods=['POST'])
+def eliminar_producto(prod_id):
+    if 'usuario_id' not in session or session['rol'] != 'admin': 
+        return {"status": "error", "message": "No autorizado"}, 403
+    
+    prod = ProductoShop.query.get(prod_id)
+    if prod:
+        try:
+            db.session.delete(prod)
+            db.session.commit()
+            return {"status": "ok"}, 200
+        except Exception as e:
+            db.session.rollback()
+            return {"status": "error", "message": str(e)}, 500
+            
+    return {"status": "error", "message": "Producto no encontrado"}, 404
+
+@app.route('/obtener_productos', methods=['GET'])
+def obtener_productos():
+    prods = ProductoShop.query.all()
+    hoy = datetime.utcnow().strftime('%Y-%m-%d')
+    lista = []
+    for p in prods:
+        lista.append({
+            'id': f"PROD-{p.id}",
+            'nombre': p.nombre,
+            'categoria': p.categoria,
+            'precio': p.precio,
+            'stock': p.stock,
+            'visible': p.visible,
+            'fecha_vencimiento': p.fecha_vencimiento,
+            'img': f"/static/uploads/{p.foto}" if p.foto else "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=300"
+        })
+    return {"status": "ok", "productos": lista, "hoy": hoy}, 200
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+
+        # --- MIGRACIÓN AUTO: Agrega la columna 'fecha_vencimiento' si la tabla ya existía ---
+        try:
+            with db.engine.connect() as conn:
+                conn.execute(db.text("ALTER TABLE producto_shop ADD COLUMN fecha_vencimiento VARCHAR(20);"))
+                conn.commit()
+        except Exception:
+            pass  # Si la columna ya existe, no hace nada y continúa normalmente
+        # --------------------------------------------------------------------------------------
+
         if not Usuario.query.filter_by(rol='admin').first():
             db.session.add(Usuario(nombre="Administrador Principal", correo="admin@huellitas.com", codigo_empleado="ADMIN-001", telefono="555-0000", password=generate_password_hash("123"), rol="admin"))
 
@@ -937,5 +1031,5 @@ if __name__ == '__main__':
         if not ConfigSitio.query.filter_by(rol_destino='global').first():
             db.session.add(ConfigSitio(rol_destino='global', titulo="Huellitas de Amor", eslogan="v5.0 - Entorno Python", color_fondo="#1e1b4b", logo_size=45))
 
-            db.session.commit()
+        db.session.commit()
     app.run(debug=True)

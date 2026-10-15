@@ -876,7 +876,10 @@
     </main>
   </div>
 
-  <div id="usuario-perfil" class="tab-content tab-content-usuario"><div class="bg-white rounded-xl shadow-sm p-6 text-center text-slate-500">Módulo de Perfil (Se programará próximamente)</div></div>
+   <!-- apartado de mi perfil  -->
+    <div id="usuario-perfil" class="tab-content-usuario tab-content hidden">
+      {% include 'perfil_compartido.html' %}
+    </div>
 
 </div>
 
@@ -1095,10 +1098,7 @@
   </div>
 </div>
 
-  <!-- apartado de mi perfil  -->
-    <div id="usuario-perfil" class="tab-content-usuario tab-content hidden">
-      {% include 'perfil_compartido.html' %}
-    </div>
+ 
 
 <!-- ======================================================= -->
 <!-- SCRIPTS DE JAVASCRIPT (Controlan los botones de Adoptar)-->
@@ -1183,31 +1183,57 @@ function mostrarDetalleVoluntariado(idDetalle) {
     }
 
     function renderizarCatalogo(lista) {
-        const grid = document.getElementById('catalogo-grid');
-        if(!grid) return;
-        const visibles = lista.filter(p => p.visible);
-        if(visibles.length === 0) { 
-            grid.innerHTML = `<p class="col-span-full text-center text-xs text-slate-400 py-8">No hay productos disponibles.</p>`; 
-            return; 
+    const grid = document.getElementById('catalogo-grid');
+    if(!grid) return;
+    const hoyStr = new Date().toISOString().split('T')[0];
+    const hoyMs = new Date(hoyStr).getTime();
+
+    // Filtro estricto de seguridad: Excluye invisibles y caducados
+    const visibles = lista.filter(p => {
+        if (!p.visible) return false;
+        if (p.fecha_vencimiento && (p.categoria === 'Comida' || p.categoria === 'Medicina')) {
+            if (p.fecha_vencimiento <= hoyStr) return false; // Se oculta al usuario
         }
-        grid.innerHTML = visibles.map(p => `
-            <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col justify-between">
-                <img src="${p.img}" class="w-full h-36 object-cover">
+        return true;
+    });
+
+    if(visibles.length === 0) { 
+        grid.innerHTML = `<p class="col-span-full text-center text-xs text-slate-400 py-8">No hay productos disponibles.</p>`; 
+        return; 
+    }
+
+    grid.innerHTML = visibles.map(p => {
+        let badgeOferta = '';
+        if (p.fecha_vencimiento && (p.categoria === 'Comida' || p.categoria === 'Medicina')) {
+            const vencMs = new Date(p.fecha_vencimiento).getTime();
+            const diffDias = Math.ceil((vencMs - hoyMs) / (1000 * 60 * 60 * 24));
+            if (diffDias > 0 && diffDias <= 30) {
+                badgeOferta = `<span class="absolute top-2 right-2 text-[10px] font-black bg-amber-500 text-white px-2 py-0.5 rounded-full shadow-md animate-pulse">🔥 Oferta de Remate</span>`;
+            }
+        }
+
+        return `
+            <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col justify-between hover:shadow-md transition relative">
+                <div class="relative">
+                    <img src="${p.img}" class="w-full h-36 object-cover">
+                    ${badgeOferta}
+                </div>
                 <div class="p-4 space-y-2 flex-1 flex flex-col justify-between">
                     <div>
                         <span class="text-[10px] font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">${p.categoria}</span>
                         <h3 class="font-bold text-sm text-slate-800 mt-1">${p.nombre}</h3>
                     </div>
                     <div class="flex justify-between items-center pt-2 border-t">
-                        <span class="font-black text-slate-800">Q${p.precio.toFixed(2)}</span>
-                        <button onclick="agregarAlCarrito('${p.id}')" ${p.stock <= 0 ? 'disabled' : ''} class="px-3 py-1.5 bg-purple-primary text-white rounded-xl font-bold text-xs hover:bg-purple-dark transition disabled:bg-slate-300">
+                        <span class="font-black text-slate-800">Q${parseFloat(p.precio).toFixed(2)}</span>
+                        <button onclick="agregarAlCarrito('${p.id}', '${p.nombre.replace(/'/g, "\\'")}', ${p.precio}, ${p.stock})" ${p.stock <= 0 ? 'disabled' : ''} class="px-3 py-1.5 bg-purple-primary text-white rounded-xl font-bold text-xs hover:bg-purple-dark transition disabled:bg-slate-300">
                             ${p.stock > 0 ? '+ Agregar' : 'Agotado'}
                         </button>
                     </div>
                 </div>
             </div>
-        `).join('');
-    }
+        `;
+    }).join('');
+}
 
     function filtrarCatalogo() { 
         const input = document.getElementById('catalogo-search');
@@ -1407,6 +1433,12 @@ function agregarAlCarrito(id, nombre, precio, stockMax) {
         historialVentas.unshift(orden);
         localStorage.setItem('huellitas_historial', JSON.stringify(historialVentas));
         
+        fetch('/descontar_stock', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: carrito })
+      });
+
         ordenActivaSeguimiento = orden;
         toggleCartModal();
         carrito = [];
