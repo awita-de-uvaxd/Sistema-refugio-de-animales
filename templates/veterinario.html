@@ -1,6 +1,19 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="w-full">
+    {% with mensajes = get_flashed_messages(with_categories=true) %}
+    {% if mensajes %}
+      <div class="mb-4 space-y-2">
+        {% for categoria, mensaje in mensajes %}
+          <div class="flex items-center gap-3 px-5 py-4 rounded-xl shadow-sm border font-semibold text-sm
+            {% if categoria == 'error' %}bg-amber-50 border-amber-200 text-amber-800{% else %}bg-emerald-50 border-emerald-200 text-emerald-800{% endif %}">
+            <i data-lucide="{% if categoria == 'error' %}alert-triangle{% else %}check-circle{% endif %}" class="w-5 h-5 flex-shrink-0"></i>
+            <span>{{ mensaje }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
   <nav class="flex overflow-x-auto border-b border-slate-200 text-sm font-medium mb-6 bg-white rounded-t-xl shadow-sm scroll-hide">
     <button onclick="switchTab('veterinario', 'inicio')" class="tab-btn-veterinario px-5 py-4 border-b-2 flex active" data-tab="inicio"><i data-lucide="activity" class="w-4 h-4 mr-2"></i> Panel de Control</button>
     <button onclick="switchTab('veterinario', 'nueva')" class="tab-btn-veterinario px-5 py-4 border-b-2 flex" data-tab="nueva"><i data-lucide="stethoscope" class="w-4 h-4 mr-2"></i> Nueva Consulta</button>
