@@ -714,75 +714,10 @@
       </div>
     </div>
 
+  <!-- Fin de la ventana de donaciones-->
   <!-- ======================================================= -->
-  <!-- PESTAÑA MIS MASCOTAS (VINCULACIÓN Y EXPEDIENTES)          -->
-  <!-- ======================================================= -->
-  <div id="usuario-mascotas" class="tab-content tab-content-usuario">
-    <div class="max-w-6xl mx-auto space-y-6">
-      
-      <div class="flex justify-between items-center bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-        <div>
-          <h2 class="text-2xl font-black text-indigo-950">Mis Mascotas Vinculadas</h2>
-          <p class="text-sm text-slate-500">Expedientes clínicos y registro de tus animales de compañía.</p>
-        </div>
-        <button onclick="abrirVincularBanco()" class="bg-indigo-900 hover:bg-indigo-950 text-white font-bold py-3 px-6 rounded-xl shadow-md transition flex items-center gap-2">
-          <i data-lucide="plus-circle" class="w-5 h-5"></i> Agregar Mascota
-        </button>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {% if mis_mascotas %}
-          {% for p in mis_mascotas %}
-          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
-            <div class="h-48 bg-slate-100 relative group">
-              {% if p.foto %}
-                <img src="{{ url_for('static', filename='uploads/' ~ p.foto) }}" class="w-full h-full object-cover">
-              {% else %}
-                <div class="w-full h-full flex items-center justify-center text-slate-300"><i data-lucide="paw-print" class="w-12 h-12"></i></div>
-              {% endif %}
-              <!-- Botón de edición flotante -->
-              <button onclick="abrirEditarMascota('{{ p.id }}', '{{ p.nombre }}')" class="absolute top-3 right-3 bg-white/90 hover:bg-white text-indigo-600 p-2 rounded-lg shadow-sm backdrop-blur transition opacity-0 group-hover:opacity-100">
-                <i data-lucide="edit-3" class="w-4 h-4"></i>
-              </button>
-            </div>
-            
-            <div class="p-5 flex-1 flex flex-col justify-between">
-              <div>
-                <h3 class="font-black text-xl text-indigo-950">{{ p.nombre }}</h3>
-                <p class="text-xs text-slate-500 font-bold uppercase tracking-wider">{{ p.especie }} • {{ p.sexo }}</p>
-                <div class="mt-4 space-y-2 text-sm text-slate-600">
-                  {% set ultima = p.consultas|first %}
-                  {% if ultima %}
-                    <p class="flex items-center gap-2"><i data-lucide="calendar" class="w-4 h-4 text-emerald-500"></i> Última cita: {{ ultima.fecha.strftime('%d/%m/%Y') }}</p>
-                    <p class="line-clamp-1 flex items-center gap-2"><i data-lucide="file-text" class="w-4 h-4 text-indigo-400"></i> {{ ultima.diagnostico }}</p>
-                  {% else %}
-                    <p class="italic text-slate-400">No hay consultas registradas aún.</p>
-                  {% endif %}
-                </div>
-              </div>
-              <button onclick="abrirExpedienteMascota('{{ p.id }}')" class="w-full mt-5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-2.5 rounded-xl border border-indigo-200 transition">Ver Expediente Completo</button>
-            </div>
-          </div>
-
-          <!-- MODAL EXPEDIENTE (VISTA USUARIO) COMPARTIDO -->
-          <div id="historial-mi-mascota-{{ p.id }}" class="hidden">
-            {% include 'expediente_compartido.html' %}
-          </div>
-          {% endfor %}
-        {% else %}
-          <div class="col-span-full text-center p-12 bg-white rounded-2xl border border-slate-200 border-dashed">
-            <i data-lucide="cat" class="w-16 h-16 text-slate-300 mx-auto mb-4"></i>
-            <h3 class="text-xl font-bold text-slate-700">Aún no tienes mascotas</h3>
-            <p class="text-slate-500 text-sm mt-2 max-w-md mx-auto">Si acudiste a la veterinaria, haz clic en "Agregar Mascota" e ingresa las credenciales que te proporcionó el doctor.</p>
-          </div>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-  <!-- FIn de apartado de mis mascotas-->
-
-
-  <!-- ======================================================= -->
+  <div id="usuario-mascotas" class="tab-content tab-content-usuario"><div class="bg-white rounded-xl shadow-sm p-6 text-center text-slate-500">Módulo de Mascotas (Esperando conexión)</div></div>
+<!-- ======================================================= -->
   <!-- PESTAÑA SHOP INTEGRADA                                  -->
   <!-- ======================================================= -->
   <div id="usuario-shop" class="tab-content tab-content-usuario">
@@ -795,8 +730,14 @@
             </div>
             
             <nav class="flex items-center gap-2">
+                <!-- Botón Mi Pedido existente -->
                 <button onclick="toggleSeguimientoModal()" id="nav-seguimiento" class="px-3.5 py-2 rounded-xl font-bold text-xs bg-purple-100 text-purple-700 hover:bg-purple-200 transition flex items-center gap-1.5">
                     📦 <span>Mi Pedido</span>
+                </button>
+
+                <!-- NUEVO BOTÓN: MIS ÓRDENES -->
+                <button onclick="abrirModalMisOrdenes()" id="nav-mis-ordenes" class="px-3.5 py-2 rounded-xl font-bold text-xs bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1.5">
+                    📋 <span>Mis órdenes</span>
                 </button>
             </nav>
         </div>
@@ -941,8 +882,30 @@
     </main>
   </div>
 
-  <div id="usuario-perfil" class="tab-content tab-content-usuario"><div class="bg-white rounded-xl shadow-sm p-6 text-center text-slate-500">Módulo de Perfil (Se programará próximamente)</div></div>
+  <!-- apartado de mi perfil  -->
+    <div id="usuario-perfil" class="tab-content-usuario tab-content hidden">
+      {% include 'perfil_compartido.html' %}
+    </div>
 
+</div>
+
+<!-- MODAL MIS ÓRDENES ACEPTADAS -->
+<div id="modal-mis-ordenes" class="fixed inset-0 bg-slate-900/50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 max-h-[85vh] overflow-y-auto shadow-2xl relative">
+        <div class="flex justify-between items-center border-b pb-3">
+            <h3 class="font-black text-slate-800 text-base flex items-center gap-2">
+                <span>◀</span> Mis órdenes
+            </h3>
+            <button onclick="toggleMisOrdenesModal()" class="text-slate-400 font-bold hover:text-slate-600 text-lg">✕</button>
+        </div>
+
+        <p class="text-xs text-slate-500">Historial de pedidos confirmados y aceptados por la administración.</p>
+
+        <!-- Contenedor donde se insertan las tarjetas de órdenes -->
+        <div id="lista-mis-ordenes" class="space-y-3">
+            <!-- Renderizado dinámico desde JS -->
+        </div>
+    </div>
 </div>
 
 <!-- ======================================================= -->
@@ -1016,53 +979,51 @@
                 </label>
             </div>
         </div>
+       <!-- CAMPOS DE ENTREGA Y PAGO UNIFICADOS -->
+      <div id="campos-cliente-pago" class="space-y-3 text-xs border-t pt-3">
+          <input type="text" id="recibe-nombre" placeholder="Nombre completo *" class="w-full p-2 border rounded-xl">
+          <input type="tel" id="recibe-telefono" placeholder="Teléfono *" class="w-full p-2 border rounded-xl">
+          
+          <!-- Campo Dirección: solo visible si es Servicio a Domicilio -->
+          <div id="box-direccion">
+              <input type="text" id="recibe-direccion" placeholder="Dirección exacta *" class="w-full p-2 border rounded-xl">
+          </div>
 
-        <div id="campos-domicilio" class="space-y-2 text-xs border-t pt-2">
-            <input type="text" id="recibe-nombre" placeholder="Nombre completo *" class="w-full p-2 border rounded-xl">
-            <input type="tel" id="recibe-telefono" placeholder="Teléfono *" class="w-full p-2 border rounded-xl">
-            <input type="text" id="recibe-direccion" placeholder="Dirección exacta *" class="w-full p-2 border rounded-xl">
+          <label class="block font-bold text-slate-700 pt-2">Método de Pago *</label>
+          <div class="grid grid-cols-2 gap-2">
+              <label class="flex items-center gap-2 p-2 border rounded-xl cursor-pointer bg-white">
+                  <input type="radio" name="metodo-pago" value="tarjeta" checked onchange="toggleFormaPago()">
+                  <span class="font-semibold">Tarjeta</span>
+              </label>
+              <label class="flex items-center gap-2 p-2 border rounded-xl cursor-pointer bg-white">
+                  <input type="radio" name="metodo-pago" value="deposito" onchange="toggleFormaPago()">
+                  <span class="font-semibold">Transferencia</span>
+              </label>
+          </div>
 
-            <label class="block font-bold text-slate-700 pt-2">Método de Pago</label>
-            <div class="grid grid-cols-2 gap-2">
-                <label class="flex items-center gap-2 p-2 border rounded-xl cursor-pointer">
-                    <input type="radio" name="metodo-pago" value="tarjeta" checked onchange="toggleFormaPago()">
-                    <span>Tarjeta</span>
-                </label>
-                <label class="flex items-center gap-2 p-2 border rounded-xl cursor-pointer">
-                    <input type="radio" name="metodo-pago" value="deposito" onchange="toggleFormaPago()">
-                    <span>Transferencia</span>
-                </label>
-            </div>
+          <!-- Formulario Tarjeta -->
+          <div id="form-tarjeta" class="space-y-2 pt-1 bg-purple-50 p-3 rounded-xl border border-purple-200">
+              <input type="text" id="card-holder" placeholder="Nombre en tarjeta *" class="w-full p-2 border bg-white rounded-xl text-xs">
+              <input type="text" id="card-number" maxlength="16" placeholder="Número de tarjeta (16 dígitos) *" class="w-full p-2 border bg-white rounded-xl text-xs">
+              <div class="grid grid-cols-2 gap-2">
+                  <input type="text" id="card-exp" placeholder="MM/AA *" class="p-2 border bg-white rounded-xl text-xs">
+                  <input type="password" id="card-cvv" placeholder="CVV *" class="p-2 border bg-white rounded-xl text-xs">
+              </div>
+          </div>
 
-            <div id="form-tarjeta" class="space-y-2 pt-1 bg-purple-50 p-3 rounded-xl border border-purple-200">
-                <input type="text" id="card-holder" placeholder="Nombre en tarjeta *" class="w-full p-2 border bg-white rounded-xl text-xs">
-                <input type="text" id="card-number" maxlength="16" placeholder="Número de tarjeta (16 dígitos) *" class="w-full p-2 border bg-white rounded-xl text-xs">
-                <div class="grid grid-cols-2 gap-2">
-                    <input type="text" id="card-exp" placeholder="MM/AA *" class="p-2 border bg-white rounded-xl text-xs">
-                    <input type="password" id="card-cvv" placeholder="CVV *" class="p-2 border bg-white rounded-xl text-xs">
-                </div>
-            </div>
-
-            <div id="info-deposito" class="hidden space-y-2 pt-1 bg-purple-50 p-3 rounded-xl text-xs text-purple-900 border border-purple-200">
-                <label class="block font-bold">Cuenta Banco Refugio:</label>
-                <select id="deposito-banco" class="w-full p-2 border rounded-xl bg-white text-xs font-semibold">
-                    <option value="Banco Industrial (012-345678-9)">Banco Industrial - Cta: 012-345678-9</option>
-                    <option value="BAC Credomatic (901-234567-8)">BAC Credomatic - Cta: 901-234567-8</option>
-                </select>
-                <div class="grid grid-cols-2 gap-2 pt-1">
-                    <input type="number" step="0.01" id="deposito-monto" placeholder="Monto Q *" class="p-2 border bg-white rounded-xl text-xs">
-                    <input type="text" id="deposito-ref" placeholder="No. Referencia *" class="p-2 border bg-white rounded-xl text-xs">
-                </div>
-            </div>
-        </div>
-
-        <div id="warning-recoger" class="hidden space-y-2 border-t pt-2">
-            <input type="text" id="recibe-nombre-tienda" placeholder="Tu Nombre completo *" class="w-full p-2 border rounded-xl text-xs">
-            <input type="tel" id="recibe-telefono-tienda" placeholder="Teléfono de contacto *" class="w-full p-2 border rounded-xl text-xs">
-            <div class="bg-amber-50 p-3 rounded-xl text-xs text-amber-800 border border-amber-200">
-                Pagas directamente en el refugio cuando tu pedido esté en <strong>5. Finalizar</strong> (se realiza el cobro en Caja Refugio).
-            </div>
-        </div>
+          <!-- Formulario Transferencia -->
+          <div id="info-deposito" class="hidden space-y-2 pt-1 bg-purple-50 p-3 rounded-xl text-xs text-purple-900 border border-purple-200">
+              <label class="block font-bold">Cuenta Banco Refugio:</label>
+              <select id="deposito-banco" class="w-full p-2 border rounded-xl bg-white text-xs font-semibold">
+                  <option value="Banco Industrial (012-345678-9)">Banco Industrial - Cta: 012-345678-9</option>
+                  <option value="BAC Credomatic (901-234567-8)">BAC Credomatic - Cta: 901-234567-8</option>
+              </select>
+              <div class="grid grid-cols-2 gap-2 pt-1">
+                  <input type="number" step="0.01" id="deposito-monto" placeholder="Monto Q *" class="p-2 border bg-white rounded-xl text-xs">
+                  <input type="text" id="deposito-ref" placeholder="No. Referencia *" class="p-2 border bg-white rounded-xl text-xs">
+              </div>
+          </div>
+      </div>
 
         <!-- OPCIÓN FACTURA / NIT -->
         <div class="border-t pt-3 space-y-2 text-xs">
@@ -1160,10 +1121,6 @@
   </div>
 </div>
 
-  <!-- apartado de mi perfil  -->
-    <div id="usuario-perfil" class="tab-content-usuario tab-content hidden">
-      {% include 'perfil_compartido.html' %}
-    </div>
 
 <!-- ======================================================= -->
 <!-- SCRIPTS DE JAVASCRIPT (Controlan los botones de Adoptar)-->
@@ -1203,11 +1160,11 @@
       lucide.createIcons();
     }
 
-  function mostrarDetalleVoluntariado(idDetalle) {
-        document.querySelectorAll('.seccion-detalle-vol').forEach(el => el.classList.add('hidden'));
-        document.getElementById(idDetalle).classList.remove('hidden');
-        document.getElementById(idDetalle).scrollIntoView({ behavior: 'smooth' });
-    }
+function mostrarDetalleVoluntariado(idDetalle) {
+      document.querySelectorAll('.seccion-detalle-vol').forEach(el => el.classList.add('hidden'));
+      document.getElementById(idDetalle).classList.remove('hidden');
+      document.getElementById(idDetalle).scrollIntoView({ behavior: 'smooth' });
+  }
 
   function abrirModalVoluntariado(progId) {
       const html = document.getElementById('modal-vol-' + progId).innerHTML;
@@ -1240,107 +1197,66 @@
         }
     });
 
-  function abrirVincularBanco() {
-    openModal(`
-      <div class="bg-[#003B5C] p-8 -m-6 rounded-2xl text-white">
-        <h2 class="text-center font-bold text-emerald-400 mb-6 text-sm tracking-wide">Vinculación de Mascotas</h2>
-        <div class="bg-[#002b44] p-6 rounded-xl border border-[#004870] shadow-inner">
-          <h3 class="text-center font-black text-xl mb-6 flex justify-center items-center gap-2">
-            <i data-lucide="shield-check" class="w-6 h-6 text-emerald-400"></i> Autenticación Veterinaria
-          </h3>
-          <!-- SE CAMBIÓ A ONSUBMIT PARA INTERCEPTARLO POR JAVASCRIPT -->
-          <form id="form-vinculacion" onsubmit="procesarVinculacion(event)" class="space-y-5">
-            <div>
-              <label class="block text-xs font-bold text-sky-200 mb-1">Código de Paciente</label>
-              <div class="relative">
-                <i data-lucide="hash" class="absolute left-3 top-3 text-slate-400 w-5 h-5"></i>
-                <input type="text" name="codigo" required placeholder="Ej. EXT-1234" class="w-full bg-white text-slate-900 border-none rounded-lg py-3 pl-10 pr-3 font-mono font-bold outline-none">
-              </div>
+  
+
+    function toggleSeguimientoModal() {
+        const modal = document.getElementById('modal-seguimiento');
+        if(modal) modal.classList.toggle('hidden');
+    }
+
+    function renderizarCatalogo(lista) {
+        const grid = document.getElementById('catalogo-grid');
+        if(!grid) return;
+        const visibles = lista.filter(p => p.visible);
+        if(visibles.length === 0) { 
+            grid.innerHTML = `<p class="col-span-full text-center text-xs text-slate-400 py-8">No hay productos disponibles.</p>`; 
+            return; 
+        }
+        grid.innerHTML = visibles.map(p => `
+            <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col justify-between">
+                <img src="${p.img}" class="w-full h-36 object-cover">
+                <div class="p-4 space-y-2 flex-1 flex flex-col justify-between">
+                    <div>
+                        <span class="text-[10px] font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">${p.categoria}</span>
+                        <h3 class="font-bold text-sm text-slate-800 mt-1">${p.nombre}</h3>
+                    </div>
+                    <div class="flex justify-between items-center pt-2 border-t">
+                        <span class="font-black text-slate-800">Q${p.precio.toFixed(2)}</span>
+                        <button onclick="agregarAlCarrito('${p.id}')" ${p.stock <= 0 ? 'disabled' : ''} class="px-3 py-1.5 bg-purple-primary text-white rounded-xl font-bold text-xs hover:bg-purple-dark transition disabled:bg-slate-300">
+                            ${p.stock > 0 ? '+ Agregar' : 'Agotado'}
+                        </button>
+                    </div>
+                </div>
             </div>
-            <div>
-              <label class="block text-xs font-bold text-sky-200 mb-1">Contraseña Temporal</label>
-              <div class="relative">
-                <i data-lucide="lock" class="absolute left-3 top-3 text-slate-400 w-5 h-5"></i>
-                <input type="password" name="password" required placeholder="****" class="w-full bg-white text-slate-900 border-none rounded-lg py-3 pl-10 pr-3 font-mono font-bold outline-none">
-              </div>
-            </div>
-            <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3.5 rounded-lg transition shadow-md mt-4">Vincular Expediente</button>
-          </form>
-        </div>
-      </div>
-    `);
-    lucide.createIcons();
-  }
+        `).join('');
+    }
 
-  // NUEVA FUNCIÓN: Envía los datos por debajo de la mesa y muestra la respuesta
-  function procesarVinculacion(e) {
-      e.preventDefault(); // Evita recargar
-      const form = document.getElementById('form-vinculacion');
-      const formData = new FormData(form);
+    function filtrarCatalogo() { 
+        const input = document.getElementById('catalogo-search');
+        const query = input ? input.value.toLowerCase() : '';
+        const tarjetas = document.querySelectorAll('#catalogo-grid > div[data-nombre]');
 
-      fetch("{{ url_for('vincular_mascota') }}", {
-          method: 'POST',
-          body: formData
-      })
-      .then(response => response.json()) // Esperamos una respuesta en JSON
-      .then(data => {
-          if (data.status === 'success') {
-              openModal(`
-                  <div class="text-center p-6">
-                      <i data-lucide="check-circle" class="w-20 h-20 text-emerald-500 mx-auto mb-4"></i>
-                      <h2 class="text-2xl font-black text-slate-800 mb-2">¡Vinculación Exitosa!</h2>
-                      <p class="text-slate-500 mb-6">El expediente clínico ahora forma parte de tu perfil.</p>
-                      <button onclick="window.location.reload();" class="bg-emerald-600 text-white font-bold py-3 px-8 rounded-xl hover:bg-emerald-700 transition">Aceptar y Ver Mascotas</button>
-                  </div>
-              `);
-          } else {
-              openModal(`
-                  <div class="text-center p-6">
-                      <i data-lucide="x-circle" class="w-20 h-20 text-red-500 mx-auto mb-4"></i>
-                      <h2 class="text-2xl font-black text-slate-800 mb-2">Error de Vinculación</h2>
-                      <p class="text-slate-500 mb-6">Código o contraseña incorrectos, o la mascota ya fue vinculada a otro perfil.</p>
-                      <button onclick="abrirVincularBanco()" class="bg-red-100 text-red-700 font-bold py-3 px-8 rounded-xl hover:bg-red-200 transition">Intentar de nuevo</button>
-                  </div>
-              `);
-          }
-          lucide.createIcons();
-      })
-      .catch(error => {
-          alert('Hubo un error de conexión con el servidor.');
-      });
-  }
+        tarjetas.forEach(card => {
+            const nombre = card.getAttribute('data-nombre').toLowerCase();
+            if (nombre.includes(query)) {
+                card.classList.remove('hidden');
+            } else {
+                card.classList.add('hidden');
+            }
+        });
+    }
 
-  function abrirEditarMascota(id, nombre) {
-      // Construimos la URL de forma tradicional para evitar errores 404 con Jinja
-      const formAction = "/editar_mascota/" + id;
-      
-      openModal(`
-        <div class="p-4">
-            <h2 class="text-xl font-black text-indigo-900 mb-6 border-b pb-3 flex items-center gap-2">
-              <i data-lucide="edit-3" class="w-5 h-5"></i> Actualizar Perfil de ` + nombre + `
-            </h2>
-            <form action="` + formAction + `" method="POST" enctype="multipart/form-data" class="space-y-6">
-              <div class="bg-slate-50 p-5 rounded-xl border border-slate-200">
-                  <label class="block text-sm font-bold text-slate-700 mb-2">Nombre Bautizado</label>
-                  <input type="text" name="nombre" value="` + nombre + `" required class="w-full border border-slate-300 rounded-xl p-3 outline-indigo-500 shadow-inner text-sm font-semibold">
-              </div>
-              
-              <div class="bg-indigo-50/50 p-5 rounded-xl border border-indigo-100">
-                  <label class="block text-sm font-bold text-indigo-900 mb-2">Nueva Foto de Perfil</label>
-                  <p class="text-xs text-slate-500 mb-3">Sube una imagen clara de su rostro. (JPG, PNG)</p>
-                  <input type="file" name="foto" accept="image/*" class="w-full text-xs text-slate-500 file:bg-indigo-600 file:text-white file:font-bold file:border-0 file:px-4 file:py-2 file:rounded-lg cursor-pointer bg-white border border-indigo-200 rounded-xl p-2 shadow-sm">
-              </div>
-              
-              <div class="flex gap-4 pt-2">
-                  <button type="button" onclick="closeModal()" class="w-1/3 py-3.5 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition">Cancelar</button>
-                  <button type="submit" class="w-2/3 bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition shadow-md flex items-center justify-center gap-2">
-                      <i data-lucide="save" class="w-4 h-4"></i> Guardar Cambios
-                  </button>
-              </div>
-            </form>
-        </div>
-      `);
-      lucide.createIcons();
+    function filtrarCategoria(cat) { 
+        const tarjetas = document.querySelectorAll('#catalogo-grid > div[data-categoria]');
+
+        tarjetas.forEach(card => {
+            const categoria = card.getAttribute('data-categoria');
+            if (cat === 'Todos' || categoria === cat) {
+                card.classList.remove('hidden');
+            } else {
+                card.classList.add('hidden');
+            }
+        });
     }
 
     function toggleNitCampo() {
@@ -1357,254 +1273,261 @@
       }
     }
     
-  function abrirExpedienteMascota(id) {
-    const html = document.getElementById('historial-mi-mascota-' + id).innerHTML;
-    openModal(html);
-    lucide.createIcons();
-  }
-
-  function toggleSeguimientoModal() {
-      const modal = document.getElementById('modal-seguimiento');
-      if(modal) modal.classList.toggle('hidden');
-  }
-
-  function renderizarCatalogo(lista) {
-      const grid = document.getElementById('catalogo-grid');
-      if(!grid) return;
-      const visibles = lista.filter(p => p.visible);
-      if(visibles.length === 0) { 
-          grid.innerHTML = `<p class="col-span-full text-center text-xs text-slate-400 py-8">No hay productos disponibles.</p>`; 
-          return; 
-      }
-      grid.innerHTML = visibles.map(p => `
-          <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col justify-between">
-              <img src="${p.img}" class="w-full h-36 object-cover">
-              <div class="p-4 space-y-2 flex-1 flex flex-col justify-between">
-                  <div>
-                      <span class="text-[10px] font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">${p.categoria}</span>
-                      <h3 class="font-bold text-sm text-slate-800 mt-1">${p.nombre}</h3>
-                  </div>
-                  <div class="flex justify-between items-center pt-2 border-t">
-                      <span class="font-black text-slate-800">Q${p.precio.toFixed(2)}</span>
-                      <button onclick="agregarAlCarrito('${p.id}')" ${p.stock <= 0 ? 'disabled' : ''} class="px-3 py-1.5 bg-purple-primary text-white rounded-xl font-bold text-xs hover:bg-purple-dark transition disabled:bg-slate-300">
-                          ${p.stock > 0 ? '+ Agregar' : 'Agotado'}
-                      </button>
-                  </div>
-              </div>
-          </div>
-      `).join('');
-  }
-
-  function filtrarCatalogo() { 
-      const input = document.getElementById('catalogo-search');
-      const query = input ? input.value.toLowerCase() : '';
-      const tarjetas = document.querySelectorAll('#catalogo-grid > div[data-nombre]');
-
-      tarjetas.forEach(card => {
-          const nombre = card.getAttribute('data-nombre').toLowerCase();
-          if (nombre.includes(query)) {
-              card.classList.remove('hidden');
-          } else {
-              card.classList.add('hidden');
-          }
-      });
-  }
-
-  function filtrarCategoria(cat) { 
-      const tarjetas = document.querySelectorAll('#catalogo-grid > div[data-categoria]');
-
-      tarjetas.forEach(card => {
-          const categoria = card.getAttribute('data-categoria');
-          if (cat === 'Todos' || categoria === cat) {
-              card.classList.remove('hidden');
-          } else {
-              card.classList.add('hidden');
-          }
-      });
-  }
-  
-  function toggleCartModal() { 
-      const modal = document.getElementById('modal-carrito');
-      if(modal) modal.classList.toggle('hidden'); 
-  }
+    function toggleCartModal() { 
+        const modal = document.getElementById('modal-carrito');
+        if(modal) modal.classList.toggle('hidden'); 
+    }
 
     // Abre la modal con la descripción del producto y sugerencias
-  function abrirModalDetalle(prodId) {
-      const elem = document.getElementById('detalle-prod-data-' + prodId);
-      if (elem) {
-          openModal(elem.innerHTML);
-          lucide.createIcons();
-      }
-  }
+function abrirModalDetalle(prodId) {
+    const elem = document.getElementById('detalle-prod-data-' + prodId);
+    if (elem) {
+        openModal(elem.innerHTML);
+        lucide.createIcons();
+    }
+}
 
 // Extrae los datos HTML seguros del botón
-  function prepararAgregarCarrito(btn) {
-      const id = btn.dataset.id;
-      const nombre = btn.dataset.nombre;
-      const precio = parseFloat(btn.dataset.precio);
-      const stockMax = parseInt(btn.dataset.stock);
+function prepararAgregarCarrito(btn) {
+    const id = btn.dataset.id;
+    const nombre = btn.dataset.nombre;
+    const precio = parseFloat(btn.dataset.precio);
+    const stockMax = parseInt(btn.dataset.stock);
 
-      agregarAlCarrito(id, nombre, precio, stockMax);
-  }
+    agregarAlCarrito(id, nombre, precio, stockMax);
+}
 
 // Agrega el item a la lista del carrito y actualiza la UI
-  function agregarAlCarrito(id, nombre, precio, stockMax) {
-      const itemExistente = carrito.find(i => i.id === id);
-      if (itemExistente) {
-          if (itemExistente.cantidad < stockMax) {
-              itemExistente.cantidad += 1;
-          } else {
-              alert('Alcanzaste la cantidad máxima disponible en inventario para este producto.');
-              return;
-          }
-      } else {
-          carrito.push({ id, nombre, precio, cantidad: 1 });
-      }
-      actualizarCarritoUI();
-      alert(`¡"${nombre}" se agregó al carrito de compras!`);
-  }
+// 1. Agregar al carrito respetando el tope de inventario
+function agregarAlCarrito(id, nombre, precio, stockMaxParam) {
+    const p = productos.find(x => String(x.id) === String(id) || parseInt(String(x.id).replace(/\D/g, '')) === parseInt(String(id).replace(/\D/g, '')));
+    const stockMax = p ? parseInt(p.stock) : (parseInt(stockMaxParam) || 0);
 
-  function cambiarCantidadCarrito(id, d) {
-      const item = carrito.find(x => x.id === id);
-      if(!item) return;
-      item.cantidad += d;
-      if(item.cantidad <= 0) carrito = carrito.filter(x => x.id !== id);
-      actualizarCarritoUI();
-  }
+    if (stockMax <= 0) return;
 
-  function actualizarCarritoUI() {
-      const totalCant = carrito.reduce((a, b) => a + b.cantidad, 0);
-      const badge = document.getElementById('cart-badge');
-      if(badge) badge.innerText = totalCant;
+    const itemExistente = carrito.find(i => String(i.id) === String(id));
+    if (itemExistente) {
+        itemExistente.cantidad = Math.min(itemExistente.cantidad + 1, stockMax);
+    } else {
+        const prodNombre = nombre || (p ? p.nombre : 'Producto');
+        const prodPrecio = parseFloat(precio) || (p ? parseFloat(p.precio) : 0);
+        carrito.push({ id, nombre: prodNombre, precio: prodPrecio, cantidad: 1 });
+    }
+    actualizarCarritoUI();
+}
 
-      const list = document.getElementById('cart-items-list');
-      if(list) {
-          list.innerHTML = carrito.length === 0 ? `<p class="text-center text-xs text-slate-400 py-4">El carrito está vacío.</p>` :
-              carrito.map(i => `
-                  <div class="flex justify-between items-center text-xs bg-slate-50 p-3 rounded-xl border">
-                      <div><h4 class="font-bold">${i.nombre}</h4><p class="text-slate-400">Q${i.precio.toFixed(2)} c/u</p></div>
-                      <div class="flex items-center gap-2">
-                          <button onclick="cambiarCantidadCarrito('${i.id}', -1)" class="px-2 bg-white border font-bold rounded">-</button>
-                          <span class="font-bold">${i.cantidad}</span>
-                          <button onclick="cambiarCantidadCarrito('${i.id}', 1)" class="px-2 bg-white border font-bold rounded">+</button>
-                          <span class="font-bold ml-2">Q${(i.precio * i.cantidad).toFixed(2)}</span>
-                      </div>
-                  </div>
-              `).join('');
-      }
-      
-      const sub = carrito.reduce((a, b) => a + (b.precio * b.cantidad), 0);
-      const devElem = document.querySelector('input[name="delivery-option"]:checked');
-      const dev = devElem ? devElem.value : 'domicilio';
-      const ship = dev === 'domicilio' ? 35.00 : 0.00;
-      
-      const elSub = document.getElementById('cart-subtotal');
-      const elShip = document.getElementById('cart-shipping');
-      const elTotal = document.getElementById('cart-total');
-      if(elSub) elSub.innerText = `Q${sub.toFixed(2)}`;
-      if(elShip) elShip.innerText = `Q${ship.toFixed(2)}`;
-      if(elTotal) elTotal.innerText = `Q${(sub + ship).toFixed(2)}`;
-  }
+// 2. Controlar la cantidad en el carrito sin exceder las existencias
+function cambiarCantidadCarrito(id, d) {
+    const item = carrito.find(x => String(x.id) === String(id));
+    if (!item) return;
 
-  function toggleEntregaCampos() {
-      const devElem = document.querySelector('input[name="delivery-option"]:checked');
-      const dev = devElem ? devElem.value : 'domicilio';
-      const camposDom = document.getElementById('campos-domicilio');
-      const warningRec = document.getElementById('warning-recoger');
-      if(camposDom) camposDom.classList.toggle('hidden', dev !== 'domicilio');
-      if(warningRec) warningRec.classList.toggle('hidden', dev === 'domicilio');
-      actualizarCarritoUI();
-  }
+    const p = productos.find(x => String(x.id) === String(id) || parseInt(String(x.id).replace(/\D/g, '')) === parseInt(String(id).replace(/\D/g, '')));
+    const stockMax = p ? parseInt(p.stock) : item.cantidad;
 
-  function toggleFormaPago() {
-      const pagoElem = document.querySelector('input[name="metodo-pago"]:checked');
-      const m = pagoElem ? pagoElem.value : 'tarjeta';
-      const formTarj = document.getElementById('form-tarjeta');
-      const infoDep = document.getElementById('info-deposito');
-      if(formTarj) formTarj.classList.toggle('hidden', m !== 'tarjeta');
-      if(infoDep) infoDep.classList.toggle('hidden', m === 'tarjeta');
-  }
+    const nuevaCant = item.cantidad + d;
+    if (nuevaCant <= 0) {
+        carrito = carrito.filter(x => String(x.id) !== String(id));
+    } else {
+        item.cantidad = Math.min(nuevaCant, stockMax);
+    }
+    actualizarCarritoUI();
+}
 
-  function procesarOrden() {
-      if(carrito.length === 0) return alert('El carrito está vacío');
-      const devElem = document.querySelector('input[name="delivery-option"]:checked');
-      const dev = devElem ? devElem.value : 'domicilio';
-      let nom, tel, dir, met, estP;
+// 3. Renderizar interfaz deshabilitando el botón '+' al llegar al límite
+function actualizarCarritoUI() {
+    const totalCant = carrito.reduce((a, b) => a + b.cantidad, 0);
+    const badge = document.getElementById('cart-badge');
+    if (badge) badge.innerText = totalCant;
 
-      if(dev === 'domicilio') {
-          nom = document.getElementById('recibe-nombre')?.value.trim();
-          tel = document.getElementById('recibe-telefono')?.value.trim();
-          dir = document.getElementById('recibe-direccion')?.value.trim();
-          if(!nom || !tel || !dir) return alert('Campos obligatorios incompletos');
-          
-          const pagoElem = document.querySelector('input[name="metodo-pago"]:checked');
-          const m = pagoElem ? pagoElem.value : 'tarjeta';
-          met = m === 'tarjeta' ? 'Tarjeta en Línea' : 'Transferencia';
-          estP = `PENDIENTE DE VERIFICACIÓN (${m === 'tarjeta' ? 'Tarjeta' : 'Transferencia'})`;
-      } else {
-          nom = document.getElementById('recibe-nombre-tienda')?.value.trim() || 'Cliente Presencial';
-          tel = document.getElementById('recibe-telefono-tienda')?.value.trim() || 'N/A';
-          dir = 'Recoger en Recepción';
-          met = 'Pago Pendiente en Recepción';
-          estP = 'PENDIENTE DE COBRO EN TIENDA';
-      }
+    const list = document.getElementById('cart-items-list');
+    if (list) {
+        list.innerHTML = carrito.length === 0 ? `<p class="text-center text-xs text-slate-400 py-4">El carrito está vacío.</p>` :
+            carrito.map(i => {
+                const p = productos.find(x => String(x.id) === String(i.id) || parseInt(String(x.id).replace(/\D/g, '')) === parseInt(String(i.id).replace(/\D/g, '')));
+                const stockMax = p ? parseInt(p.stock) : i.cantidad;
+                const topeAlcanzado = i.cantidad >= stockMax;
 
-        // =========================================================
-        // CAPTURA DEL NIT O CONSUMIDOR FINAL
-        // =========================================================
-        const chkFactura = document.getElementById('requiere-factura');
-        const inputNit = document.getElementById('recibe-nit');
-        let nitRegistrado = 'Consumidor Final';
+                return `
+                    <div class="flex justify-between items-center text-xs bg-slate-50 p-3 rounded-xl border">
+                        <div>
+                            <h4 class="font-bold">${i.nombre}</h4>
+                            <p class="text-slate-400">Q${i.precio.toFixed(2)} c/u (Disp: ${stockMax})</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="cambiarCantidadCarrito('${i.id}', -1)" class="px-2 bg-white border font-bold rounded hover:bg-slate-100">-</button>
+                            <span class="font-bold">${i.cantidad}</span>
+                            <button onclick="cambiarCantidadCarrito('${i.id}', 1)" ${topeAlcanzado ? 'disabled' : ''} class="px-2 bg-white border font-bold rounded hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed">+</button>
+                            <span class="font-bold ml-2">Q${(i.precio * i.cantidad).toFixed(2)}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+    }
+    
+    const sub = carrito.reduce((a, b) => a + (b.precio * b.cantidad), 0);
+    const devElem = document.querySelector('input[name="delivery-option"]:checked');
+    const dev = devElem ? devElem.value : 'domicilio';
+    const ship = dev === 'domicilio' ? 35.00 : 0.00;
+    
+    const elSub = document.getElementById('cart-subtotal');
+    const elShip = document.getElementById('cart-shipping');
+    const elTotal = document.getElementById('cart-total');
+    if (elSub) elSub.innerText = `Q${sub.toFixed(2)}`;
+    if (elShip) elShip.innerText = `Q${ship.toFixed(2)}`;
+    if (elTotal) elTotal.innerText = `Q${(sub + ship).toFixed(2)}`;
+}
 
-        if (chkFactura && chkFactura.checked && inputNit && inputNit.value.trim() !== '') {
-            nitRegistrado = inputNit.value.trim().toUpperCase();
+    function toggleEntregaCampos() {
+        const devElem = document.querySelector('input[name="delivery-option"]:checked');
+        const dev = devElem ? devElem.value : 'domicilio';
+        const boxDir = document.getElementById('box-direccion');
+        
+        if (boxDir) {
+            boxDir.classList.toggle('hidden', dev !== 'domicilio');
         }
-        // =========================================================
+        actualizarCarritoUI();
+    }
 
-        const sub = carrito.reduce((a, b) => a + (b.precio * b.cantidad), 0);
-        const env = dev === 'domicilio' ? 35.00 : 0.00;
+    function toggleFormaPago() {
+        const pagoElem = document.querySelector('input[name="metodo-pago"]:checked');
+        const m = pagoElem ? pagoElem.value : 'tarjeta';
+        const formTarj = document.getElementById('form-tarjeta');
+        const infoDep = document.getElementById('info-deposito');
+        if(formTarj) formTarj.classList.toggle('hidden', m !== 'tarjeta');
+        if(infoDep) infoDep.classList.toggle('hidden', m === 'tarjeta');
+    }
 
-        const orden = {
-            id: "PED-" + Math.floor(1000 + Math.random() * 9000),
-            fecha: new Date().toLocaleDateString('es-GT'),
-            nit: nitRegistrado, // <-- AQUÍ SE GUARDA EL NIT EN LA ORDEN
-            clienteNombre: nom, clienteTel: tel, clienteDir: dir,
-            itemsDetalle: JSON.parse(JSON.stringify(carrito)),
-            subtotal: sub, envio: env, total: sub + env,
-            tipo: dev === 'domicilio' ? 'Domicilio' : 'Tienda',
-            metodoPago: met, estadoPago: estP, estadoOrden: '1. Tomando',
-            stockDescontado: false
-        };
+    async function procesarOrden() {
+    if (!carrito || carrito.length === 0) {
+        mostrarNotificacionFlotante('El carrito de compras está vacío.');
+        return;
+    }
 
-      historialVentas.unshift(orden);
-      localStorage.setItem('huellitas_historial', JSON.stringify(historialVentas));
+    const devElem = document.querySelector('input[name="delivery-option"]:checked');
+    const dev = devElem ? devElem.value : 'domicilio';
+
+    const nom = document.getElementById('recibe-nombre')?.value.trim();
+    const tel = document.getElementById('recibe-telefono')?.value.trim();
+    let dir = 'Recoger en Recepción Refugio';
+
+    if (!nom || !tel) {
+        mostrarNotificacionFlotante('Ingresa tu Nombre y Teléfono de contacto.');
+        return;
+    }
+
+    if (dev === 'domicilio') {
+        dir = document.getElementById('recibe-direccion')?.value.trim();
+        if (!dir) {
+            mostrarNotificacionFlotante('Ingresa la Dirección exacta de entrega.');
+            return;
+        }
+    }
+
+    // Cálculo del Total Exacto
+    const sub = carrito.reduce((a, b) => a + (b.precio * b.cantidad), 0);
+    const env = dev === 'domicilio' ? 35.00 : 0.00;
+    const totalEsperado = sub + env;
+
+    // Validación Método de Pago
+    const pagoElem = document.querySelector('input[name="metodo-pago"]:checked');
+    const m = pagoElem ? pagoElem.value : 'tarjeta';
+    const met = m === 'tarjeta' ? 'Tarjeta en Línea' : 'Transferencia';
+
+    if (m === 'deposito') {
+        const montoIngresado = parseFloat(document.getElementById('deposito-monto')?.value || 0);
+        const refIngresada = document.getElementById('deposito-ref')?.value.trim();
+
+        if (!refIngresada) {
+            mostrarNotificacionFlotante('Ingresa el número de referencia del depósito.');
+            return;
+        }
+
+        // Validación estricta: No permite ni más ni menos
+        if (Math.abs(montoIngresado - totalEsperado) > 0.01) {
+            mostrarNotificacionFlotante(`Agregar monto exacto (Q${totalEsperado.toFixed(2)}).`);
+            return;
+        }
+    }
+
+    // Factura / NIT
+    const chkFactura = document.getElementById('requiere-factura');
+    const inputNit = document.getElementById('recibe-nit');
+    let nitRegistrado = 'Consumidor Final';
+
+    if (chkFactura && chkFactura.checked) {
+        if (inputNit && inputNit.value.trim() !== '') {
+            nitRegistrado = inputNit.value.trim().toUpperCase();
+        } else {
+            mostrarNotificacionFlotante('Ingresa tu número de NIT para la factura.');
+            return;
+        }
+    }
+
+    const estP = `PENDIENTE DE VERIFICACIÓN (${m === 'tarjeta' ? 'Tarjeta' : 'Transferencia'})`;
+
+    const orden = {
+        id: "PED-" + Math.floor(1000 + Math.random() * 9000),
+        fecha: new Date().toLocaleDateString('es-GT'),
+        nit: nitRegistrado,
+        clienteNombre: nom,
+        clienteTel: tel,
+        clienteDir: dir,
+        itemsDetalle: JSON.parse(JSON.stringify(carrito)),
+        subtotal: sub,
+        envio: env,
+        total: totalEsperado,
+        tipo: dev === 'domicilio' ? 'Domicilio' : 'Tienda',
+        metodoPago: met,
+        estadoPago: estP,
+        estadoOrden: '1. Tomando',
+        stockDescontado: false,
+        entregado: false
+    };
+
+    // Guardar orden en historial local
+    historialVentas.unshift(orden);
+    localStorage.setItem('huellitas_historial', JSON.stringify(historialVentas));
+
+    ordenActivaSeguimiento = orden;
+
+    // Resetear carrito e interfaz
+    carrito = [];
+    actualizarCarritoUI();
+    if (typeof limpiarFormularioCarrito === 'function') limpiarFormularioCarrito();
+
+    const modalCarrito = document.getElementById('modal-carrito');
+    if (modalCarrito) modalCarrito.classList.add('hidden');
+
+    actualizarBarraProgresivaCliente(orden);
+    const modalSeguimiento = document.getElementById('modal-seguimiento');
+    if (modalSeguimiento) modalSeguimiento.classList.remove('hidden');
+
+    mostrarNotificacionFlotante(`¡Orden ${orden.id} creada exitosamente!`);
+}
+  
       
-      ordenActivaSeguimiento = orden;
-      toggleCartModal();
-      carrito = [];
-      actualizarCarritoUI();
-      toggleSeguimientoModal();
-      actualizarBarraProgresivaCliente(orden);
-      alert(`Orden ${orden.id} creada con éxito.`);
-  }
 
-  function buscarOrdenCliente() {
-      const input = document.getElementById('input-search-order');
-      if(!input) return;
-      const q = input.value.trim().toUpperCase();
-      const o = historialVentas.find(x => x.id === q);
-      if(o) { ordenActivaSeguimiento = o; actualizarBarraProgresivaCliente(o); }
-      else alert('Orden no encontrada');
-  }
+    function buscarOrdenCliente() {
+    const input = document.getElementById('input-search-order');
+    if (!input) return;
+    const q = input.value.trim().toUpperCase();
+    const o = historialVentas.find(x => x.id === q);
+    if (o) { 
+        ordenActivaSeguimiento = o; 
+        actualizarBarraProgresivaCliente(o); 
+    } else {
+        mostrarNotificacionFlotante('Orden no encontrada. Revisa el código ingresado.');
+    }
+}
 
-  function actualizarBarraProgresivaCliente(orden) {
-      const code = document.getElementById('tracking-code');
-      const msg = document.getElementById('order-status-msg');
-      if(code) code.innerText = `Código: ${orden.id}`;
-      if(msg) msg.innerHTML = `Orden <strong>${orden.id}</strong> (${orden.tipo}) - Estado: <strong class="text-purple-primary">${orden.estadoOrden}</strong> | Pago: <strong>${orden.estadoPago}</strong>`;
-      
-      const steps = ["1. Tomando", "2. Aceptado", "3. Procesando", "4. Empacando", "5. Finalizar"];
-      const idx = steps.findIndex(s => orden.estadoOrden.includes(s.split('.')[0]));
+    function actualizarBarraProgresivaCliente(orden) {
+        const code = document.getElementById('tracking-code');
+        const msg = document.getElementById('order-status-msg');
+        if(code) code.innerText = `Código: ${orden.id}`;
+        if(msg) msg.innerHTML = `Orden <strong>${orden.id}</strong> (${orden.tipo}) - Estado: <strong class="text-purple-primary">${orden.estadoOrden}</strong> | Pago: <strong>${orden.estadoPago}</strong>`;
+        
+        const steps = ["1. Tomando", "2. Aceptado", "3. Procesando", "4. Empacando", "5. Finalizar"];
+        const idx = steps.findIndex(s => orden.estadoOrden.includes(s.split('.')[0]));
 
         for(let i=1; i<=5; i++) {
             const stepElem = document.getElementById(`step-${i}`);
@@ -1613,131 +1536,141 @@
             }
         }
 
-      const btnFactura = document.getElementById('btn-dl-factura');
-      if(btnFactura) {
-          if(orden.estadoPago.includes('PAGADO')) btnFactura.removeAttribute('disabled');
-          else btnFactura.setAttribute('disabled', 'true');
-      }
-  }
-
-  function descargarDocumentoCliente(tipo) {
-  if (!ordenActivaSeguimiento) {
-    return alert('Por favor, busca tu pedido antes de descargar.');
-  }
-  const o = ordenActivaSeguimiento;
-
-  const wrapper = document.getElementById('pdf-render-wrapper');
-  if (wrapper) wrapper.style.display = 'block';
-
-  const titleEl = document.getElementById('pdf-doc-title');
-  const ordIdEl = document.getElementById('pdf-ord-id');
-  const dateEl = document.getElementById('pdf-date');
-  const clientBox = document.getElementById('pdf-client-box');
-  const statusBadge = document.getElementById('pdf-status-badge');
-  const itemsBody = document.getElementById('pdf-items-body');
-  const subtotalEl = document.getElementById('pdf-subtotal');
-  const shippingEl = document.getElementById('pdf-shipping');
-  const totalEl = document.getElementById('pdf-total');
-
-  if (ordIdEl) ordIdEl.innerText = `#${o.id || 'PED-0000'}`;
-  if (dateEl) dateEl.innerText = `Fecha: ${o.fecha || new Date().toLocaleDateString('es-GT')}`;
-
-  // Determinación de dirección: Soporta "A Domicilio" y "Recoger en Tienda"
-  let direccionTexto = 'Recoger en Recepción';
-  if (o.clienteDir && o.clienteDir.trim() !== '' && o.clienteDir !== 'N/A' && o.clienteDir !== 'Recoger en Recepción') {
-    direccionTexto = o.clienteDir;
-  } else if (o.tipoEntrega === 'domicilio') {
-    direccionTexto = 'Envío a Domicilio';
-  }
-
-  const clienteNombre = o.clienteNombre || 'Cliente';
-  const clienteTel = o.clienteTel || 'N/A';
-  const nitCliente = o.nit || o.clienteNit || 'Consumidor Final';
-
-  // 1. ORDEN DE COMPRA (Amarillo - Pendiente por Pagar)
-  if (tipo === 'ORDEN_COMPRA') {
-    if (titleEl) titleEl.innerText = "ORDEN DE COMPRA";
-    if (statusBadge) {
-      statusBadge.innerText = "PENDIENTE POR PAGAR";
-      statusBadge.style.backgroundColor = "#FEF3C7";
-      statusBadge.style.color = "#92400E";
-      statusBadge.style.border = "1px solid #FCD34D";
+        const btnFactura = document.getElementById('btn-dl-factura');
+        if(btnFactura) {
+            if(orden.estadoPago.includes('PAGADO')) btnFactura.removeAttribute('disabled');
+            else btnFactura.setAttribute('disabled', 'true');
+        }
     }
-    if (clientBox) {
-      clientBox.innerHTML = `
-        <p style="margin:2px 0;"><strong>Cliente:</strong> ${clienteNombre}</p>
-        <p style="margin:2px 0;"><strong>NIT:</strong> ${nitCliente}</p>
-        <p style="margin:2px 0;"><strong>Dirección:</strong> ${direccionTexto}</p>
-        <p style="margin:2px 0;"><strong>Teléfono:</strong> ${clienteTel}</p>
-        <p style="margin:2px 0;"><strong>Estado de Cuenta:</strong> <span style="color:#B45309; font-weight:bold;">Cuenta Pendiente por Pagar</span></p>
-      `;
+
+  // 1. Buscar orden del cliente
+function buscarOrdenCliente() {
+    const input = document.getElementById('input-search-order');
+    if (!input) return;
+    const q = input.value.trim().toUpperCase();
+    const o = historialVentas.find(x => x.id === q);
+    if (o) { 
+        ordenActivaSeguimiento = o; 
+        actualizarBarraProgresivaCliente(o); 
+    } else {
+        mostrarNotificacionFlotante('Orden no encontrada. Revisa el código ingresado.');
     }
-  } 
-  // 2. FACTURA OFICIAL DE COMPRA (Verde - Pagado / Cancelado)
-  else {
-    if (titleEl) titleEl.innerText = "FACTURA OFICIAL DE COMPRA";
-    if (statusBadge) {
-      statusBadge.innerText = "PAGADO / CANCELADO";
-      statusBadge.style.backgroundColor = "#D1FAE5";
-      statusBadge.style.color = "#065F46";
-      statusBadge.style.border = "1px solid #6EE7B7";
-    }
-    const metodoPago = o.metodoPago || 'Presencial (Tarjeta POS)';
-    if (clientBox) {
-      clientBox.innerHTML = `
-        <p style="margin:2px 0;"><strong>Cliente:</strong> ${clienteNombre}</p>
-        <p style="margin:2px 0;"><strong>NIT:</strong> ${nitCliente}</p>
-        <p style="margin:2px 0;"><strong>Dirección:</strong> ${direccionTexto}</p>
-        <p style="margin:2px 0;"><strong>Teléfono:</strong> ${clienteTel}</p>
-        <p style="margin:2px 0;"><strong>Estado de Cuenta:</strong> <span style="color:#047857; font-weight:bold;">Cuenta Pagada y Cancelada (${metodoPago})</span></p>
-      `;
-    }
-  }
-
-  // Carga de productos
-  const items = o.itemsDetalle || [];
-  if (itemsBody) {
-    itemsBody.innerHTML = items.map(i => {
-      const precio = parseFloat(i.precio || 0);
-      const cant = parseInt(i.cantidad || 1);
-      const sub = precio * cant;
-      return `
-        <tr style="border-bottom: 1px solid #f1f5f9;">
-          <td style="padding: 12px 8px; font-weight: 600; color: #64748b;">${i.id || 'PROD'}</td>
-          <td style="padding: 12px 8px; font-weight: 700; color: #0f172a;">${i.nombre}</td>
-          <td style="padding: 12px 8px; text-align: center; font-weight: 600;">${cant}</td>
-          <td style="padding: 12px 8px; text-align: right; color: #475569;">Q${precio.toFixed(2)}</td>
-          <td style="padding: 12px 8px; text-align: right; font-weight: 700; color: #0f172a;">Q${sub.toFixed(2)}</td>
-        </tr>
-      `;
-    }).join('');
-  }
-
-  const subtotal = parseFloat(o.subtotal || (o.total - (o.envio || 0)));
-  const envio = parseFloat(o.envio || 0);
-  const total = parseFloat(o.total || 0);
-
-  if (subtotalEl) subtotalEl.innerText = `Q${subtotal.toFixed(2)}`;
-  if (shippingEl) shippingEl.innerText = `Q${envio.toFixed(2)}`;
-  if (totalEl) totalEl.innerText = `Q${total.toFixed(2)}`;
-
-  const element = document.getElementById('pdf-template');
-
-  const opt = {
-    margin:       0,
-    filename:     `${tipo}_${o.id}.pdf`,
-    image:        { type: 'jpeg', quality: 0.98 },
-    html2canvas:  { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
-    jsPDF:        { unit: 'pt', format: 'a4', orientation: 'portrait' }
-  };
-
-  html2pdf().set(opt).from(element).save().then(() => {
-    if (wrapper) wrapper.style.display = 'none';
-  }).catch(() => {
-    if (wrapper) wrapper.style.display = 'none';
-  });
 }
 
+// 2. Descargar documentos del cliente
+function descargarDocumentoCliente(tipo) {
+    if (!ordenActivaSeguimiento) {
+        mostrarNotificacionFlotante('Por favor, busca tu pedido antes de descargar.');
+        return;
+    }
+    const o = ordenActivaSeguimiento;
+
+    const wrapper = document.getElementById('pdf-render-wrapper');
+    if (wrapper) wrapper.style.display = 'block';
+
+    const titleEl = document.getElementById('pdf-doc-title');
+    const ordIdEl = document.getElementById('pdf-ord-id');
+    const dateEl = document.getElementById('pdf-date');
+    const clientBox = document.getElementById('pdf-client-box');
+    const statusBadge = document.getElementById('pdf-status-badge');
+    const itemsBody = document.getElementById('pdf-items-body');
+    const subtotalEl = document.getElementById('pdf-subtotal');
+    const shippingEl = document.getElementById('pdf-shipping');
+    const totalEl = document.getElementById('pdf-total');
+
+    if (ordIdEl) ordIdEl.innerText = `#${o.id || 'PED-0000'}`;
+    if (dateEl) dateEl.innerText = `Fecha: ${o.fecha || new Date().toLocaleDateString('es-GT')}`;
+
+    let direccionTexto = 'Recoger en Recepción';
+    if (o.clienteDir && o.clienteDir.trim() !== '' && o.clienteDir !== 'N/A' && o.clienteDir !== 'Recoger en Recepción') {
+        direccionTexto = o.clienteDir;
+    } else if (o.tipoEntrega === 'domicilio') {
+        direccionTexto = 'Envío a Domicilio';
+    }
+
+    const clienteNombre = o.clienteNombre || 'Cliente';
+    const clienteTel = o.clienteTel || 'N/A';
+    const nitCliente = o.nit || o.clienteNit || 'Consumidor Final';
+
+    if (tipo === 'ORDEN_COMPRA') {
+        if (titleEl) titleEl.innerText = "ORDEN DE COMPRA";
+        if (statusBadge) {
+            statusBadge.innerText = "PENDIENTE POR PAGAR";
+            statusBadge.style.backgroundColor = "#FEF3C7";
+            statusBadge.style.color = "#92400E";
+            statusBadge.style.border = "1px solid #FCD34D";
+        }
+        if (clientBox) {
+            clientBox.innerHTML = `
+                <p style="margin:2px 0;"><strong>Cliente:</strong> ${clienteNombre}</p>
+                <p style="margin:2px 0;"><strong>NIT:</strong> ${nitCliente}</p>
+                <p style="margin:2px 0;"><strong>Dirección:</strong> ${direccionTexto}</p>
+                <p style="margin:2px 0;"><strong>Teléfono:</strong> ${clienteTel}</p>
+                <p style="margin:2px 0;"><strong>Estado de Cuenta:</strong> <span style="color:#B45309; font-weight:bold;">Cuenta Pendiente por Pagar</span></p>
+            `;
+        }
+    } else {
+        if (titleEl) titleEl.innerText = "FACTURA OFICIAL DE COMPRA";
+        if (statusBadge) {
+            statusBadge.innerText = "PAGADO / CANCELADO";
+            statusBadge.style.backgroundColor = "#D1FAE5";
+            statusBadge.style.color = "#065F46";
+            statusBadge.style.border = "1px solid #6EE7B7";
+        }
+        const metodoPago = o.metodoPago || 'Presencial (Tarjeta POS)';
+        if (clientBox) {
+            clientBox.innerHTML = `
+                <p style="margin:2px 0;"><strong>Cliente:</strong> ${clienteNombre}</p>
+                <p style="margin:2px 0;"><strong>NIT:</strong> ${nitCliente}</p>
+                <p style="margin:2px 0;"><strong>Dirección:</strong> ${direccionTexto}</p>
+                <p style="margin:2px 0;"><strong>Teléfono:</strong> ${clienteTel}</p>
+                <p style="margin:2px 0;"><strong>Estado de Cuenta:</strong> <span style="color:#047857; font-weight:bold;">Cuenta Pagada y Cancelada (${metodoPago})</span></p>
+            `;
+        }
+    }
+
+    const items = o.itemsDetalle || [];
+    if (itemsBody) {
+        itemsBody.innerHTML = items.map(i => {
+            const precio = parseFloat(i.precio || 0);
+            const cant = parseInt(i.cantidad || 1);
+            const sub = precio * cant;
+            return `
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 12px 8px; font-weight: 600; color: #64748b;">${i.id || 'PROD'}</td>
+                    <td style="padding: 12px 8px; font-weight: 700; color: #0f172a;">${i.nombre}</td>
+                    <td style="padding: 12px 8px; text-align: center; font-weight: 600;">${cant}</td>
+                    <td style="padding: 12px 8px; text-align: right; color: #475569;">Q${precio.toFixed(2)}</td>
+                    <td style="padding: 12px 8px; text-align: right; font-weight: 700; color: #0f172a;">Q${sub.toFixed(2)}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    const subtotal = parseFloat(o.subtotal || (o.total - (o.envio || 0)));
+    const envio = parseFloat(o.envio || 0);
+    const total = parseFloat(o.total || 0);
+
+    if (subtotalEl) subtotalEl.innerText = `Q${subtotal.toFixed(2)}`;
+    if (shippingEl) shippingEl.innerText = `Q${envio.toFixed(2)}`;
+    if (totalEl) totalEl.innerText = `Q${total.toFixed(2)}`;
+
+    const element = document.getElementById('pdf-template');
+
+    const opt = {
+        margin:       0,
+        filename:     `${tipo}_${o.id}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
+        jsPDF:        { unit: 'pt', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(element).save().then(() => {
+        if (wrapper) wrapper.style.display = 'none';
+    }).catch(() => {
+        if (wrapper) wrapper.style.display = 'none';
+    });
+}
 function toggleNitCampo() {
   const checkbox = document.getElementById('requiere-factura');
   const container = document.getElementById('campo-nit-container');
@@ -1751,6 +1684,116 @@ function toggleNitCampo() {
       if (nitInput) nitInput.value = '';
     }
   }
+}
+
+  function limpiarFormularioCarrito() {
+    // 1. Campos de Entrega a Domicilio
+    const nomDom = document.getElementById('recibe-nombre'); if (nomDom) nomDom.value = '';
+    const telDom = document.getElementById('recibe-telefono'); if (telDom) telDom.value = '';
+    const dirDom = document.getElementById('recibe-direccion'); if (dirDom) dirDom.value = '';
+
+    // 2. Campos de Tarjeta de Crédito/Débito
+    const cardHolder = document.getElementById('card-holder'); if (cardHolder) cardHolder.value = '';
+    const cardNum = document.getElementById('card-number'); if (cardNum) cardNum.value = '';
+    const cardExp = document.getElementById('card-exp'); if (cardExp) cardExp.value = '';
+    const cardCvv = document.getElementById('card-cvv'); if (cardCvv) cardCvv.value = '';
+
+    // 3. Campos de Transferencia/Depósito
+    const depMonto = document.getElementById('deposito-monto'); if (depMonto) depMonto.value = '';
+    const depRef = document.getElementById('deposito-ref'); if (depRef) depRef.value = '';
+
+    // 4. Campos de Recoger en Tienda
+    const nomTienda = document.getElementById('recibe-nombre-tienda'); if (nomTienda) nomTienda.value = '';
+    const telTienda = document.getElementById('recibe-telefono-tienda'); if (telTienda) telTienda.value = '';
+
+    // 5. Casilla y campo de NIT / Factura
+    const chkFactura = document.getElementById('requiere-factura'); if (chkFactura) chkFactura.checked = false;
+    const inputNit = document.getElementById('recibe-nit'); if (inputNit) inputNit.value = '';
+    const containerNit = document.getElementById('campo-nit-container'); if (containerNit) containerNit.classList.add('hidden');
+
+    // 6. Restablecer opciones por defecto (Domicilio y Tarjeta)
+    const radioDom = document.querySelector('input[name="delivery-option"][value="domicilio"]');
+    if (radioDom) {
+        radioDom.checked = true;
+        toggleEntregaCampos();
+    }
+
+    const radioTarjeta = document.querySelector('input[name="metodo-pago"][value="tarjeta"]');
+    if (radioTarjeta) {
+        radioTarjeta.checked = true;
+        toggleFormaPago();
+    }
+}
+
+function toggleMisOrdenesModal() {
+    const modal = document.getElementById('modal-mis-ordenes');
+    if (modal) modal.classList.toggle('hidden');
+}
+
+  function abrirModalMisOrdenes() {
+    const lista = document.getElementById('lista-mis-ordenes');
+    if (!lista) return;
+
+    // Obtener historial desde localStorage
+    const historial = JSON.parse(localStorage.getItem('huellitas_historial')) || [];
+
+    // Filtrar únicamente las órdenes que han sido ACEPTADAS por la administración
+    // (Aceptadas = estadoOrden distinto de "1. Tomando")
+    const aceptadas = historial.filter(o => o.estadoOrden && !o.estadoOrden.startsWith('1.'));
+
+    if (aceptadas.length === 0) {
+        lista.innerHTML = `
+            <div class="p-6 text-center bg-slate-50 border border-slate-200 rounded-2xl">
+                <p class="text-xs text-slate-400 font-bold">No tienes órdenes aceptadas aún.</p>
+                <p class="text-[10px] text-slate-400 mt-1">Tus compras aparecerán aquí en cuanto el refugio las apruebe.</p>
+            </div>
+        `;
+    } else {
+        lista.innerHTML = aceptadas.map(o => `
+            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-2 hover:border-emerald-300 transition">
+                <div class="flex justify-between items-center">
+                    <span class="text-[11px] font-extrabold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full">
+                        ✓ ${o.estadoOrden.replace(/^\d+\.\s*/, '')}
+                    </span>
+                    <span class="text-[10px] text-slate-400 font-medium">${o.fecha || 'Reciente'}</span>
+                </div>
+
+                <div class="flex items-center gap-3 pt-1">
+                    <div class="w-10 h-10 bg-amber-100/80 rounded-xl flex items-center justify-center text-lg shrink-0">
+                        📦
+                    </div>
+                    <div>
+                        <h4 class="font-black text-slate-800 text-sm tracking-tight">${o.id}</h4>
+                        <p class="text-xs font-semibold text-slate-500">Total Q${parseFloat(o.total || 0).toFixed(2)}</p>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Mostrar el modal
+    const modal = document.getElementById('modal-mis-ordenes');
+    if (modal) modal.classList.remove('hidden');
+}
+
+// Función para mostrar una notificación flotante personalizada
+function mostrarNotificacionFlotante(mensaje) {
+    let toast = document.getElementById('notificacion-flotante');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'notificacion-flotante';
+        toast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 backdrop-blur-md text-white font-bold text-xs px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 transition-all duration-300 opacity-0 pointer-events-none flex items-center gap-2';
+        document.body.appendChild(toast);
+    }
+    
+    toast.innerHTML = `<span>⚠️</span> <span>${mensaje}</span>`;
+    toast.classList.remove('opacity-0', 'pointer-events-none');
+    toast.classList.add('opacity-100');
+
+    setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0', 'pointer-events-none');
+    }, 3500);
 }
 
 </script>

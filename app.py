@@ -980,6 +980,117 @@ def crear_producto():
     flash("Producto creado e ingresado a la tienda con éxito.", "success")
     return redirect(url_for('admin'))
 
+# ==========================================
+# RUTAS DE CONTROL DE INVENTARIO Y TIENDA
+# ==========================================
+
+@app.route('/obtener_productos', methods=['GET'])
+def obtener_productos():
+    """Devuelve la lista actualizada de productos desde SQLite"""
+    productos = ProductoShop.query.all()
+    lista = []
+    for p in productos:
+        lista.append({
+            'id': p.id,
+            'nombre': p.nombre,
+            'categoria': p.categoria,
+            'precio': p.precio,
+            'stock': p.stock,
+            'descripcion': p.descripcion,
+            'foto': p.foto,
+            'visible': p.visible
+        })
+    return jsonify({'status': 'ok', 'productos': lista})
+
+
+@app.route('/editar_producto/<int:id>', methods=['POST'])
+def editar_producto(id):
+    """Actualiza la visibilidad, precio o stock en SQLite"""
+    if 'usuario_id' not in session or session.get('rol') != 'admin':
+        return jsonify({'status': 'error', 'message': 'No autorizado'}), 403
+    
+    p = ProductoShop.query.get(id)
+    if not p:
+        return jsonify({'status': 'error', 'message': 'Producto no encontrado'}), 404
+
+    data = request.get_json(silent=True) or request.form
+    
+    if 'visible' in data:
+        vis_val = data.get('visible')
+        p.visible = True if str(vis_val).lower() in ['1', 'true', 'yes'] else False
+    if 'stock' in data:
+        p.stock = int(data.get('stock'))
+    if 'precio' in data:
+        p.precio = float(data.get('precio'))
+    if 'nombre' in data and data.get('nombre'):
+        p.nombre = data.get('nombre')
+
+    db.session.commit()
+    return jsonify({'status': 'ok', 'message': 'Producto actualizado exitosamente'})
+
+
+@app.route('/eliminar_producto/<int:id>', methods=['POST'])
+def eliminar_producto(id):
+    """Elimina permanentemente un producto de SQLite"""
+    if 'usuario_id' not in session or session.get('rol') != 'admin':
+        return jsonify({'status': 'error', 'message': 'No autorizado'}), 403
+    
+    p = ProductoShop.query.get(id)
+    if not p:
+        return jsonify({'status': 'error', 'message': 'Producto no encontrado'}), 404
+
+    db.session.delete(p)
+    db.session.commit()
+    return jsonify({'status': 'ok', 'message': 'Producto eliminado correctamente'})
+
+@app.route('/venta_directa', methods=['POST'])
+def venta_directa():
+    """Procesa una venta presencial en caja y descuenta el inventario en SQLite"""
+    if 'usuario_id' not in session or session.get('rol') != 'admin':
+        return jsonify({'status': 'error', 'message': 'No autorizado'}), 403
+
+    data = request.get_json(silent=True) or {}
+    
+    # Acepta tanto 'items' como 'itemsDetalle' para evitar desajustes
+    items = data.get('items') or data.get('itemsDetalle') or []
+
+    if not items:
+        return jsonify({'status': 'error', 'message': 'El carrito de venta está vacío'}), 400
+
+    # Descontar el stock en la base de datos
+    for item in items:
+        raw_id = str(item.get('id', '') or item.get('numId', ''))
+        digits = ''.join(filter(str.isdigit, raw_id))
+        if digits:
+            num_id = int(digits)
+            p = ProductoShop.query.get(num_id)
+            if p:
+                cant = int(item.get('cantidad', 1))
+                if p.stock < cant:
+                    return jsonify({'status': 'error', 'message': f'Stock insuficiente para "{p.nombre}". Disponible: {p.stock}'}), 400
+                p.stock = max(0, p.stock - cant)
+
+    db.session.commit()
+    return jsonify({'status': 'ok', 'message': 'Venta presencial procesada e inventario actualizado'})
+
+@app.route('/descontar_stock', methods=['POST'])
+def descontar_stock():
+    data = request.get_json(silent=True) or {}
+    items = data.get('items', [])
+    
+    for item in items:
+        raw_id = str(item.get('id', ''))
+        # Extrae el ID numérico del producto (ej: PROD-3 -> 3)
+        digits = ''.join(filter(str.isdigit, raw_id))
+        if digits:
+            num_id = int(digits)
+            p = ProductoShop.query.get(num_id)
+            if p:
+                cant = int(item.get('cantidad', 1))
+                p.stock = max(0, p.stock - cant)
+                
+    db.session.commit()
+    return jsonify({'status': 'ok', 'message': 'Stock rebajado correctamente'})
 
 @app.route('/editar_mascota/<int:paciente_id>', methods=['POST'])
 def editar_mascota(paciente_id):
