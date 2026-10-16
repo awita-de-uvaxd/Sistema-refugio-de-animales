@@ -4,7 +4,75 @@
  */
  
  let sintomas = [];
+
+   // Aviso con el diseño del sistema (reemplaza a alert). tipo: 'error' | 'info'
+  function mostrarAviso(titulo, mensaje, tipo = 'error') {
+    const color = tipo === 'error'
+      ? { fondo: 'bg-amber-50', icono: 'text-amber-500', nombre: 'alert-triangle' }
+      : { fondo: 'bg-indigo-50', icono: 'text-indigo-500', nombre: 'info' };
+
+    openModal(`
+      <div class="text-center p-4 max-w-md mx-auto">
+        <div class="w-20 h-20 ${color.fondo} rounded-full flex items-center justify-center mx-auto mb-4">
+          <i data-lucide="${color.nombre}" class="w-10 h-10 ${color.icono}"></i>
+        </div>
+        <h2 class="text-2xl font-black text-indigo-950 mb-2">${titulo}</h2>
+        <p class="text-sm text-slate-500 mb-8 leading-relaxed">${mensaje}</p>
+        <button type="button" onclick="closeModal()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition">Entendido</button>
+      </div>
+    `);
+    lucide.createIcons();
+  }
+
+
   let vacunas = [];
+  const MAX_VACUNAS = 2;   // la vacuna múltiple (Séxtuple) cuenta como UNA
+  const MAX_DIAS_PERSONALIZADO = 365;
+
+  function addVacuna() {
+    const nombre = document.getElementById('input-vacuna').value.trim();
+    let freq = document.getElementById('select-frecuencia').value;
+    if (!nombre) return;
+
+        if (vacunas.length >= MAX_VACUNAS) {
+      mostrarAviso('Límite de vacunas alcanzado',
+        'Solo puedes aplicar <b>' + MAX_VACUNAS + ' vacunas</b> por consulta. La vacuna múltiple (Séxtuple) cuenta como una sola.');
+      return;
+    }
+    if (vacunas.some(v => v.nombre.toLowerCase() === nombre.toLowerCase())) {
+      mostrarAviso('Vacuna repetida', 'La vacuna <b>' + nombre + '</b> ya está en esta consulta.');
+      return;
+    }
+    if (nombre.length > 40) {
+      mostrarAviso('Nombre demasiado largo', 'El nombre de la vacuna no puede pasar de 40 caracteres.');
+      return;
+    }
+    if (!/^[\p{L}\p{N} \-]+$/u.test(nombre)) {
+      mostrarAviso('Caracteres no permitidos', 'Usa solo letras, números, espacios y guiones en el nombre de la vacuna.');
+      return;
+    }
+
+    if (freq === 'Personalizado') {
+      const dias = parseInt(document.getElementById('input-personalizado-dias').value, 10);
+            if (!dias || dias < 1 || dias > MAX_DIAS_PERSONALIZADO) {
+        mostrarAviso('Días no válidos', 'Los días personalizados deben ser de <b>1 a ' + MAX_DIAS_PERSONALIZADO + '</b>.');
+        return;
+      }
+      freq = 'Cada ' + dias + ' días';
+    }
+
+    vacunas.push({ nombre: nombre, frecuencia: freq, fecha: fechaHoy });
+    document.getElementById('input-vacuna').value = '';
+    document.getElementById('input-personalizado-dias').value = '';
+    renderVacunas();
+  }
+  
+  function removeVacuna(index) { vacunas.splice(index, 1); renderVacunas(); }
+  
+  function renderVacunas() {
+    document.getElementById('lista-vacunas').innerHTML = vacunas.map((v, i) => `<div class="flex justify-between items-center bg-white border border-emerald-100 p-3 rounded-lg text-sm shadow-sm"><div class="flex items-center gap-2"><i data-lucide="syringe" class="w-4 h-4 text-emerald-600"></i><span class="font-bold text-emerald-800">` + v.nombre + `</span><span class="text-xs text-slate-500 ml-2">Freq: ` + v.frecuencia + `</span></div><div class="flex gap-3 items-center"><span class="text-xs font-mono bg-slate-100 px-2 py-1 rounded">Aplicación: ` + v.fecha + `</span><button type="button" onclick="removeVacuna(` + i + `)" class="text-red-500 hover:bg-red-50 p-1 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div></div>`).join('');
+    lucide.createIcons();
+  }
   let evidenciaFiles = new DataTransfer(); 
   const fechaHoy = "{{ hoy }}"; 
 
@@ -96,29 +164,6 @@
       else caja.classList.add('hidden');
   }
 
-  function addVacuna() {
-    const nombre = document.getElementById('input-vacuna').value.trim();
-    let freq = document.getElementById('select-frecuencia').value;
-    
-    if (freq === 'Personalizado') {
-        const dias = document.getElementById('input-personalizado-dias').value;
-        freq = 'Cada ' + (dias || 0) + ' días';
-    }
-
-    if(nombre) {
-      vacunas.push({ nombre: nombre, frecuencia: freq, fecha: fechaHoy });
-      document.getElementById('input-vacuna').value = '';
-      document.getElementById('input-personalizado-dias').value = '';
-      renderVacunas();
-    }
-  }
-  
-  function removeVacuna(index) { vacunas.splice(index, 1); renderVacunas(); }
-  
-  function renderVacunas() {
-    document.getElementById('lista-vacunas').innerHTML = vacunas.map((v, i) => `<div class="flex justify-between items-center bg-white border border-emerald-100 p-3 rounded-lg text-sm shadow-sm"><div class="flex items-center gap-2"><i data-lucide="syringe" class="w-4 h-4 text-emerald-600"></i><span class="font-bold text-emerald-800">` + v.nombre + `</span><span class="text-xs text-slate-500 ml-2">Freq: ` + v.frecuencia + `</span></div><div class="flex gap-3 items-center"><span class="text-xs font-mono bg-slate-100 px-2 py-1 rounded">Aplicación: ` + v.fecha + `</span><button type="button" onclick="removeVacuna(` + i + `)" class="text-red-500 hover:bg-red-50 p-1 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div></div>`).join('');
-    lucide.createIcons();
-  }
   
   function aplicarRefuerzo(nombre, frecuencia) {
     document.getElementById('input-vacuna').value = nombre;
