@@ -74,7 +74,8 @@
     lucide.createIcons();
   }
   let evidenciaFiles = new DataTransfer(); 
-  const fechaHoy = "{{ hoy }}"; 
+  
+  const fechaHoy = document.getElementById('veterinario-config').dataset.fechaHoy;
 
   // --- VISOR DE FOTO PERFIL ---
   function previewImage(event, imgId, containerId) {
@@ -335,8 +336,7 @@
     const fotoContainer = document.getElementById('preview-perfil-container');
     const fotoImg = document.getElementById('preview-perfil');
     if (fotoPerfil && fotoPerfil.trim() !== '' && fotoPerfil !== 'None') {
-        fotoImg.src = "{{ url_for('static', filename='uploads/') }}" + fotoPerfil;
-        fotoContainer.classList.remove('hidden');
+      fotoImg.src = window.VETERINARIO_CONFIG.uploadsUrl + fotoPerfil;fotoContainer.classList.remove('hidden');
     } else {
         fotoContainer.classList.add('hidden');
         fotoImg.src = '';
@@ -380,8 +380,8 @@
   function filtrarCitas() {
     const filtro = document.getElementById('filtro-citas').value;
     const items = document.querySelectorAll('.cita-item');
-    const hoy = new Date("{{ hoy }}");
-    items.forEach(item => {
+    const hoy = new Date(fechaHoy);
+      items.forEach(item => {
       const fechaCita = new Date(item.getAttribute('data-fecha'));
       const diffTime = fechaCita - hoy;
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -407,7 +407,7 @@
       <div class="flex justify-between items-center mb-6">
         <h2 class="text-xl font-bold text-indigo-900 flex items-center gap-2"><i data-lucide="calendar-plus"></i> Agendar Cita (Paciente #${pacienteId})</h2>
       </div>
-      <form action="{{ url_for('crear_cita') }}" method="POST" class="space-y-4">
+      <form action="${window.VETERINARIO_CONFIG.crearCitaUrl}" method="POST" class="space-y-4">
         <input type="hidden" name="paciente_id" value="${pacienteId}">
         <div><label class="block text-sm font-bold mb-1 text-slate-800">Fecha de la cita</label><input type="date" name="fecha" required class="w-full border rounded-lg p-3 outline-none text-slate-600 bg-slate-50"></div>
         <div><label class="block text-sm font-bold mb-1 text-slate-800">Motivo de la visita</label><input type="text" name="motivo" required placeholder="Ej. Retiro de puntos..." class="w-full border rounded-lg p-3 outline-none"></div>
