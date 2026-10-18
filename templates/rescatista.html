@@ -74,7 +74,12 @@
           
           <div><label class="block text-sm font-semibold mb-1">Dirección del rescate</label><textarea name="direccion" id="form-direccion" required rows="2" class="w-full border rounded-lg p-2.5 outline-none"></textarea></div>
           <div class="grid grid-cols-2 gap-4">
-            <div><label class="block text-sm font-semibold mb-1">Especie</label><select name="especie" class="w-full border rounded-lg p-2.5 outline-none"><option value="Perro">Perro</option><option value="Gato">Gato</option></select></div>
+            <div><label class="block text-sm font-semibold mb-1">Especie</label>
+              <div class="flex gap-2">
+                <select name="especie" data-especie-campo class="w-full border rounded-lg p-2.5 outline-none">{% for e in especies %}<option value="{{ e.nombre }}">{{ e.nombre }}</option>{% endfor %}</select>
+                <button type="button" onclick="abrirGestorEspecies()" class="flex-shrink-0 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 rounded-lg transition" title="Agregar, editar o borrar especies"><i data-lucide="settings-2" class="w-4 h-4"></i></button>
+              </div>
+            </div>
             <div><label class="block text-sm font-semibold mb-1">Sexo</label><select name="sexo" class="w-full border rounded-lg p-2.5 outline-none"><option value="Macho">Macho</option><option value="Hembra">Hembra</option></select></div>
           </div>
           <div class="grid grid-cols-2 gap-4">
@@ -138,3 +143,4 @@
   
 </script>
 {% endblock %}
+{% include '_gestor_especies.html' %}

@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Especies</title></head>
+<body>
+<script id="datos" type="application/json">{{ {'lista': lista, 'mensaje': mensaje, 'tipo': tipo, 'cambio': cambio}|tojson }}</script>
+<script>
+  // Esta página se carga dentro de un iframe oculto y solo avisa a la página principal.
+  (function () {
+    var d = JSON.parse(document.getElementById('datos').textContent);
+    if (window.parent !== window && window.parent.especiesActualizadas) {
+      window.parent.especiesActualizadas(d.lista, d.mensaje, d.tipo, d.cambio);
+    } else {
+      document.body.textContent = d.mensaje;
+    }
+  })();
+</script>
+</body></html>

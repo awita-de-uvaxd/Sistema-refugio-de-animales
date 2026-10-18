@@ -35,7 +35,19 @@
           <div class="md:col-span-4 space-y-5">
             <h4 class="font-bold text-sm text-indigo-700 uppercase tracking-widest border-b border-indigo-100 pb-2 mb-4">1. Perfil del Paciente</h4>
             <div><label class="block text-sm font-bold mb-1 text-slate-800">Nombre</label><input type="text" name="nombre_paciente" id="form-nombre" class="w-full border rounded-lg p-2.5 outline-none bg-slate-50"></div>
-            <div><label class="block text-sm font-bold mb-1 text-slate-800">Especie</label><input type="text" name="especie" id="form-especie" class="w-full border rounded-lg p-2.5 outline-none bg-slate-50"></div>
+            <div><label class="block text-sm font-bold mb-1 text-slate-800">Especie</label>
+              <div class="flex gap-2">
+                <div class="relative flex-1">
+                  <input type="text" name="especie" id="form-especie" data-especie-campo maxlength="50" autocomplete="off"
+                    onfocus="abrirMenuEspecies(true)" onclick="abrirMenuEspecies(true)" oninput="abrirMenuEspecies()" onblur="cerrarMenuEspeciesTarde()"
+                    onkeydown="if (event.key === 'Escape') cerrarMenuEspecies()"
+                    class="w-full border rounded-lg p-2.5 pr-9 outline-none bg-slate-50 focus:border-indigo-500 focus:bg-white transition">
+                  <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 absolute right-3 top-3.5 pointer-events-none"></i>
+                  <div id="menu-especies" class="hidden absolute z-30 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-56 overflow-y-auto custom-scroll py-1"></div>
+                </div>
+                <button type="button" onclick="abrirGestorEspecies()" class="flex-shrink-0 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 rounded-lg transition" title="Agregar, editar o borrar especies"><i data-lucide="settings-2" class="w-4 h-4"></i></button>
+              </div>
+            </div>
             <div><label class="block text-sm font-bold mb-1 text-slate-800">Sexo</label>
               <select name="sexo" id="form-sexo" class="w-full border rounded-lg p-2.5 outline-none bg-slate-50">
                 <option value="Macho">Macho</option><option value="Hembra">Hembra</option>

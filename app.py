@@ -727,6 +727,86 @@ def crear_rescate():
     db.session.commit()
     return redirect(url_for('rescatista'))
 
+
+# ==========================================
+# CATALOGO DE ESPECIES (compartido: Rescatista y Veterinario)
+# ==========================================
+class Especie(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(30), nullable=False, unique=True)
+
+MAX_ESPECIE = 30
+ROLES_ESPECIES = ('rescatista', 'veterinario', 'admin')
+RE_ESPECIE = re.compile(r"^(?:[^\W_]|[ \-])+$")   # letras (con tildes y ñ), números, espacio y guion
+
+# Deja la lista disponible en TODAS las plantillas: {{ especies }} y {{ especies_lista }}
+@app.context_processor
+def inyectar_especies():
+    try:
+        todas = Especie.query.order_by(Especie.nombre).all()
+    except Exception:
+        return {'especies': [], 'especies_lista': []}
+    return {'especies': todas, 'especies_lista': [{'id': e.id, 'nombre': e.nombre} for e in todas]}
+
+def respuesta_especies(mensaje, tipo='ok', cambio=None):
+    """Responde dentro de un iframe oculto: la página se actualiza sin recargarse (no se pierde lo escrito)."""
+    lista = [{'id': e.id, 'nombre': e.nombre} for e in Especie.query.order_by(Especie.nombre).all()]
+    return render_template('especies_respuesta.html', lista=lista, mensaje=mensaje, tipo=tipo, cambio=cambio)
+
+def validar_nombre_especie(valor, excepto_id=None):
+    """Devuelve (nombre_limpio, None) o (None, mensaje_de_error)."""
+    nombre = ' '.join((valor or '').split())
+    if not nombre:
+        return None, "Escribe el nombre de la especie."
+    if len(nombre) > MAX_ESPECIE:
+        return None, f"La especie no puede pasar de {MAX_ESPECIE} caracteres (tiene {len(nombre)})."
+    if not RE_ESPECIE.match(nombre):
+        return None, "La especie tiene caracteres especiales no permitidos."
+    nombre = nombre[:1].upper() + nombre[1:].lower()
+    repetida = Especie.query.filter(db.func.lower(Especie.nombre) == nombre.lower())
+    if excepto_id:
+        repetida = repetida.filter(Especie.id != excepto_id)
+    if repetida.first():
+        return None, f"La especie '{nombre}' ya existe."
+    return nombre, None
+
+@app.route('/especies/agregar', methods=['POST'])
+def agregar_especie():
+    if session.get('rol') not in ROLES_ESPECIES: return redirect(url_for('login'))
+    nombre, error = validar_nombre_especie(request.form.get('nombre'))
+    if error: return respuesta_especies(error, 'error')
+    db.session.add(Especie(nombre=nombre))
+    db.session.commit()
+    return respuesta_especies(f"Especie '{nombre}' agregada.")
+
+@app.route('/especies/editar/<int:especie_id>', methods=['POST'])
+def editar_especie(especie_id):
+    if session.get('rol') not in ROLES_ESPECIES: return redirect(url_for('login'))
+    esp = Especie.query.get(especie_id)
+    if not esp: return respuesta_especies("Esa especie ya no existe.", 'error')
+    nombre, error = validar_nombre_especie(request.form.get('nombre'), excepto_id=esp.id)
+    if error: return respuesta_especies(error, 'error')
+    viejo = esp.nombre
+    esp.nombre = nombre
+    # Corrige también a los animales y rescates que ya tenían el nombre mal escrito
+    Paciente.query.filter_by(especie=viejo).update({'especie': nombre})
+    Rescate.query.filter_by(especie=viejo).update({'especie': nombre})
+    db.session.commit()
+    return respuesta_especies(f"Especie actualizada: '{viejo}' ahora es '{nombre}'.", cambio={'de': viejo, 'a': nombre})
+
+@app.route('/especies/borrar/<int:especie_id>', methods=['POST'])
+def borrar_especie(especie_id):
+    if session.get('rol') not in ROLES_ESPECIES: return redirect(url_for('login'))
+    esp = Especie.query.get(especie_id)
+    if not esp: return respuesta_especies("Esa especie ya no existe.", 'error')
+    if Especie.query.count() <= 1:
+        return respuesta_especies("Debe quedar al menos una especie en la lista.", 'error')
+    nombre = esp.nombre
+    db.session.delete(esp)
+    db.session.commit()
+    return respuesta_especies(f"Especie '{nombre}' borrada. Los animales ya registrados conservan su especie.")
+
+
 @app.route('/crear_cita', methods=['POST'])
 def crear_cita():
     if 'usuario_id' not in session or session['rol'] != 'veterinario': return redirect(url_for('login'))
@@ -790,6 +870,16 @@ def crear_consulta():
     paciente_id = request.form.get('paciente_existente_id')
     rescate_id = request.form.get('rescate_id') or None
     
+    # La especie de un animal NUEVO debe estar en la lista de especies
+    especie_oficial = None
+    if not paciente_id:
+        especie_texto = (request.form.get('especie') or '').strip()
+        existente = Especie.query.filter(db.func.lower(Especie.nombre) == especie_texto.lower()).first()
+        if not existente:
+            flash("La especie '" + especie_texto + "' no está en la lista. Agrégala con el botón de engranaje junto al campo Especie.", "error")
+            return redirect(url_for('veterinario'))
+        especie_oficial = existente.nombre
+    
     # 1. Atrapar la foto de perfil (si subieron una)
     foto_perfil = None
     if 'foto_perfil' in request.files and request.files['foto_perfil'].filename != '':
@@ -801,7 +891,7 @@ def crear_consulta():
     if not paciente_id:
         nuevo_paciente = Paciente(
             nombre=request.form.get('nombre_paciente'), 
-            especie=request.form.get('especie'), 
+            especie=especie_oficial, 
             sexo=request.form.get('sexo'), 
             disponible_adopcion=request.form.get('adopcion_status', 'No Aplica'),
             foto=foto_perfil,
@@ -1135,9 +1225,20 @@ def editar_mascota(paciente_id):
         
     return redirect(url_for('usuario'))
 
-if __name__ == '__main__':
+if __name__ == '__main__':    
     with app.app_context():
         db.create_all()
+        
+        # Catálogo de especies: solo la primera vez (Perro, Gato y las que ya existían en pacientes/rescates)
+        if not Especie.query.first():
+            vistas = set()
+            for nombre in ['Perro', 'Gato'] + [x.especie for x in Paciente.query.all()] + [x.especie for x in Rescate.query.all()]:
+                nombre = ' '.join((nombre or '').split())
+                if nombre and len(nombre) <= MAX_ESPECIE and nombre.lower() not in vistas:
+                    vistas.add(nombre.lower())
+                    db.session.add(Especie(nombre=nombre[:1].upper() + nombre[1:].lower()))
+            db.session.commit()
+
         if not Usuario.query.filter_by(rol='admin').first():
             db.session.add(Usuario(nombre="Administrador Principal", correo="admin@huellitas.com", codigo_empleado="ADMIN-001", telefono="555-0000", password=generate_password_hash("123"), rol="admin"))
 
