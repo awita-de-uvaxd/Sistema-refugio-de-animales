@@ -4,8 +4,10 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
+import re
+import calendar
 
 app = Flask(__name__)
 @app.route('/js/<path:filename>')
@@ -210,6 +212,30 @@ class Vacuna(db.Model):
     fecha_aplicacion = db.Column(db.DateTime, default=datetime.utcnow)
     paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=False)
     consulta_id = db.Column(db.Integer, db.ForeignKey('consulta_medica.id'), nullable=True)
+
+        # Fecha de la próxima dosis, calculada con la frecuencia que eligió el veterinario
+    @property
+    def proxima_fecha(self):
+        f = (self.frecuencia or '').strip()
+        base = self.fecha_aplicacion.date()
+        dias = {'Semanal': 7, 'Quincenal': 15}.get(f)
+        meses = {'Mensual': 1, 'Cada 3 Meses': 3, 'Cada 6 Meses': 6, 'Cada 8 Meses': 8, 'Anual': 12}.get(f)
+        m = re.match(r"^Cada (\d+) días$", f)
+        if dias: return base + timedelta(days=dias)
+        if m: return base + timedelta(days=int(m.group(1)))
+        if meses:
+            mes = base.month - 1 + meses
+            anio = base.year + mes // 12
+            mes = mes % 12 + 1
+            ultimo_dia = calendar.monthrange(anio, mes)[1]   # evita 31 de febrero
+            return base.replace(year=anio, month=mes, day=min(base.day, ultimo_dia))
+        return None
+
+    # Días que faltan para la próxima dosis (negativo = ya venció)
+    @property
+    def dias_restantes(self):
+        prox = self.proxima_fecha
+        return (prox - datetime.now().date()).days if prox else None
 
 class Cita(db.Model):
     id = db.Column(db.Integer, primary_key=True)

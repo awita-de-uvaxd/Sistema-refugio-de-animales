@@ -165,6 +165,56 @@
   }
 
   
+
+    // --- REFUERZO CON CONFIRMACIÓN (ventana del sistema: Aceptar / Cancelar) ---
+  let refuerzoPendiente = null;
+
+  function escaparHtml(texto) {
+    const div = document.createElement('div');
+    div.textContent = texto;
+    return div.innerHTML;
+  }
+
+  function confirmarRefuerzo(boton) {
+    refuerzoPendiente = { nombre: boton.dataset.nombre, frecuencia: boton.dataset.frecuencia, boton: boton };
+    openModal(`
+      <div class="text-center p-4 max-w-md mx-auto">
+        <div class="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <i data-lucide="syringe" class="w-10 h-10 text-indigo-500"></i>
+        </div>
+        <h2 class="text-2xl font-black text-indigo-950 mb-2">¿Aplicar refuerzo?</h2>
+        <p class="text-sm text-slate-500 mb-8 leading-relaxed">Se agregará un refuerzo de <b>` + escaparHtml(refuerzoPendiente.nombre) + `</b> (` + escaparHtml(refuerzoPendiente.frecuencia) + `) a esta consulta con la fecha de hoy.</p>
+        <div class="flex gap-4">
+          <button type="button" onclick="cancelarRefuerzo()" class="w-1/2 py-3.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition">Cancelar</button>
+          <button type="button" onclick="aceptarRefuerzo()" class="w-1/2 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition">Aceptar</button>
+        </div>
+      </div>
+    `);
+    lucide.createIcons();
+  }
+
+  function cancelarRefuerzo() {
+    refuerzoPendiente = null;
+    closeModal();
+  }
+
+  function aceptarRefuerzo() {
+    if (!refuerzoPendiente) return;
+    const r = refuerzoPendiente;
+    refuerzoPendiente = null;
+    closeModal();
+    aplicarRefuerzo(r.nombre, r.frecuencia);
+
+    // Si entró a la consulta, el botón queda marcado para no repetirlo
+    if (vacunas.some(v => v.nombre.toLowerCase() === r.nombre.toLowerCase())) {
+      r.boton.disabled = true;
+      r.boton.className = 'flex-shrink-0 bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-2 rounded-lg border border-emerald-200 flex items-center gap-1 cursor-default';
+      r.boton.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i> Refuerzo agregado';
+      lucide.createIcons();
+    }
+  }
+
+  
   function aplicarRefuerzo(nombre, frecuencia) {
     document.getElementById('input-vacuna').value = nombre;
     
