@@ -1,0 +1,66 @@
+    <!-- ======================================================= -->
+  <!-- PESTAÑA MIS MASCOTAS (VINCULACIÓN Y EXPEDIENTES)          -->
+  <!-- ======================================================= -->
+  <div id="usuario-mascotas" class="tab-content tab-content-usuario">
+    <div class="max-w-6xl mx-auto space-y-6">
+      
+      <div class="flex justify-between items-center bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+        <div>
+          <h2 class="text-2xl font-black text-indigo-950">Mis Mascotas Vinculadas</h2>
+          <p class="text-sm text-slate-500">Expedientes clínicos y registro de tus animales de compañía.</p>
+        </div>
+        <button onclick="abrirVincularBanco()" class="bg-indigo-900 hover:bg-indigo-950 text-white font-bold py-3 px-6 rounded-xl shadow-md transition flex items-center gap-2">
+          <i data-lucide="plus-circle" class="w-5 h-5"></i> Agregar Mascota
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% if mis_mascotas %}
+          {% for p in mis_mascotas %}
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+            <div class="h-48 bg-slate-100 relative group">
+              {% if p.foto %}
+                <img src="{{ url_for('static', filename='uploads/' ~ p.foto) }}" class="w-full h-full object-cover">
+              {% else %}
+                <div class="w-full h-full flex items-center justify-center text-slate-300"><i data-lucide="paw-print" class="w-12 h-12"></i></div>
+              {% endif %}
+              <!-- Botón de edición flotante -->
+              <button onclick="abrirEditarMascota('{{ p.id }}', '{{ p.nombre }}')" class="absolute top-3 right-3 bg-white/90 hover:bg-white text-indigo-600 p-2 rounded-lg shadow-sm backdrop-blur transition opacity-0 group-hover:opacity-100">
+                <i data-lucide="edit-3" class="w-4 h-4"></i>
+              </button>
+            </div>
+            
+            <div class="p-5 flex-1 flex flex-col justify-between">
+              <div>
+                <h3 class="font-black text-xl text-indigo-950">{{ p.nombre }}</h3>
+                <p class="text-xs text-slate-500 font-bold uppercase tracking-wider">{{ p.especie }} • {{ p.sexo }}</p>
+                <div class="mt-4 space-y-2 text-sm text-slate-600">
+                  {% set ultima = p.consultas|first %}
+                  {% if ultima %}
+                    <p class="flex items-center gap-2"><i data-lucide="calendar" class="w-4 h-4 text-emerald-500"></i> Última cita: {{ ultima.fecha.strftime('%d/%m/%Y') }}</p>
+                    <p class="line-clamp-1 flex items-center gap-2"><i data-lucide="file-text" class="w-4 h-4 text-indigo-400"></i> {{ ultima.diagnostico }}</p>
+                  {% else %}
+                    <p class="italic text-slate-400">No hay consultas registradas aún.</p>
+                  {% endif %}
+                </div>
+              </div>
+              <button onclick="abrirExpedienteMascota('{{ p.id }}')" class="w-full mt-5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-2.5 rounded-xl border border-indigo-200 transition">Ver Expediente Completo</button>
+            </div>
+          </div>
+
+          <!-- MODAL EXPEDIENTE (VISTA USUARIO) COMPARTIDO -->
+          <div id="historial-mi-mascota-{{ p.id }}" class="hidden">
+            {% include 'expediente_compartido.html' %}
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="col-span-full text-center p-12 bg-white rounded-2xl border border-slate-200 border-dashed">
+            <i data-lucide="cat" class="w-16 h-16 text-slate-300 mx-auto mb-4"></i>
+            <h3 class="text-xl font-bold text-slate-700">Aún no tienes mascotas</h3>
+            <p class="text-slate-500 text-sm mt-2 max-w-md mx-auto">Si acudiste a la veterinaria, haz clic en "Agregar Mascota" e ingresa las credenciales que te proporcionó el doctor.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <!-- FIn de apartado de mis mascotas-->

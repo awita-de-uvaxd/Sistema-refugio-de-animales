@@ -1,0 +1,61 @@
+  <!-- ======================================================= -->
+  <!-- PESTAÑA 2: ALERTAS CIUDADANAS (Tu código intacto)       -->
+  <!-- ======================================================= -->
+  <div id="usuario-alertas" class="tab-content tab-content-usuario">
+    <div class="bg-white rounded-xl shadow-sm p-8 max-w-3xl mx-auto border-t-4 border-red-500 form-extenso">
+      <h2 class="text-2xl font-bold text-center text-red-600 mb-2">Reportar Alerta Ciudadana</h2>
+      <p class="text-center text-slate-500 mb-6 text-sm">Tu reporte llegará inmediatamente al panel de nuestros rescatistas.</p>
+      
+      <form action="{{ url_for('crear_alerta') }}" method="POST" enctype="multipart/form-data">
+        <fieldset>
+          <legend>Situación</legend>
+          <label>Nivel de Urgencia:</label>
+          <select name="urgencia" required>
+            <option value="Media">Media (Animal asustado o perdido)</option>
+            <option value="Grave">Grave (Herido o atrapado)</option>
+            <option value="Crítico">Crítico (Peligro de muerte inminente)</option>
+          </select>
+          <label>Animal (Especie y Cantidad):</label>
+          <input type="text" name="especie_cantidad" required placeholder="Ej. 1 perro mediano negro">
+          <label>Descripción de lo sucedido:</label>
+          <textarea name="descripcion" required rows="2" placeholder="Detalla cómo lo encontraste..."></textarea>
+          
+          <label class="mt-4">Adjuntar Fotografía (Opcional pero recomendado):</label>
+          <input type="file" name="foto" accept="image/*" class="w-full border rounded-lg p-2 text-sm bg-white">
+        </fieldset>
+        
+        <fieldset>
+          <legend>Ubicación y Contacto</legend>
+          <label>Dirección exacta o referencia:</label>
+          <input type="text" name="direccion" required placeholder="Calle, avenida, zona o referencias claras">
+          
+          <div class="grid grid-cols-2 gap-4 mt-2">
+            <div>
+              <label>Tipo de Entorno:</label>
+              <select name="entorno" class="w-full border rounded-lg p-2">
+                <option value="Vía Pública">Vía Pública / Calle</option>
+                <option value="Terreno Baldío">Terreno Baldío</option>
+                <option value="Casa Abandonada">Casa Abandonada</option>
+                <option value="Barranco">Barranco / Río</option>
+              </select>
+            </div>
+            <div>
+              <label>Indicaciones de llegada:</label>
+              <input type="text" name="indicaciones" placeholder="Ej. Al lado de la tienda azul">
+            </div>
+          </div>
+          
+          <label class="mt-4">Tu Nombre:</label>
+          <input type="text" name="nombre_reporta" required value="{{ session['nombre'] }}">
+          
+          <label>Tu Teléfono (Para que el rescatista te contacte):</label>
+          <input type="text" name="telefono_reporta" required placeholder="Ej. 5555-4444">
+        </fieldset>
+        
+        <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-xl mt-4 shadow-md transition text-lg flex items-center justify-center gap-2">
+          <i data-lucide="send" class="w-5 h-5"></i> Enviar Alerta al Refugio
+        </button>
+      </form>
+    </div>
+  </div>
+  <!-- FIN DE LA PESTAÑA 2 -->

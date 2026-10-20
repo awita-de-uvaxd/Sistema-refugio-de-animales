@@ -1,0 +1,16 @@
+<script>
+
+        function mostrarDetalleVoluntariado(idDetalle) {
+      document.querySelectorAll('.seccion-detalle-vol').forEach(el => el.classList.add('hidden'));
+      document.getElementById(idDetalle).classList.remove('hidden');
+      document.getElementById(idDetalle).scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function abrirModalVoluntariado(progId) {
+      const html = document.getElementById('modal-vol-' + progId).innerHTML;
+      openModal(html);
+      lucide.createIcons();
+  }
+
+
+</script>
