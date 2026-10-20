@@ -362,7 +362,7 @@ def registro():
         
         flash('Registro exitoso. Ahora puedes iniciar sesión.', 'success')
         return redirect(url_for('login'))
-    return render_template('registro.html')
+    return render_template('login/registro.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -383,7 +383,7 @@ def login():
             else: return redirect(url_for('usuario'))
         else:
             flash('Credenciales incorrectas. Intenta de nuevo.', 'error')
-    return render_template('login.html')
+    return render_template('login/login.html')
 
 @app.route('/logout')
 def logout():
@@ -395,7 +395,7 @@ def logout():
 # 3. RUTAS DE VISUALIZACIÓN
 # ==========================================
 @app.route('/')
-def inicio(): return render_template('inicio.html')
+def inicio(): return render_template('login/inicio.html')
 
 @app.route('/rescatista')
 def rescatista(): 
