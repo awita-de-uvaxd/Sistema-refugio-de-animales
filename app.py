@@ -879,6 +879,20 @@ def crear_consulta():
             flash("La especie '" + especie_texto + "' no está en la lista. Agrégala con el botón de engranaje junto al campo Especie.", "error")
             return redirect(url_for('veterinario'))
         especie_oficial = existente.nombre
+
+            # Campos obligatorios: si falta alguno, no se guarda nada
+    obligatorios = {
+        'temp': 'La temperatura',
+        'peso': 'El peso',
+        'diagnostico': 'El diagnóstico',
+        'tratamiento': 'El tratamiento',
+        'sintomas_ocultos': 'Al menos un síntoma',
+    }
+    for campo, etiqueta in obligatorios.items():
+        if not (request.form.get(campo) or '').strip():
+            flash(etiqueta + ' es obligatorio.', 'error')
+            return redirect(url_for('veterinario'))
+        
     
     # 1. Atrapar la foto de perfil (si subieron una)
     foto_perfil = None

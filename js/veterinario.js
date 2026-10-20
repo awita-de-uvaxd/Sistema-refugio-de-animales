@@ -153,6 +153,7 @@
   function removeSintoma(index) { sintomas.splice(index, 1); renderSintomas(); }
   
   function renderSintomas() {
+    setTimeout(actualizarBotonGuardar, 0);
     document.getElementById('contenedor-sintomas').innerHTML = sintomas.map((s, i) => `<span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 shadow-sm">` + s + ` <i data-lucide="x" class="w-3 h-3 cursor-pointer hover:text-red-500" onclick="removeSintoma(` + i + `)"></i></span>`).join('');
     lucide.createIcons();
   }
@@ -233,6 +234,34 @@
     
     addVacuna();
   }
+
+  
+  // --- BLOQUEO DEL BOTÓN "GUARDAR EXPEDIENTE" HASTA QUE TODO ESTÉ COMPLETO Y CORRECTO ---
+  const CAMPOS_AUXILIARES = ['input-sintoma', 'input-vacuna', 'input-personalizado-dias'];
+
+  // Devuelve la lista de lo que falta o está mal (vacía = se puede guardar)
+  function camposFaltantes() {
+    const faltan = [];
+    document.querySelectorAll('#form-consulta-vet [data-regla]').forEach(campo => {
+      if (campo.readOnly || CAMPOS_AUXILIARES.includes(campo.id)) return;
+      if (revisarCampo(campo)) faltan.push((campo.dataset.etiqueta || 'Un campo').replace(/^(El|La|Los|Las) /, ''));
+    });
+    if (sintomas.length === 0 && !document.getElementById('input-sintoma').value.trim()) faltan.push('Síntomas');
+    return faltan;
+  }
+
+  function actualizarBotonGuardar() {
+    const boton = document.getElementById('btn-guardar-expediente');
+    const msg = document.getElementById('msg-guardar');
+    if (!boton) return;
+    const faltan = camposFaltantes();
+    boton.disabled = faltan.length > 0;
+    msg.textContent = faltan.length ? 'Falta completar o corregir: ' + faltan.join(', ') + '.' : '';
+  }
+  document.addEventListener('input', (e) => { if (e.target.closest && e.target.closest('#form-consulta-vet')) actualizarBotonGuardar(); });
+  window.addEventListener('DOMContentLoaded', actualizarBotonGuardar);
+
+
 
   // --- BLOQUEO Y AUTO-GUARDADO DEL FORMULARIO ---
   function prepararEnvio() {
@@ -366,6 +395,7 @@
     }
     document.getElementById('form-especie').value = especie;
     document.getElementById('form-sexo').value = sexo;
+    actualizarBotonGuardar();
   }
 
   function buscarPacientes() {

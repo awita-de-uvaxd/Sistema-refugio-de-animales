@@ -39,14 +39,22 @@
       : '<p class="px-4 py-3 text-xs text-slate-400 italic">No está en la lista. Usa el engranaje para agregarla.</p>';
     menu.classList.remove('hidden');
   }
+
+  
   function elegirEspecie(boton) {
     document.getElementById('form-especie').value = boton.dataset.nombre;
     cerrarMenuEspecies();
+    if (typeof actualizarBotonGuardar === 'function') actualizarBotonGuardar();
   }
+
+
+
   function cerrarMenuEspecies() {
     const menu = document.getElementById('menu-especies');
     if (menu) menu.classList.add('hidden');
   }
+
+
   function cerrarMenuEspeciesTarde() { setTimeout(cerrarMenuEspecies, 150); }   // da tiempo a registrar el clic
 
 
