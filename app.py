@@ -32,8 +32,8 @@ db = SQLAlchemy(app)
 class ConfigSitio(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     rol_destino = db.Column(db.String(20), unique=True, nullable=False) # 'global', 'admin', 'usuario', 'veterinario', 'rescatista', 'inicio'
-    titulo = db.Column(db.String(100), default="Huellitas de Amor")
-    eslogan = db.Column(db.String(100), default="v5.0 - Entorno Python")
+    titulo = db.Column(db.String(100), default="Nombre de pagina de prueba :D")
+    eslogan = db.Column(db.String(100), default="Texto de eslogan de prueba XDXDXD")
     color_fondo = db.Column(db.String(20), default="#1e1b4b")
     logo = db.Column(db.String(200), nullable=True)
     logo_size = db.Column(db.Integer, default=45)
