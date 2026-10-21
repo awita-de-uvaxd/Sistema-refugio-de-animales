@@ -1,4 +1,4 @@
-  <!-- ======================================================= -->
+<!-- ======================================================= -->
   <!-- PESTAÑA 3: MI FORMULARIO / CV DE ADOPCIÓN COMPLETO      -->
   <!-- ======================================================= -->
   <div id="usuario-cv" class="tab-content tab-content-usuario">
@@ -6,19 +6,25 @@
       <h2 class="text-2xl font-bold text-center text-emerald-800 mb-2">Solicitud Oficial de Adopción</h2>
       <p class="text-center text-slate-500 mb-8 text-sm border-b pb-4">Formulario de evaluación de hogar y compromiso responsable.</p>
       
-      <form action="{{ url_for('actualizar_cv') }}" method="POST">
+      <!-- Se agregó onsubmit para validaciones finales estrictas -->
+      <form action="{{ url_for('actualizar_cv') }}" method="POST" onsubmit="return validarCV(event)">
         <fieldset>
           <legend>1. Datos Personales del Solicitante</legend>
           <div class="grid grid-cols-2 gap-4">
-            <div><label>DPI / Documento:</label><input type="text" name="dpi" value="{{ mi_cv.dpi if mi_cv else '' }}" required placeholder="Ej. 1234 56789 0101"></div>
+            <!-- Validado: Exactamente 14 números -->
+            <div><label>DPI / Documento (14 dígitos):</label><input type="text" id="cv-dpi" name="dpi" value="{{ mi_cv.dpi if mi_cv else '' }}" required maxlength="14" oninput="filtrarSoloNumeros(this)" placeholder="Ej. 12345678901234"></div>
             <div><label>Fecha de nacimiento:</label><input type="date" name="fecha_nacimiento" value="{{ mi_cv.fecha_nacimiento if mi_cv else '' }}" required></div>
           </div>
           <div class="grid grid-cols-2 gap-4 mt-2">
-            <div><label>Teléfono / WhatsApp:</label><input type="tel" name="telefono" value="{{ mi_cv.telefono if mi_cv else '' }}" required></div>
-            <div><label>Ocupación / Profesión:</label><input type="text" name="ocupacion" value="{{ mi_cv.ocupacion if mi_cv else '' }}" required></div>
+            <!-- Validado: 8 dígitos con guion automático -->
+            <div><label>Teléfono / WhatsApp:</label><input type="text" id="cv-tel" name="telefono" value="{{ mi_cv.telefono if mi_cv else '' }}" required maxlength="9" oninput="formatearTelefonoLocal(this)" placeholder="Ej. 5555-4444"></div>
+            <!-- Validado: Máx 50, Solo letras -->
+            <div><label>Ocupación / Profesión:</label><input type="text" name="ocupacion" value="{{ mi_cv.ocupacion if mi_cv else '' }}" required maxlength="50" oninput="filtrarSoloLetras(this)"></div>
           </div>
-          <label class="mt-2">Dirección exacta de residencia:</label><input type="text" name="direccion" value="{{ mi_cv.direccion if mi_cv else '' }}" required>
-          <label class="mt-2">Red social (Opcional):</label><input type="text" name="redes_sociales" value="{{ mi_cv.redes_sociales if mi_cv else '' }}" placeholder="@usuario o enlace">
+          <!-- Validado: Máx 50, Alfanumérico y Guiones -->
+          <label class="mt-2">Dirección exacta de residencia:</label><input type="text" name="direccion" value="{{ mi_cv.direccion if mi_cv else '' }}" required maxlength="50" oninput="filtrarDireccionCV(this)">
+          <!-- Validado: Máx 50, restringe caracteres raros -->
+          <label class="mt-2">Red social (Opcional):</label><input type="text" name="redes_sociales" value="{{ mi_cv.redes_sociales if mi_cv else '' }}" maxlength="50" oninput="filtrarRedSocial(this)" placeholder="@usuario o enlace corto">
         </fieldset>
 
         <fieldset>
@@ -59,8 +65,9 @@
               </select>
             </div>
           </div>
+          <!-- Validado: Máx 300, Alfanumérico -->
           <label class="mt-2">Personas que habitan en el hogar (relación y edades):</label>
-          <textarea name="integrantes" rows="2" required>{{ mi_cv.integrantes if mi_cv else '' }}</textarea>
+          <textarea name="integrantes" rows="2" required maxlength="300" oninput="filtrarAlfanumericoTextarea(this)">{{ mi_cv.integrantes if mi_cv else '' }}</textarea>
           
           <div class="grid grid-cols-2 gap-4 mt-2">
             <div>
@@ -83,30 +90,39 @@
 
         <fieldset>
           <legend>3. Historial de Mascotas</legend>
+          <!-- Validado: Máx 200, Alfanumérico -->
           <label>¿Tienes otras mascotas? (Especie, edad, esterilizados/vacunados):</label>
-          <textarea name="mascotas_actuales" rows="2" required placeholder="Si no tienes, coloca 'Ninguna'">{{ mi_cv.mascotas_actuales if mi_cv else '' }}</textarea>
+          <textarea name="mascotas_actuales" rows="2" required maxlength="200" oninput="filtrarAlfanumericoTextarea(this)" placeholder="Si no tienes, coloca 'Ninguna'">{{ mi_cv.mascotas_actuales if mi_cv else '' }}</textarea>
+          <!-- Validado: Máx 200, Alfanumérico -->
           <label class="mt-2">Mascotas en los últimos 5 años y qué ocurrió con ellas:</label>
-          <textarea name="mascotas_anteriores" rows="2" required>{{ mi_cv.mascotas_anteriores if mi_cv else '' }}</textarea>
+          <textarea name="mascotas_anteriores" rows="2" required maxlength="200" oninput="filtrarAlfanumericoTextarea(this)">{{ mi_cv.mascotas_anteriores if mi_cv else '' }}</textarea>
         </fieldset>
 
         <fieldset>
           <legend>4. Cuidados, Estilo de Vida y Presupuesto</legend>
           <div class="grid grid-cols-2 gap-4">
-            <div><label>¿Por qué deseas adoptar?</label><input type="text" name="motivo_adopcion" value="{{ mi_cv.motivo_adopcion if mi_cv else '' }}" required></div>
-            <div><label>Presupuesto mensual estimado:</label><input type="text" name="presupuesto" value="{{ mi_cv.presupuesto if mi_cv else '' }}" placeholder="Ej. Q. 400" required></div>
+            <!-- Validado: Máx 50, Solo Letras -->
+            <div><label>¿Por qué deseas adoptar?</label><input type="text" name="motivo_adopcion" value="{{ mi_cv.motivo_adopcion if mi_cv else '' }}" required maxlength="50" oninput="filtrarSoloLetras(this)"></div>
+            <!-- Validado: Máx 50, Letras y Números -->
+            <div><label>Presupuesto mensual estimado:</label><input type="text" name="presupuesto" value="{{ mi_cv.presupuesto if mi_cv else '' }}" placeholder="Ej. 400" required maxlength="50" oninput="filtrarAlfanumericoInput(this)"></div>
           </div>
           <div class="grid grid-cols-2 gap-4 mt-2">
-            <div><label>Horas que pasará solo:</label><input type="text" name="horas_solo" value="{{ mi_cv.horas_solo if mi_cv else '' }}" required></div>
-            <div><label>Área de día y lugar para dormir:</label><input type="text" name="lugar_estancia" value="{{ mi_cv.lugar_estancia if mi_cv else '' }}" required></div>
+            <!-- Validado: Máx 50, Solo Letras y numeros -->
+            <div><label>Horas que pasará solo:</label><input type="text" name="horas_solo" value="{{ mi_cv.horas_solo if mi_cv else '' }}" required maxlength="50" oninput="filtrarAlfanumericoInput(this)"></div>
+            <!-- Validado: Máx 50, Solo Letras -->
+            <div><label>Área de día y lugar para dormir:</label><input type="text" name="lugar_estancia" value="{{ mi_cv.lugar_estancia if mi_cv else '' }}" required maxlength="50" oninput="filtrarSoloLetras(this)"></div>
           </div>
           <div class="grid grid-cols-2 gap-4 mt-2">
-            <div><label>En vacaciones/viaje, ¿quién lo cuidará?</label><input type="text" name="plan_viaje" value="{{ mi_cv.plan_viaje if mi_cv else '' }}" required></div>
-            <div><label>En caso de mudanza, ¿qué pasará?</label><input type="text" name="plan_mudanza" value="{{ mi_cv.plan_mudanza if mi_cv else '' }}" required></div>
+            <!-- Validado: Máx 50, Solo Letras -->
+            <div><label>En vacaciones/viaje, ¿quién lo cuidará?</label><input type="text" name="plan_viaje" value="{{ mi_cv.plan_viaje if mi_cv else '' }}" required maxlength="50" oninput="filtrarSoloLetras(this)"></div>
+            <!-- Validado: Máx 50, Solo Letras -->
+            <div><label>En caso de mudanza, ¿qué pasará?</label><input type="text" name="plan_mudanza" value="{{ mi_cv.plan_mudanza if mi_cv else '' }}" required maxlength="50" oninput="filtrarSoloLetras(this)"></div>
           </div>
         </fieldset>
 
         <fieldset>
           <legend>5. Responsabilidad y Compromiso</legend>
+          <!-- (Los select no necesitan validación extra de JS ya que no permiten escritura libre) -->
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label>Si rompe objetos o ladra mucho:</label>
@@ -146,12 +162,16 @@
           <legend>6. Referencias Personales (No familiares de la misma casa)</legend>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label>Referencia 1 (Nombre):</label><input type="text" name="ref1_nombre" value="{{ mi_cv.ref1_nombre if mi_cv else '' }}" required>
-              <label class="mt-2">Teléfono / Relación:</label><input type="text" name="ref1_tel" value="{{ mi_cv.ref1_tel if mi_cv else '' }}" required>
+              <!-- Validado: Máx 15, Solo Letras -->
+              <label>Referencia 1 (Nombre):</label><input type="text" name="ref1_nombre" value="{{ mi_cv.ref1_nombre if mi_cv else '' }}" required maxlength="15" oninput="filtrarSoloLetras(this)">
+              <!-- Validado: Máx 8, Solo Números -->
+              <label class="mt-2">Teléfono / Relación:</label><input type="text" id="cv-ref1-tel" name="ref1_tel" value="{{ mi_cv.ref1_tel if mi_cv else '' }}" required maxlength="8" oninput="filtrarSoloNumeros(this)">
             </div>
             <div>
-              <label>Referencia 2 (Nombre):</label><input type="text" name="ref2_nombre" value="{{ mi_cv.ref2_nombre if mi_cv else '' }}" required>
-              <label class="mt-2">Teléfono / Relación:</label><input type="text" name="ref2_tel" value="{{ mi_cv.ref2_tel if mi_cv else '' }}" required>
+              <!-- Validado: Máx 15, Solo Letras -->
+              <label>Referencia 2 (Nombre):</label><input type="text" name="ref2_nombre" value="{{ mi_cv.ref2_nombre if mi_cv else '' }}" required maxlength="15" oninput="filtrarSoloLetras(this)">
+              <!-- Validado: Máx 8, Solo Números -->
+              <label class="mt-2">Teléfono / Relación:</label><input type="text" id="cv-ref2-tel" name="ref2_tel" value="{{ mi_cv.ref2_tel if mi_cv else '' }}" required maxlength="8" oninput="filtrarSoloNumeros(this)">
             </div>
           </div>
         </fieldset>
@@ -166,5 +186,68 @@
       </form>
     </div>
   </div>
-   <!-- FIn de pestaña 3                                       -->
-  
+
+  <script>
+    // 1. Filtro Solo Números (Para DPI y teléfonos de referencias)
+    function filtrarSoloNumeros(input) {
+        input.value = input.value.replace(/\D/g, '');
+    }
+
+    // 2. Filtro Teléfono Local (Formato XXXX-XXXX)
+    function formatearTelefonoLocal(input) {
+        let valor = input.value.replace(/\D/g, '');
+        if (valor.length > 4) {
+            valor = valor.substring(0, 4) + '-' + valor.substring(4, 8);
+        }
+        input.value = valor;
+    }
+
+    // 3. Filtro Solo Letras (Bloquea números y especiales)
+    function filtrarSoloLetras(input) {
+        input.value = input.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ ]/g, '');
+    }
+
+    // 4. Filtro Alfanumérico Simple (Letras y Números)
+    function filtrarAlfanumericoInput(input) {
+        input.value = input.value.replace(/[^A-Za-z0-9ÁÉÍÓÚáéíóúÑñ ]/g, '');
+    }
+
+    // 5. Filtro Alfanumérico Multilínea (Textareas)
+    function filtrarAlfanumericoTextarea(textarea) {
+        textarea.value = textarea.value.replace(/[^A-Za-z0-9ÁÉÍÓÚáéíóúÑñ \n]/g, '');
+    }
+
+    // 6. Filtro Dirección (Letras, Números, Espacios y Guiones)
+    function filtrarDireccionCV(input) {
+        input.value = input.value.replace(/[^A-Za-z0-9ÁÉÍÓÚáéíóúÑñ \-]/g, '');
+    }
+
+    // 7. Filtro Red Social (Letras, Números, @, ., /, _, -)
+    function filtrarRedSocial(input) {
+        input.value = input.value.replace(/[^A-Za-z0-9@./_\-]/g, '');
+    }
+
+    // Validación Final Estricta al hacer Submit
+    function validarCV(event) {
+        const dpi = document.getElementById('cv-dpi').value;
+        const ref1 = document.getElementById('cv-ref1-tel').value;
+        const ref2 = document.getElementById('cv-ref2-tel').value;
+
+        // Validar DPI exactamente 14 caracteres
+        if (dpi.length !== 14) {
+            alert("El DPI debe contener exactamente 14 dígitos.");
+            event.preventDefault();
+            return false;
+        }
+
+        // Validar Teléfonos de referencia exactamente 8 caracteres
+        if (ref1.length !== 8 || ref2.length !== 8) {
+            alert("Los teléfonos de las referencias deben contener exactamente 8 dígitos.");
+            event.preventDefault();
+            return false;
+        }
+
+        return true;
+    }
+  </script>
+  <!-- FIN DE LA PESTAÑA 3 -->

@@ -1,12 +1,12 @@
-  <!-- ======================================================= -->
-  <!-- PESTAÑA 2: ALERTAS CIUDADANAS (Tu código intacto)       -->
+<!-- ======================================================= -->
+  <!-- PESTAÑA 2: ALERTAS CIUDADANAS (Validado Estricto)       -->
   <!-- ======================================================= -->
   <div id="usuario-alertas" class="tab-content tab-content-usuario">
     <div class="bg-white rounded-xl shadow-sm p-8 max-w-3xl mx-auto border-t-4 border-red-500 form-extenso">
       <h2 class="text-2xl font-bold text-center text-red-600 mb-2">Reportar Alerta Ciudadana</h2>
       <p class="text-center text-slate-500 mb-6 text-sm">Tu reporte llegará inmediatamente al panel de nuestros rescatistas.</p>
       
-      <form action="{{ url_for('crear_alerta') }}" method="POST" enctype="multipart/form-data">
+      <form id="form-alerta" action="{{ url_for('crear_alerta') }}" method="POST" enctype="multipart/form-data" onsubmit="return validarAlerta(event)">
         <fieldset>
           <legend>Situación</legend>
           <label>Nivel de Urgencia:</label>
@@ -15,19 +15,26 @@
             <option value="Grave">Grave (Herido o atrapado)</option>
             <option value="Crítico">Crítico (Peligro de muerte inminente)</option>
           </select>
-          <label>Animal (Especie y Cantidad):</label>
-          <input type="text" name="especie_cantidad" required placeholder="Ej. 1 perro mediano negro">
-          <label>Descripción de lo sucedido:</label>
-          <textarea name="descripcion" required rows="2" placeholder="Detalla cómo lo encontraste..."></textarea>
           
-          <label class="mt-4">Adjuntar Fotografía (Opcional pero recomendado):</label>
-          <input type="file" name="foto" accept="image/*" class="w-full border rounded-lg p-2 text-sm bg-white">
+          <!-- Filtro estricto: Letras y Números en tiempo real -->
+          <label>Animal (Especie y Cantidad):</label>
+          <input type="text" name="especie_cantidad" required maxlength="50" oninput="filtrarAlfanumericoInput(this)" placeholder="Ej. 1 perro mediano negro">
+          
+          <!-- Filtro estricto: Letras, Números y saltos de línea -->
+          <label>Descripción de lo sucedido:</label>
+          <textarea id="desc-alerta" name="descripcion" required maxlength="200" rows="2" placeholder="Detalla cómo lo encontraste..." oninput="filtrarAlfanumericoTextarea(this)"></textarea>
+          <p class="text-[10px] text-slate-400 text-right mt-1"><span id="contador-desc">0</span>/200</p>
+          
+          <label class="mt-4">Adjuntar Fotografía (Máximo 50MB):</label>
+          <input type="file" id="foto-alerta" name="foto" accept="image/*" class="w-full border rounded-lg p-2 text-sm bg-white">
         </fieldset>
         
         <fieldset>
           <legend>Ubicación y Contacto</legend>
+          
+          <!-- Filtro estricto: Letras, Números y Guiones en tiempo real -->
           <label>Dirección exacta o referencia:</label>
-          <input type="text" name="direccion" required placeholder="Calle, avenida, zona o referencias claras">
+          <input type="text" name="direccion" required maxlength="50" oninput="filtrarDireccion(this)" placeholder="Ej. Calle 12-25 Zona 1">
           
           <div class="grid grid-cols-2 gap-4 mt-2">
             <div>
@@ -40,16 +47,19 @@
               </select>
             </div>
             <div>
+              <!-- Filtro estricto: Solo Letras -->
               <label>Indicaciones de llegada:</label>
-              <input type="text" name="indicaciones" placeholder="Ej. Al lado de la tienda azul">
+              <input type="text" name="indicaciones" maxlength="50" oninput="filtrarSoloLetras(this)" placeholder="Ej. Al lado de la tienda azul">
             </div>
           </div>
           
+          <!-- Filtro estricto: Solo Letras -->
           <label class="mt-4">Tu Nombre:</label>
-          <input type="text" name="nombre_reporta" required value="{{ session['nombre'] }}">
+          <input type="text" name="nombre_reporta" required maxlength="20" oninput="filtrarSoloLetras(this)" value="{{ session['nombre'] }}">
           
-          <label>Tu Teléfono (Para que el rescatista te contacte):</label>
-          <input type="text" name="telefono_reporta" required placeholder="Ej. 5555-4444">
+          <!-- Filtro estricto: Solo Formato 502-XXXX-XXXX -->
+          <label>Tu Teléfono (Formato: 502-XXXX-XXXX):</label>
+          <input type="text" name="telefono_reporta" required maxlength="13" oninput="formatearTelefono(this)" placeholder="Ej. 502-5555-4444">
         </fieldset>
         
         <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-xl mt-4 shadow-md transition text-lg flex items-center justify-center gap-2">
@@ -58,4 +68,69 @@
       </form>
     </div>
   </div>
+
+  <script>
+    // 1. Filtro Alfanumérico (Letras, Números, Espacios)
+    function filtrarAlfanumericoInput(input) {
+        input.value = input.value.replace(/[^A-Za-z0-9ÁÉÍÓÚáéíóúÑñ ]/g, '');
+    }
+
+    // 2. Filtro Alfanumérico + Saltos de línea (Para Textarea)
+    function filtrarAlfanumericoTextarea(textarea) {
+        textarea.value = textarea.value.replace(/[^A-Za-z0-9ÁÉÍÓÚáéíóúÑñ \n]/g, '');
+        document.getElementById('contador-desc').innerText = textarea.value.length;
+    }
+
+    // 3. Filtro de Dirección (Letras, Números, Espacios, Guiones y Comas)
+    function filtrarDireccion(input) {
+        // Permitimos el guión medio para direcciones tipo 12-25 y la coma
+        input.value = input.value.replace(/[^A-Za-z0-9ÁÉÍÓÚáéíóúÑñ \-,]/g, '');
+    }
+
+    // 4. Filtro Solo Letras (y espacios)
+    function filtrarSoloLetras(input) {
+        input.value = input.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ ]/g, '');
+    }
+
+    // 5. Autocompletado y Formato del Teléfono
+    function formatearTelefono(input) {
+        // Elimina todo lo que no sea número
+        let valor = input.value.replace(/\D/g, '');
+        
+        // Aplica el formato 502-XXXX-XXXX a medida que se escribe
+        if (valor.length > 3 && valor.length <= 7) {
+            valor = valor.substring(0, 3) + '-' + valor.substring(3, 7);
+        } else if (valor.length > 7) {
+            valor = valor.substring(0, 3) + '-' + valor.substring(3, 7) + '-' + valor.substring(7, 11);
+        }
+        
+        input.value = valor;
+    }
+
+    // Validación Final antes de enviar (Tamaño de foto de 50MB y formato de teléfono)
+    function validarAlerta(event) {
+        // Validar tamaño de foto
+        const fotoInput = document.getElementById('foto-alerta');
+        if (fotoInput.files.length > 0) {
+            const fileSize = fotoInput.files[0].size;
+            const maxSize = 50 * 1024 * 1024; // 50 MB
+            
+            if (fileSize > maxSize) {
+                alert("La fotografía es demasiado pesada. El límite máximo es de 50MB.");
+                event.preventDefault();
+                return false;
+            }
+        }
+
+        // Validar longitud del teléfono
+        const telefonoInput = document.querySelector('input[name="telefono_reporta"]');
+        if (telefonoInput.value.length !== 13) {
+            alert("Por favor, ingrese un número de teléfono válido (Ej: 502-1234-5678).");
+            event.preventDefault();
+            return false;
+        }
+
+        return true;
+    }
+  </script>
   <!-- FIN DE LA PESTAÑA 2 -->
