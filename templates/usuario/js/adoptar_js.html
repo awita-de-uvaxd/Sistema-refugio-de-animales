@@ -30,6 +30,35 @@
       lucide.createIcons();
     }
 
+    // Intercepta el formulario para enviar la solicitud sin recargar la página
+  function enviarSolicitudAdopcion(event, form) {
+    event.preventDefault(); // Evita que la página salte a blanco
+    
+    // Envía los datos silenciosamente al servidor de Flask
+    fetch(form.action, {
+      method: 'POST',
+      body: new FormData(form)
+    }).then(response => {
+      // 1. Cerramos el modal grande del perrito
+      closeModal();
+      
+      // 2. Abrimos nuestro componente mágico de "Solicitud Enviada"
+      const modalExito = document.getElementById('modal-exito-adopcion');
+      modalExito.classList.remove('hidden');
+      // Pequeño delay para que la animación de opacidad se vea suave
+      setTimeout(() => { modalExito.classList.remove('opacity-0'); }, 10);
+    });
+  }
 
+  // Cierra nuestro componente y recarga la página para actualizar las listas
+  function cerrarModalExitoAdopcion() {
+    const modalExito = document.getElementById('modal-exito-adopcion');
+    modalExito.classList.add('opacity-0');
+    
+    setTimeout(() => { 
+      modalExito.classList.add('hidden');
+      window.location.reload(); // Recargamos para que el perrito adoptado desaparezca del catálogo
+    }, 300);
+  }
 
 </script>

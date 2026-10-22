@@ -3,7 +3,7 @@
 
 function abrirVincularBanco() {
     openModal(`
-      <div class="bg-[#003B5C] p-8 -m-6 rounded-2xl text-white">
+      <div class="bg-[#003B5C] p-8 -m-6 rounded-2xl text-white overflow-hidden relative">
         <h2 class="text-center font-bold text-emerald-400 mb-6 text-sm tracking-wide">Vinculación de Mascotas</h2>
         <div class="bg-[#002b44] p-6 rounded-xl border border-[#004870] shadow-inner">
           <h3 class="text-center font-black text-xl mb-6 flex justify-center items-center gap-2">
@@ -25,8 +25,12 @@ function abrirVincularBanco() {
                 <input type="password" name="password" required placeholder="****" class="w-full bg-white text-slate-900 border-none rounded-lg py-3 pl-10 pr-3 font-mono font-bold outline-none">
               </div>
             </div>
-            <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3.5 rounded-lg transition shadow-md mt-4">Vincular Expediente</button>
-          </form>
+
+            <!-- INYECCIÓN DE TU COMPONENTE MÁGICO -->
+            {% include 'componentes/btn_vincular_estrellas.html' %}
+            
+
+            </form>
         </div>
       </div>
     `);

@@ -9,9 +9,8 @@
           <h2 class="text-2xl font-black text-indigo-950">Mis Mascotas Vinculadas</h2>
           <p class="text-sm text-slate-500">Expedientes clínicos y registro de tus animales de compañía.</p>
         </div>
-        <button onclick="abrirVincularBanco()" class="bg-indigo-900 hover:bg-indigo-950 text-white font-bold py-3 px-6 rounded-xl shadow-md transition flex items-center gap-2">
-          <i data-lucide="plus-circle" class="w-5 h-5"></i> Agregar Mascota
-        </button>
+        {% include 'componentes/btn_agregar_mascota.html' %}
+    
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -76,7 +76,7 @@
           <!-- Botones de Acción Inteligentes -->
           {% if mi_cv and mi_cv.dpi %}
             <!-- Si ya llenó el CV, el botón es verde y envía el formulario -->
-            <form action="{{ url_for('crear_solicitud', paciente_id=mascota.id) }}" method="POST">
+            <form action="{{ url_for('crear_solicitud', paciente_id=mascota.id) }}" method="POST" onsubmit="enviarSolicitudAdopcion(event, this)">
               <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl transition flex items-center justify-center gap-2 mb-4 shadow-md">
                 <i data-lucide="heart" class="w-5 h-5"></i> Solicitar Adopción Oficial
               </button>
@@ -102,3 +102,5 @@
     </div>
   </div>
   <!-- FIN DE LA PESTAÑA 1 -->
+
+  {% include 'componentes/modal_exito_adopcion.html' %}
