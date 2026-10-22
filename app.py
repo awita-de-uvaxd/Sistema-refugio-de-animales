@@ -348,54 +348,55 @@ def editar_apariencia():
     flash(f"Apariencia actualizada para el grupo: {rol_destino.upper()}", "success")
     return redirect(url_for('admin'))
 
-@app.route('/registro', methods=['GET', 'POST'])
-def registro():
-    if request.method == 'POST':
-        nombre = request.form.get('nombre')
-        correo = request.form.get('correo')
-        password = request.form.get('password')
-        
-        password_encriptada = generate_password_hash(password)
-        nuevo_usuario = Usuario(nombre=nombre, correo=correo, password=password_encriptada, rol='usuario')
-        db.session.add(nuevo_usuario)
-        db.session.commit()
-        
-        flash('Registro exitoso. Ahora puedes iniciar sesión.', 'success')
-        return redirect(url_for('login'))
-    return render_template('login/registro.html')
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        correo_o_codigo = request.form.get('credencial')
-        password = request.form.get('password')
-        
-        usuario = Usuario.query.filter((Usuario.correo == correo_o_codigo) | (Usuario.codigo_empleado == correo_o_codigo)).first()
-        
-        if usuario and check_password_hash(usuario.password, password):
-            session['usuario_id'] = usuario.id
-            session['rol'] = usuario.rol
-            session['nombre'] = usuario.nombre
-            
-            if usuario.rol == 'admin': return redirect(url_for('admin'))
-            elif usuario.rol == 'veterinario': return redirect(url_for('veterinario'))
-            elif usuario.rol == 'rescatista': return redirect(url_for('rescatista'))
-            else: return redirect(url_for('usuario'))
-        else:
-            flash('Credenciales incorrectas. Intenta de nuevo.', 'error')
-    return render_template('login/login.html')
 
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('inicio'))
 
+@app.route('/')
+def inicio():
+    return render_template('login/inicio.html', modo='inicio')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        # ... (Tu código de validación de base de datos se queda igualito)
+        correo_o_codigo = request.form.get('credencial')
+        password = request.form.get('password')
+        usuario = Usuario.query.filter((Usuario.correo == correo_o_codigo) | (Usuario.codigo_empleado == correo_o_codigo)).first()
+        if usuario and check_password_hash(usuario.password, password):
+            session['usuario_id'] = usuario.id
+            session['rol'] = usuario.rol
+            session['nombre'] = usuario.nombre
+            if usuario.rol == 'admin': return redirect(url_for('admin'))
+            elif usuario.rol == 'veterinario': return redirect(url_for('veterinario'))
+            elif usuario.rol == 'rescatista': return redirect(url_for('rescatista'))
+            else: return redirect(url_for('usuario'))
+        else:
+            flash('Credenciales incorrectas. Intenta de nuevo.', 'error')
+    
+    return render_template('login/inicio.html', modo='login')
+
+@app.route('/registro', methods=['GET', 'POST'])
+def registro():
+    if request.method == 'POST':
+        # ... (Tu código de guardar en BD se queda igualito)
+        nombre = request.form.get('nombre')
+        correo = request.form.get('correo')
+        password = request.form.get('password')
+        password_encriptada = generate_password_hash(password)
+        nuevo_usuario = Usuario(nombre=nombre, correo=correo, password=password_encriptada, rol='usuario')
+        db.session.add(nuevo_usuario)
+        db.session.commit()
+        flash('Registro exitoso. Ahora puedes iniciar sesión.', 'success')
+        return redirect(url_for('login'))
+        
+    return render_template('login/inicio.html', modo='registro')
 
 # ==========================================
 # 3. RUTAS DE VISUALIZACIÓN
 # ==========================================
-@app.route('/')
-def inicio(): return render_template('login/inicio.html')
 
 @app.route('/rescatista')
 def rescatista(): 
