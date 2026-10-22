@@ -1,0 +1,7 @@
+<div id="admin-clientes" class="tab-content-main hidden bg-white p-6 rounded-xl shadow-sm space-y-5">
+  <h2 class="text-xl font-black text-indigo-900 mb-2">Gestión de usuarios</h2>
+  <p class="text-sm text-slate-500 mb-5">Consulta correos, actualiza datos de acceso y restablece contraseñas. Las contraseñas anteriores no se pueden consultar.</p>
+  <div class="space-y-3">{% for cuenta in cuentas_clientes %}
+    {% include 'admin_modulos/tarjeta_cuenta.html' %}
+  {% else %}<p class="bg-slate-50 p-5 text-sm text-slate-500">No hay usuarios registrados.</p>{% endfor %}</div>
+</div>
