@@ -78,8 +78,8 @@
           <div class="md:col-span-8 space-y-6">
             <h4 class="font-bold text-sm text-indigo-700 uppercase tracking-widest border-b border-indigo-100 pb-2 mb-4">2. Evaluación Clínica Actual</h4>
             <div class="grid grid-cols-3 gap-4">
-              <div><label class="block text-sm font-bold mb-1 text-slate-800">Temp (°C)</label><input type="text" name="temp" data-regla="temperatura" data-requerido data-etiqueta="La temperatura" placeholder="Ej. 38.5" autocomplete="off" class="w-full border rounded-lg p-2.5 outline-none"></div>
-              <div><label class="block text-sm font-bold mb-1 text-slate-800">Peso (Kg)</label><input type="text" name="peso" data-regla="peso" data-requerido data-etiqueta="El peso" placeholder="Ej. 12.5" autocomplete="off" class="w-full border rounded-lg p-2.5 outline-none"></div>
+              <div><label class="block text-sm font-bold mb-1 text-slate-800">Temp (°C)</label><input type="text" name="temp" id="form-temp" placeholder="Ej. 38.5" class="w-full border rounded-lg p-2.5 outline-none"></div>
+              <div><label class="block text-sm font-bold mb-1 text-slate-800">Peso (Kg)</label><input type="text" name="peso" id="form-peso" placeholder="Ej. 12.5" class="w-full border rounded-lg p-2.5 outline-none"></div>
               
               <!-- EVIDENCIA FOTOGRÁFICA MÚLTIPLE CON X PARA BORRAR -->
               <div>
@@ -150,6 +150,8 @@
               </div>
             </div>
             
+            <div id="resumen-errores" class="hidden mb-4 p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-sm"></div>
+
             <div class="pt-4 flex flex-col items-end gap-2">
               <button type="button" id="btn-guardar-expediente" onclick="validarYEnviarConsulta()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-10 rounded-xl shadow-md transition text-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-indigo-600">Guardar Expediente</button>
               <p id="msg-guardar" class="text-xs font-semibold text-amber-600 text-right"></p>

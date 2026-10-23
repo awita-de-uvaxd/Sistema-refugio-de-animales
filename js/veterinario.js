@@ -282,46 +282,102 @@
     document.getElementById('vacunas-hidden').value = JSON.stringify(vacunas);
   }
 
-  function validarYEnviarConsulta() {
-      const tipo = document.getElementById('form-tipo-ingreso').value;
-      const isNew = document.getElementById('form-paciente-id').value === '';
-      const codeGenerado = document.getElementById('hidden-codigo-acceso').value;
+  // --- RESTRICCIONES Y VALIDACIONES EN TIEMPO REAL ---
+document.addEventListener('DOMContentLoaded', () => {
+  const inputNombre = document.getElementById('form-nombre');
+  const inputTemp = document.getElementById('form-temp');
+  const inputPeso = document.getElementById('form-peso');
+  const inputSintoma = document.getElementById('input-sintoma');
 
-      prepararEnvio(); 
-
-      if (tipo === 'Externo' && isNew && !codeGenerado) {
-          
-          const code = 'EXT-' + Math.floor(1000 + Math.random() * 9000);
-          const pin = Math.floor(1000 + Math.random() * 9000).toString();
-
-          document.getElementById('select-adopcion').value = "Mascota Externa";
-
-          openModal(`
-              <div class="text-center p-4">
-                  <i data-lucide="shield-check" class="w-16 h-16 text-emerald-500 mx-auto mb-4"></i>
-                  <h2 class="text-2xl font-black text-slate-800 mb-2">Credenciales Generadas</h2>
-                  <p class="text-sm text-slate-500 mb-6">Entrega estas credenciales al dueño para que pueda vincular su mascota desde su perfil en la plataforma.</p>
-                  <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 mb-8 space-y-4">
-                      <div>
-                          <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Código de Paciente</p>
-                          <p class="text-3xl font-mono font-black text-indigo-900 tracking-wider">` + code + `</p>
-                      </div>
-                      <div class="border-t border-slate-200 pt-4">
-                          <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Contraseña Temporal</p>
-                          <p class="text-3xl font-mono font-black text-indigo-900 tracking-wider">` + pin + `</p>
-                      </div>
-                  </div>
-                  <div class="flex gap-4">
-                      <button type="button" onclick="closeModal();" class="w-1/2 py-3.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition">Cancelar</button>
-                      <button type="button" onclick="document.getElementById('hidden-codigo-acceso').value='` + code + `'; document.getElementById('hidden-password-acceso').value='` + pin + `'; document.getElementById('form-consulta-vet').submit();" class="w-1/2 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition">Confirmar y Generar Expediente</button>
-                  </div>
-              </div>
-          `);
-          lucide.createIcons();
-      } else {
-          document.getElementById('form-consulta-vet').submit();
-      }
+  // Restricción Nombre: solo letras y máx 30 caracteres
+  if (inputNombre) {
+    inputNombre.addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+      if (e.target.value.length > 30) e.target.value = e.target.value.slice(0, 30);
+    });
   }
+
+  // Restricción Temperatura: solo números y punto (formato XX.X)
+  if (inputTemp) {
+    inputTemp.addEventListener('input', (e) => {
+      let val = e.target.value.replace(/[^0-9.]/g, '');
+      const partes = val.split('.');
+      if (partes.length > 2) val = partes[0] + '.' + partes.slice(1).join('');
+      if (partes[0].length > 2) partes[0] = partes[0].slice(0, 2);
+      if (partes[1] && partes[1].length > 1) partes[1] = partes[1].slice(0, 1);
+      e.target.value = val;
+    });
+  }
+
+  // Restricción Peso: solo números
+  if (inputPeso) {
+    inputPeso.addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/[^0-9.]/g, '');
+      const partes = e.target.value.split('.');
+      if (partes.length > 2) e.target.value = partes[0] + '.' + partes.slice(1).join('');
+    });
+  }
+
+  // Restricción Síntomas: solo letras
+  if (inputSintoma) {
+    inputSintoma.addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+    });
+  }
+});
+
+// --- FUNCIÓN DE VALIDACIÓN Y ENVÍO ---
+function validarYEnviarConsulta() {
+  const errores = [];
+  
+  const nombre = document.getElementById('form-nombre')?.value.trim();
+  const temp = document.getElementById('form-temp')?.value.trim();
+  const peso = document.getElementById('form-peso')?.value.trim();
+  const especie = document.getElementById('form-especie')?.value.trim();
+  const diagnostico = document.querySelector('textarea[name="diagnostico"]')?.value.trim();
+  const tratamiento = document.querySelector('textarea[name="tratamiento"]')?.value.trim();
+  const inputImagenes = document.getElementById('input-evidencia');
+  const numImagenes = inputImagenes?.files ? inputImagenes.files.length : 0;
+
+  // 1. Validaciones básicas
+  if (!nombre) errores.push("El nombre del paciente es obligatorio.");
+  if (!temp || !/^\d{1,2}(\.\d{1})?$/.test(temp)) errores.push("Ingrese una temperatura válida (ej. 38.5).");
+  if (!peso || !/^\d+(\.\d+)?$/.test(peso)) errores.push("Ingrese un peso válido.");
+
+  // 2. VALIDACIÓN DE ESPECIE (Comprueba si existe en la lista ESPECIES del sistema)
+  if (!especie) {
+    errores.push("El campo Especie es obligatorio.");
+  } else if (typeof ESPECIES !== 'undefined' && Array.isArray(ESPECIES)) {
+    const existeEnLista = ESPECIES.some(e => e.nombre.toLowerCase() === especie.toLowerCase());
+    if (!existeEnLista) {
+      errores.push(`La especie '${especie}' no está en la lista. Agrégala primero en el módulo de Configuración > Especies.`);
+    }
+  }
+
+  // 3. Validación de campos clínicos
+  if (!diagnostico) errores.push("El diagnóstico es obligatorio.");
+  if (diagnostico && diagnostico.length > 70) errores.push("El diagnóstico no debe superar los 70 caracteres.");
+  if (!tratamiento) errores.push("El tratamiento es obligatorio.");
+  if (tratamiento && tratamiento.length > 70) errores.push("El tratamiento no debe superar los 70 caracteres.");
+  if (numImagenes < 2 || numImagenes > 5) errores.push(`Debe adjuntar entre 2 y 5 imágenes de evidencia (seleccionadas: ${numImagenes}).`);
+
+  // 4. Despliegue de errores en pantalla
+  const divResumen = document.getElementById('resumen-errores');
+
+  if (errores.length > 0) {
+    if (divResumen) {
+      divResumen.classList.remove('hidden');
+      divResumen.innerHTML = `<strong>Corrija los siguientes errores para guardar:</strong><ul class="list-disc ml-5 mt-1">${errores.map(e => `<li>${e}</li>`).join('')}</ul>`;
+    }
+    // Muestra la ventana emergente con todos los errores recopilados
+    mostrarAviso("Errores en el formulario", errores.join("<br>"), "error");
+    return false;
+  } else {
+    if (divResumen) divResumen.classList.add('hidden');
+    // Envía el formulario si todo está correcto
+    document.getElementById('form-consulta-vet').submit();
+  }
+}
 
   function aplicarRuta(tipo) {
     document.getElementById('form-tipo-ingreso').value = tipo;
