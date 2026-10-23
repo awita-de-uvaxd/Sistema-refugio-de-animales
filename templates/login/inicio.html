@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+{% include 'login/estrellas.css' %}
+</style>
 
 <!-- CONTENEDOR MAESTRO: Controla la posición de todo mediante la clase 'auth-active' -->
 <div id="master-container" class="relative w-full max-w-5xl mx-auto h-[620px] mt-6 {% if modo != 'inicio' %} auth-active {% endif %}">
@@ -57,29 +60,40 @@
           </button>
         </div>
 
-        <!-- CAPA 2: FORMULARIO DE LOGIN (Oculto al inicio) -->
-        <div id="layer-login" class="absolute inset-0 p-8 md:p-10 flex flex-col justify-center transition-opacity duration-700 bg-white z-10">
-          <div class="text-center mb-8">
-            <h2 class="text-3xl font-black text-slate-800">Hola de nuevo</h2>
-            <p class="text-sm text-slate-500 mt-2">Me alegra verte. Inicia sesión para continuar.</p>
+        <!-- CAPA 2: FORMULARIO DE LOGIN (Con Estrellas de Fondo) -->
+        <div id="layer-login" class="absolute inset-0 transition-opacity duration-700 z-10 overflow-hidden rounded-[2rem]">
+          
+          <!-- ESTRELLAS ESPACIALES (Fondo oscuro) -->
+          <div class="container-estrellas absolute inset-0 z-0">
+            <div id="stars"></div>
+            <div id="stars2"></div>
+            <div id="stars3"></div>
           </div>
-          
-          {% with messages = get_flashed_messages() %}
-            {% if messages %}
-              <div class="bg-red-100 text-red-700 px-4 py-2 rounded-lg mb-4 text-xs font-bold text-center">{{ messages[0] }}</div>
-            {% endif %}
-          {% endwith %}
 
-          <form action="{{ url_for('login') }}" method="POST" class="space-y-5">
-            <input type="text" name="credencial" required class="dog-trigger w-full border-2 border-slate-200 rounded-xl p-3.5 bg-slate-50 outline-none focus:border-amber-500 focus:bg-white transition font-semibold" placeholder="Correo o Código">
-            <input type="password" name="password" required class="dog-trigger w-full border-2 border-slate-200 rounded-xl p-3.5 bg-slate-50 outline-none focus:border-amber-500 focus:bg-white transition font-semibold" placeholder="Contraseña">
+          <!-- CONTENIDO DEL FORMULARIO (Capa Superior) -->
+          <div class="relative z-10 p-8 md:p-10 flex flex-col justify-center h-full">
+            <div class="text-center mb-8">
+              <h2 class="text-3xl font-black text-white drop-shadow-md">Hola de nuevo</h2>
+              <p class="text-sm text-slate-300 mt-2">Me alegra verte. Inicia sesión para continuar.</p>
+            </div>
             
-            <button type="submit" class="btn-31 w-full mt-4"><span class="text-container"><span class="text">Entrar al Sistema</span></span></button>
-          </form>
-          
-          <p class="text-center text-sm text-slate-500 mt-8">¿Aún no tienes cuenta? <br>
-            <button type="button" onclick="girarTarjeta('registro')" class="text-indigo-600 font-black hover:underline mt-1 cursor-pointer">¡Regístrate aquí!</button>
-          </p>
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                <div class="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-2 rounded-lg mb-4 text-xs font-bold text-center backdrop-blur-sm">{{ messages[0] }}</div>
+              {% endif %}
+            {% endwith %}
+
+            <form action="{{ url_for('login') }}" method="POST" class="space-y-5 relative">
+              <input type="text" name="credencial" required class="dog-trigger w-full border-2 border-transparent rounded-xl p-3.5 bg-white/10 text-white placeholder-slate-400 outline-none focus:border-amber-500 focus:bg-white/20 transition font-semibold backdrop-blur-md" placeholder="Correo o Código">
+              <input type="password" name="password" required class="dog-trigger w-full border-2 border-transparent rounded-xl p-3.5 bg-white/10 text-white placeholder-slate-400 outline-none focus:border-amber-500 focus:bg-white/20 transition font-semibold backdrop-blur-md" placeholder="Contraseña">
+              
+              <button type="submit" class="btn-31 w-full mt-4"><span class="text-container"><span class="text">Entrar al Sistema</span></span></button>
+            </form>
+            
+            <p class="text-center text-sm text-slate-400 mt-8">¿Aún no tienes cuenta? <br>
+              <button type="button" onclick="girarTarjeta('registro')" class="text-amber-400 font-black hover:underline mt-1 cursor-pointer">¡Regístrate aquí!</button>
+            </p>
+          </div>
         </div>
 
       </div>
