@@ -1382,6 +1382,7 @@ function abrirEditarMascota(id, nombre) {
       lucide.createIcons();
     }
     
+
   function abrirExpedienteMascota(id) {
     const html = document.getElementById('historial-mi-mascota-' + id).innerHTML;
     openModal(html);
@@ -1515,20 +1516,44 @@ function prepararAgregarCarrito(btn) {
 
 // Agrega el item a la lista del carrito y actualiza la UI
 // 1. Agregar al carrito respetando el tope de inventario
+// Reemplazar únicamente estas dos funciones en <script>
+function prepararAgregarCarrito(btn) {
+    const id = btn.dataset.id;
+    const nombre = btn.dataset.nombre;
+    const precio = parseFloat(btn.dataset.precio) || 0;
+    const stockMax = parseInt(btn.dataset.stock) || 0;
+
+    agregarAlCarrito(id, nombre, precio, stockMax);
+}
+
 function agregarAlCarrito(id, nombre, precio, stockMaxParam) {
-    const p = productos.find(x => String(x.id) === String(id) || parseInt(String(x.id).replace(/\D/g, '')) === parseInt(String(id).replace(/\D/g, '')));
+    const numId = parseInt(String(id).replace(/\D/g, ''));
+    const p = productos.find(x => String(x.id) === String(id) || parseInt(String(x.id).replace(/\D/g, '')) === numId);
+    
     const stockMax = p ? parseInt(p.stock) : (parseInt(stockMaxParam) || 0);
 
-    if (stockMax <= 0) return;
-
-    const itemExistente = carrito.find(i => String(i.id) === String(id));
-    if (itemExistente) {
-        itemExistente.cantidad = Math.min(itemExistente.cantidad + 1, stockMax);
-    } else {
-        const prodNombre = nombre || (p ? p.nombre : 'Producto');
-        const prodPrecio = parseFloat(precio) || (p ? parseFloat(p.precio) : 0);
-        carrito.push({ id, nombre: prodNombre, precio: prodPrecio, cantidad: 1 });
+    if (stockMax <= 0) {
+        mostrarNotificacionFlotante('Producto agotado o sin disponibilidad.');
+        return;
     }
+
+    const prodNombre = nombre || (p ? p.nombre : 'Producto');
+    const prodPrecio = parseFloat(precio) || (p ? parseFloat(p.precio) : 0);
+    const itemExistente = carrito.find(i => String(i.id) === String(id));
+
+    if (itemExistente) {
+        if (itemExistente.cantidad < stockMax) {
+            itemExistente.cantidad += 1;
+            mostrarNotificacionFlotante(`+1 "${prodNombre}" agregado al carrito`);
+        } else {
+            mostrarNotificacionFlotante(`Límite de stock alcanzado (${stockMax} disponibles).`);
+            return;
+        }
+    } else {
+        carrito.push({ id, nombre: prodNombre, precio: prodPrecio, cantidad: 1 });
+        mostrarNotificacionFlotante(`"${prodNombre}" agregado al carrito`);
+    }
+
     actualizarCarritoUI();
 }
 
