@@ -246,10 +246,9 @@
       if (campo.readOnly || CAMPOS_AUXILIARES.includes(campo.id)) return;
       if (revisarCampo(campo)) faltan.push((campo.dataset.etiqueta || 'Un campo').replace(/^(El|La|Los|Las) /, ''));
     });
-    if (sintomas.length === 0 && !document.getElementById('input-sintoma').value.trim()) faltan.push('Síntomas');
     return faltan;
   }
-
+  
   function actualizarBotonGuardar() {
     const boton = document.getElementById('btn-guardar-expediente');
     const msg = document.getElementById('msg-guardar');

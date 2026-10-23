@@ -887,7 +887,6 @@ def crear_consulta():
         'peso': 'El peso',
         'diagnostico': 'El diagnóstico',
         'tratamiento': 'El tratamiento',
-        'sintomas_ocultos': 'Al menos un síntoma',
     }
     for campo, etiqueta in obligatorios.items():
         if not (request.form.get(campo) or '').strip():
