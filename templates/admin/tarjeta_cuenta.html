@@ -1,0 +1,52 @@
+{% set estado_c = estados_cuentas.get(cuenta.id) %}
+{% set volver = 'clientes' if cuenta.rol == 'usuario' else ('administradores' if cuenta.rol == 'admin' else 'logs') %}
+{% set activada = estado_c.activo if estado_c else True %}
+{% set cuenta_super = estado_c and estado_c.nivel_admin == 'superadmin' %}
+<article class="border rounded-xl shadow-sm p-4 bg-white">
+  <div class="flex flex-wrap gap-3 items-start justify-between">
+    <div class="min-w-0">
+      <h4 class="font-bold text-slate-800">{{ cuenta.nombre }} <span class="text-xs font-medium text-slate-500">#{{ cuenta.id }}</span></h4>
+      <p class="text-xs text-slate-600 mt-1 break-all">Correo: <strong>{{ cuenta.correo or 'No registrado' }}</strong></p>
+      <p class="text-xs text-slate-500 mt-1">Acceso: {{ cuenta.codigo_empleado or 'Por correo electrónico' }}</p>
+      <p class="text-xs text-slate-500 mt-1 uppercase font-bold">{{ 'Administrador principal' if cuenta_super else cuenta.rol }}</p>
+    </div>
+    {% if estado_c and estado_c.cambiar_password %}<span class="text-xs px-2 py-1 rounded-lg bg-amber-100 text-amber-900">Cambio de contraseña pendiente</span>{% endif %}
+    <span class="text-xs px-3 py-1 rounded-full font-bold {{ 'bg-emerald-100 text-emerald-800' if activada else 'bg-red-100 text-red-700' }}">{{ 'Activo' if activada else 'Sin acceso' }}</span>
+  </div>
+  {% if cuenta.id != session.get('usuario_id') %}
+  <div class="grid sm:grid-cols-2 gap-3 mt-4">
+    <details class="border rounded-xl p-3 text-xs"><summary class="cursor-pointer font-bold text-indigo-700">Restablecer contraseña</summary>
+      <form method="POST" action="{{ url_for('gestion_resetear_password', uid=cuenta.id) }}" class="space-y-2 pt-3">
+        <input type="hidden" name="_csrf_gestion" value="{{ csrf_gestion() }}"><input type="hidden" name="volver" value="{{ volver }}">
+        <label class="block text-slate-600">Nueva contraseña temporal</label>
+        <div class="flex gap-1"><input type="password" name="password_nueva" minlength="12" required autocomplete="new-password" class="min-w-0 w-full p-2 rounded-lg border"><button type="button" onclick="generarPasswordCuenta(this)" class="bg-slate-100 px-2 rounded-lg" title="Crear contraseña segura">Generar</button></div>
+        <button onclick="return confirm('¿Restablecer contraseña e invalidar sesiones activas?')" class="bg-indigo-600 text-white p-2 rounded-lg font-bold w-full">Guardar nueva contraseña</button>
+      </form>
+    </details>
+    <details class="border rounded-xl p-3 text-xs"><summary class="cursor-pointer font-bold text-indigo-700">Modificar correo de acceso</summary>
+      <form method="POST" action="{{ url_for('gestion_cambiar_correo', uid=cuenta.id) }}" class="pt-3 space-y-2">
+        <input type="hidden" name="_csrf_gestion" value="{{ csrf_gestion() }}"><input type="hidden" name="volver" value="{{ volver }}">
+        <input name="correo" type="email" required maxlength="100" value="{{ cuenta.correo or '' }}" class="w-full p-2 border rounded-lg">
+        <button class="bg-indigo-600 text-white p-2 w-full rounded-lg font-bold">Actualizar correo</button>
+      </form>
+    </details>
+  </div>
+  <form method="POST" action="{{ url_for('gestion_estado_cuenta', uid=cuenta.id) }}" class="mt-3">
+    <input type="hidden" name="_csrf_gestion" value="{{ csrf_gestion() }}"><input type="hidden" name="volver" value="{{ volver }}">
+    <input type="hidden" name="accion" value="{{ 'desactivar' if activada else 'activar' }}">
+    <button onclick="return confirm('{{ '¿Eliminar el acceso a esta cuenta? Se conservará el historial.' if activada else '¿Reactivar la cuenta?' }}')" class="text-xs font-bold {{ 'text-red-600' if activada else 'text-emerald-700' }} hover:underline">{{ 'Eliminar empleado / dar de baja' if activada and cuenta.rol in ['rescatista','veterinario'] else ('Desactivar acceso' if activada else 'Restaurar acceso') }}</button>
+  </form>
+  {% endif %}
+  {% if cuenta.rol == 'admin' and superadmin and not cuenta_super %}
+  <details class="border-t mt-4 pt-3"><summary class="text-sm font-bold text-indigo-700 cursor-pointer">Editar funciones de este administrador</summary>
+    <form method="POST" action="{{ url_for('gestion_permisos_admin', uid=cuenta.id) }}" class="pt-3">
+      <input type="hidden" name="_csrf_gestion" value="{{ csrf_gestion() }}"><input type="hidden" name="volver" value="{{ volver }}">
+      {% set seleccionados = estado_c.permisos_json if estado_c else "[]" %}
+      <div class="grid sm:grid-cols-2 gap-2">{% for clave,nombre in permisos_catalogo.items() %}
+        <label class="text-xs"><input type="checkbox" name="permisos" value="{{ clave }}" {% if '"' ~ clave ~ '"' in seleccionados %}checked{% endif %}> {{ nombre }}</label>
+      {% endfor %}</div>
+      <button class="mt-3 bg-indigo-700 text-white font-bold px-4 py-2 text-xs rounded-xl">Guardar permisos</button>
+    </form>
+  </details>
+  {% endif %}
+</article>

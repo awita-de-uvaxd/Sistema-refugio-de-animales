@@ -4,8 +4,10 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
+import re
+import calendar
 
 app = Flask(__name__)
 @app.route('/js/<path:filename>')
@@ -30,8 +32,8 @@ db = SQLAlchemy(app)
 class ConfigSitio(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     rol_destino = db.Column(db.String(20), unique=True, nullable=False) # 'global', 'admin', 'usuario', 'veterinario', 'rescatista', 'inicio'
-    titulo = db.Column(db.String(100), default="Huellitas de Amor")
-    eslogan = db.Column(db.String(100), default="v5.0 - Entorno Python")
+    titulo = db.Column(db.String(100), default="Nombre de pagina de prueba :D")
+    eslogan = db.Column(db.String(100), default="Texto de eslogan de prueba XDXDXD")
     color_fondo = db.Column(db.String(20), default="#1e1b4b")
     logo = db.Column(db.String(200), nullable=True)
     logo_size = db.Column(db.Integer, default=45)
@@ -211,6 +213,30 @@ class Vacuna(db.Model):
     paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=False)
     consulta_id = db.Column(db.Integer, db.ForeignKey('consulta_medica.id'), nullable=True)
 
+        # Fecha de la próxima dosis, calculada con la frecuencia que eligió el veterinario
+    @property
+    def proxima_fecha(self):
+        f = (self.frecuencia or '').strip()
+        base = self.fecha_aplicacion.date()
+        dias = {'Semanal': 7, 'Quincenal': 15}.get(f)
+        meses = {'Mensual': 1, 'Cada 3 Meses': 3, 'Cada 6 Meses': 6, 'Cada 8 Meses': 8, 'Anual': 12}.get(f)
+        m = re.match(r"^Cada (\d+) días$", f)
+        if dias: return base + timedelta(days=dias)
+        if m: return base + timedelta(days=int(m.group(1)))
+        if meses:
+            mes = base.month - 1 + meses
+            anio = base.year + mes // 12
+            mes = mes % 12 + 1
+            ultimo_dia = calendar.monthrange(anio, mes)[1]   # evita 31 de febrero
+            return base.replace(year=anio, month=mes, day=min(base.day, ultimo_dia))
+        return None
+
+    # Días que faltan para la próxima dosis (negativo = ya venció)
+    @property
+    def dias_restantes(self):
+        prox = self.proxima_fecha
+        return (prox - datetime.now().date()).days if prox else None
+
 class Cita(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     fecha = db.Column(db.String(20), nullable=False) # Formato YYYY-MM-DD
@@ -322,54 +348,55 @@ def editar_apariencia():
     flash(f"Apariencia actualizada para el grupo: {rol_destino.upper()}", "success")
     return redirect(url_for('admin'))
 
-@app.route('/registro', methods=['GET', 'POST'])
-def registro():
-    if request.method == 'POST':
-        nombre = request.form.get('nombre')
-        correo = request.form.get('correo')
-        password = request.form.get('password')
-        
-        password_encriptada = generate_password_hash(password)
-        nuevo_usuario = Usuario(nombre=nombre, correo=correo, password=password_encriptada, rol='usuario')
-        db.session.add(nuevo_usuario)
-        db.session.commit()
-        
-        flash('Registro exitoso. Ahora puedes iniciar sesión.', 'success')
-        return redirect(url_for('login'))
-    return render_template('registro.html')
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        correo_o_codigo = request.form.get('credencial')
-        password = request.form.get('password')
-        
-        usuario = Usuario.query.filter((Usuario.correo == correo_o_codigo) | (Usuario.codigo_empleado == correo_o_codigo)).first()
-        
-        if usuario and check_password_hash(usuario.password, password):
-            session['usuario_id'] = usuario.id
-            session['rol'] = usuario.rol
-            session['nombre'] = usuario.nombre
-            
-            if usuario.rol == 'admin': return redirect(url_for('admin'))
-            elif usuario.rol == 'veterinario': return redirect(url_for('veterinario'))
-            elif usuario.rol == 'rescatista': return redirect(url_for('rescatista'))
-            else: return redirect(url_for('usuario'))
-        else:
-            flash('Credenciales incorrectas. Intenta de nuevo.', 'error')
-    return render_template('login.html')
 
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('inicio'))
 
+@app.route('/')
+def inicio():
+    return render_template('login/inicio.html', modo='inicio')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        # ... (Tu código de validación de base de datos se queda igualito)
+        correo_o_codigo = request.form.get('credencial')
+        password = request.form.get('password')
+        usuario = Usuario.query.filter((Usuario.correo == correo_o_codigo) | (Usuario.codigo_empleado == correo_o_codigo)).first()
+        if usuario and check_password_hash(usuario.password, password):
+            session['usuario_id'] = usuario.id
+            session['rol'] = usuario.rol
+            session['nombre'] = usuario.nombre
+            if usuario.rol == 'admin': return redirect(url_for('admin'))
+            elif usuario.rol == 'veterinario': return redirect(url_for('veterinario'))
+            elif usuario.rol == 'rescatista': return redirect(url_for('rescatista'))
+            else: return redirect(url_for('usuario'))
+        else:
+            flash('Credenciales incorrectas. Intenta de nuevo.', 'error')
+    
+    return render_template('login/inicio.html', modo='login')
+
+@app.route('/registro', methods=['GET', 'POST'])
+def registro():
+    if request.method == 'POST':
+        # ... (Tu código de guardar en BD se queda igualito)
+        nombre = request.form.get('nombre')
+        correo = request.form.get('correo')
+        password = request.form.get('password')
+        password_encriptada = generate_password_hash(password)
+        nuevo_usuario = Usuario(nombre=nombre, correo=correo, password=password_encriptada, rol='usuario')
+        db.session.add(nuevo_usuario)
+        db.session.commit()
+        flash('Registro exitoso. Ahora puedes iniciar sesión.', 'success')
+        return redirect(url_for('login'))
+        
+    return render_template('login/inicio.html', modo='registro')
 
 # ==========================================
 # 3. RUTAS DE VISUALIZACIÓN
 # ==========================================
-@app.route('/')
-def inicio(): return render_template('inicio.html')
 
 @app.route('/rescatista')
 def rescatista(): 
@@ -701,6 +728,86 @@ def crear_rescate():
     db.session.commit()
     return redirect(url_for('rescatista'))
 
+
+# ==========================================
+# CATALOGO DE ESPECIES (compartido: Rescatista y Veterinario)
+# ==========================================
+class Especie(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(30), nullable=False, unique=True)
+
+MAX_ESPECIE = 30
+ROLES_ESPECIES = ('rescatista', 'veterinario', 'admin')
+RE_ESPECIE = re.compile(r"^(?:[^\W_]|[ \-])+$")   # letras (con tildes y ñ), números, espacio y guion
+
+# Deja la lista disponible en TODAS las plantillas: {{ especies }} y {{ especies_lista }}
+@app.context_processor
+def inyectar_especies():
+    try:
+        todas = Especie.query.order_by(Especie.nombre).all()
+    except Exception:
+        return {'especies': [], 'especies_lista': []}
+    return {'especies': todas, 'especies_lista': [{'id': e.id, 'nombre': e.nombre} for e in todas]}
+
+def respuesta_especies(mensaje, tipo='ok', cambio=None):
+    """Responde dentro de un iframe oculto: la página se actualiza sin recargarse (no se pierde lo escrito)."""
+    lista = [{'id': e.id, 'nombre': e.nombre} for e in Especie.query.order_by(Especie.nombre).all()]
+    return render_template('especies_respuesta.html', lista=lista, mensaje=mensaje, tipo=tipo, cambio=cambio)
+
+def validar_nombre_especie(valor, excepto_id=None):
+    """Devuelve (nombre_limpio, None) o (None, mensaje_de_error)."""
+    nombre = ' '.join((valor or '').split())
+    if not nombre:
+        return None, "Escribe el nombre de la especie."
+    if len(nombre) > MAX_ESPECIE:
+        return None, f"La especie no puede pasar de {MAX_ESPECIE} caracteres (tiene {len(nombre)})."
+    if not RE_ESPECIE.match(nombre):
+        return None, "La especie tiene caracteres especiales no permitidos."
+    nombre = nombre[:1].upper() + nombre[1:].lower()
+    repetida = Especie.query.filter(db.func.lower(Especie.nombre) == nombre.lower())
+    if excepto_id:
+        repetida = repetida.filter(Especie.id != excepto_id)
+    if repetida.first():
+        return None, f"La especie '{nombre}' ya existe."
+    return nombre, None
+
+@app.route('/especies/agregar', methods=['POST'])
+def agregar_especie():
+    if session.get('rol') not in ROLES_ESPECIES: return redirect(url_for('login'))
+    nombre, error = validar_nombre_especie(request.form.get('nombre'))
+    if error: return respuesta_especies(error, 'error')
+    db.session.add(Especie(nombre=nombre))
+    db.session.commit()
+    return respuesta_especies(f"Especie '{nombre}' agregada.")
+
+@app.route('/especies/editar/<int:especie_id>', methods=['POST'])
+def editar_especie(especie_id):
+    if session.get('rol') not in ROLES_ESPECIES: return redirect(url_for('login'))
+    esp = Especie.query.get(especie_id)
+    if not esp: return respuesta_especies("Esa especie ya no existe.", 'error')
+    nombre, error = validar_nombre_especie(request.form.get('nombre'), excepto_id=esp.id)
+    if error: return respuesta_especies(error, 'error')
+    viejo = esp.nombre
+    esp.nombre = nombre
+    # Corrige también a los animales y rescates que ya tenían el nombre mal escrito
+    Paciente.query.filter_by(especie=viejo).update({'especie': nombre})
+    Rescate.query.filter_by(especie=viejo).update({'especie': nombre})
+    db.session.commit()
+    return respuesta_especies(f"Especie actualizada: '{viejo}' ahora es '{nombre}'.", cambio={'de': viejo, 'a': nombre})
+
+@app.route('/especies/borrar/<int:especie_id>', methods=['POST'])
+def borrar_especie(especie_id):
+    if session.get('rol') not in ROLES_ESPECIES: return redirect(url_for('login'))
+    esp = Especie.query.get(especie_id)
+    if not esp: return respuesta_especies("Esa especie ya no existe.", 'error')
+    if Especie.query.count() <= 1:
+        return respuesta_especies("Debe quedar al menos una especie en la lista.", 'error')
+    nombre = esp.nombre
+    db.session.delete(esp)
+    db.session.commit()
+    return respuesta_especies(f"Especie '{nombre}' borrada. Los animales ya registrados conservan su especie.")
+
+
 @app.route('/crear_cita', methods=['POST'])
 def crear_cita():
     if 'usuario_id' not in session or session['rol'] != 'veterinario': return redirect(url_for('login'))
@@ -764,6 +871,30 @@ def crear_consulta():
     paciente_id = request.form.get('paciente_existente_id')
     rescate_id = request.form.get('rescate_id') or None
     
+    # La especie de un animal NUEVO debe estar en la lista de especies
+    especie_oficial = None
+    if not paciente_id:
+        especie_texto = (request.form.get('especie') or '').strip()
+        existente = Especie.query.filter(db.func.lower(Especie.nombre) == especie_texto.lower()).first()
+        if not existente:
+            flash("La especie '" + especie_texto + "' no está en la lista. Agrégala con el botón de engranaje junto al campo Especie.", "error")
+            return redirect(url_for('veterinario'))
+        especie_oficial = existente.nombre
+
+            # Campos obligatorios: si falta alguno, no se guarda nada
+    obligatorios = {
+        'temp': 'La temperatura',
+        'peso': 'El peso',
+        'diagnostico': 'El diagnóstico',
+        'tratamiento': 'El tratamiento',
+        'sintomas_ocultos': 'Al menos un síntoma',
+    }
+    for campo, etiqueta in obligatorios.items():
+        if not (request.form.get(campo) or '').strip():
+            flash(etiqueta + ' es obligatorio.', 'error')
+            return redirect(url_for('veterinario'))
+        
+    
     # 1. Atrapar la foto de perfil (si subieron una)
     foto_perfil = None
     if 'foto_perfil' in request.files and request.files['foto_perfil'].filename != '':
@@ -775,7 +906,7 @@ def crear_consulta():
     if not paciente_id:
         nuevo_paciente = Paciente(
             nombre=request.form.get('nombre_paciente'), 
-            especie=request.form.get('especie'), 
+            especie=especie_oficial, 
             sexo=request.form.get('sexo'), 
             disponible_adopcion=request.form.get('adopcion_status', 'No Aplica'),
             foto=foto_perfil,
@@ -1109,9 +1240,20 @@ def editar_mascota(paciente_id):
         
     return redirect(url_for('usuario'))
 
-if __name__ == '__main__':
+if __name__ == '__main__':    
     with app.app_context():
         db.create_all()
+        
+        # Catálogo de especies: solo la primera vez (Perro, Gato y las que ya existían en pacientes/rescates)
+        if not Especie.query.first():
+            vistas = set()
+            for nombre in ['Perro', 'Gato'] + [x.especie for x in Paciente.query.all()] + [x.especie for x in Rescate.query.all()]:
+                nombre = ' '.join((nombre or '').split())
+                if nombre and len(nombre) <= MAX_ESPECIE and nombre.lower() not in vistas:
+                    vistas.add(nombre.lower())
+                    db.session.add(Especie(nombre=nombre[:1].upper() + nombre[1:].lower()))
+            db.session.commit()
+
         if not Usuario.query.filter_by(rol='admin').first():
             db.session.add(Usuario(nombre="Administrador Principal", correo="admin@huellitas.com", codigo_empleado="ADMIN-001", telefono="555-0000", password=generate_password_hash("123"), rol="admin"))
 

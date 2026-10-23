@@ -74,7 +74,8 @@
     lucide.createIcons();
   }
   let evidenciaFiles = new DataTransfer(); 
-  const fechaHoy = "{{ hoy }}"; 
+  
+  const fechaHoy = document.getElementById('veterinario-config').dataset.fechaHoy;
 
   // --- VISOR DE FOTO PERFIL ---
   function previewImage(event, imgId, containerId) {
@@ -152,6 +153,7 @@
   function removeSintoma(index) { sintomas.splice(index, 1); renderSintomas(); }
   
   function renderSintomas() {
+    setTimeout(actualizarBotonGuardar, 0);
     document.getElementById('contenedor-sintomas').innerHTML = sintomas.map((s, i) => `<span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 shadow-sm">` + s + ` <i data-lucide="x" class="w-3 h-3 cursor-pointer hover:text-red-500" onclick="removeSintoma(` + i + `)"></i></span>`).join('');
     lucide.createIcons();
   }
@@ -162,6 +164,56 @@
       const caja = document.getElementById('caja-personalizado');
       if(val === 'Personalizado') caja.classList.remove('hidden');
       else caja.classList.add('hidden');
+  }
+
+  
+
+    // --- REFUERZO CON CONFIRMACIÓN (ventana del sistema: Aceptar / Cancelar) ---
+  let refuerzoPendiente = null;
+
+  function escaparHtml(texto) {
+    const div = document.createElement('div');
+    div.textContent = texto;
+    return div.innerHTML;
+  }
+
+  function confirmarRefuerzo(boton) {
+    refuerzoPendiente = { nombre: boton.dataset.nombre, frecuencia: boton.dataset.frecuencia, boton: boton };
+    openModal(`
+      <div class="text-center p-4 max-w-md mx-auto">
+        <div class="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <i data-lucide="syringe" class="w-10 h-10 text-indigo-500"></i>
+        </div>
+        <h2 class="text-2xl font-black text-indigo-950 mb-2">¿Aplicar refuerzo?</h2>
+        <p class="text-sm text-slate-500 mb-8 leading-relaxed">Se agregará un refuerzo de <b>` + escaparHtml(refuerzoPendiente.nombre) + `</b> (` + escaparHtml(refuerzoPendiente.frecuencia) + `) a esta consulta con la fecha de hoy.</p>
+        <div class="flex gap-4">
+          <button type="button" onclick="cancelarRefuerzo()" class="w-1/2 py-3.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition">Cancelar</button>
+          <button type="button" onclick="aceptarRefuerzo()" class="w-1/2 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition">Aceptar</button>
+        </div>
+      </div>
+    `);
+    lucide.createIcons();
+  }
+
+  function cancelarRefuerzo() {
+    refuerzoPendiente = null;
+    closeModal();
+  }
+
+  function aceptarRefuerzo() {
+    if (!refuerzoPendiente) return;
+    const r = refuerzoPendiente;
+    refuerzoPendiente = null;
+    closeModal();
+    aplicarRefuerzo(r.nombre, r.frecuencia);
+
+    // Si entró a la consulta, el botón queda marcado para no repetirlo
+    if (vacunas.some(v => v.nombre.toLowerCase() === r.nombre.toLowerCase())) {
+      r.boton.disabled = true;
+      r.boton.className = 'flex-shrink-0 bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-2 rounded-lg border border-emerald-200 flex items-center gap-1 cursor-default';
+      r.boton.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i> Refuerzo agregado';
+      lucide.createIcons();
+    }
   }
 
   
@@ -182,6 +234,34 @@
     
     addVacuna();
   }
+
+  
+  // --- BLOQUEO DEL BOTÓN "GUARDAR EXPEDIENTE" HASTA QUE TODO ESTÉ COMPLETO Y CORRECTO ---
+  const CAMPOS_AUXILIARES = ['input-sintoma', 'input-vacuna', 'input-personalizado-dias'];
+
+  // Devuelve la lista de lo que falta o está mal (vacía = se puede guardar)
+  function camposFaltantes() {
+    const faltan = [];
+    document.querySelectorAll('#form-consulta-vet [data-regla]').forEach(campo => {
+      if (campo.readOnly || CAMPOS_AUXILIARES.includes(campo.id)) return;
+      if (revisarCampo(campo)) faltan.push((campo.dataset.etiqueta || 'Un campo').replace(/^(El|La|Los|Las) /, ''));
+    });
+    if (sintomas.length === 0 && !document.getElementById('input-sintoma').value.trim()) faltan.push('Síntomas');
+    return faltan;
+  }
+
+  function actualizarBotonGuardar() {
+    const boton = document.getElementById('btn-guardar-expediente');
+    const msg = document.getElementById('msg-guardar');
+    if (!boton) return;
+    const faltan = camposFaltantes();
+    boton.disabled = faltan.length > 0;
+    msg.textContent = faltan.length ? 'Falta completar o corregir: ' + faltan.join(', ') + '.' : '';
+  }
+  document.addEventListener('input', (e) => { if (e.target.closest && e.target.closest('#form-consulta-vet')) actualizarBotonGuardar(); });
+  window.addEventListener('DOMContentLoaded', actualizarBotonGuardar);
+
+
 
   // --- BLOQUEO Y AUTO-GUARDADO DEL FORMULARIO ---
   function prepararEnvio() {
@@ -285,8 +365,7 @@
     const fotoContainer = document.getElementById('preview-perfil-container');
     const fotoImg = document.getElementById('preview-perfil');
     if (fotoPerfil && fotoPerfil.trim() !== '' && fotoPerfil !== 'None') {
-        fotoImg.src = "{{ url_for('static', filename='uploads/') }}" + fotoPerfil;
-        fotoContainer.classList.remove('hidden');
+      fotoImg.src = window.VETERINARIO_CONFIG.uploadsUrl + fotoPerfil;fotoContainer.classList.remove('hidden');
     } else {
         fotoContainer.classList.add('hidden');
         fotoImg.src = '';
@@ -316,6 +395,7 @@
     }
     document.getElementById('form-especie').value = especie;
     document.getElementById('form-sexo').value = sexo;
+    actualizarBotonGuardar();
   }
 
   function buscarPacientes() {
@@ -330,8 +410,8 @@
   function filtrarCitas() {
     const filtro = document.getElementById('filtro-citas').value;
     const items = document.querySelectorAll('.cita-item');
-    const hoy = new Date("{{ hoy }}");
-    items.forEach(item => {
+    const hoy = new Date(fechaHoy);
+      items.forEach(item => {
       const fechaCita = new Date(item.getAttribute('data-fecha'));
       const diffTime = fechaCita - hoy;
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -357,7 +437,7 @@
       <div class="flex justify-between items-center mb-6">
         <h2 class="text-xl font-bold text-indigo-900 flex items-center gap-2"><i data-lucide="calendar-plus"></i> Agendar Cita (Paciente #${pacienteId})</h2>
       </div>
-      <form action="{{ url_for('crear_cita') }}" method="POST" class="space-y-4">
+      <form action="${window.VETERINARIO_CONFIG.crearCitaUrl}" method="POST" class="space-y-4">
         <input type="hidden" name="paciente_id" value="${pacienteId}">
         <div><label class="block text-sm font-bold mb-1 text-slate-800">Fecha de la cita</label><input type="date" name="fecha" required class="w-full border rounded-lg p-3 outline-none text-slate-600 bg-slate-50"></div>
         <div><label class="block text-sm font-bold mb-1 text-slate-800">Motivo de la visita</label><input type="text" name="motivo" required placeholder="Ej. Retiro de puntos..." class="w-full border rounded-lg p-3 outline-none"></div>

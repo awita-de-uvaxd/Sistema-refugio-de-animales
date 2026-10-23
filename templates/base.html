@@ -7,12 +7,10 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
-
     .mask-edges {
         -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
         mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
     }
-
     .tab-content { display: none; }
     .tab-content.active { display: block; }
     .scroll-hide::-webkit-scrollbar { display: none; }
@@ -39,7 +37,6 @@
     </div>
   </div>
 
-
   <!-- Header Dinámico y Multirrol -->
   <header class="text-white shadow-lg sticky top-0 z-40 transition-colors duration-500 overflow-hidden" style="background-color: {{ config_sitio.color_fondo if config_sitio else '#1e1b4b' }};">
     
@@ -49,22 +46,22 @@
         {% set banners = config_sitio.banner.split(',') %}
         
         {% if config_sitio.banner_style == 'mosaic' %}
-          <!-- Estilo Mosaico -->
-          <div class="w-full h-full" style="background-image: url('{{ url_for('static', filename='uploads/' ~ banners[0]) }}'); background-repeat: repeat; background-size: {{ config_sitio.mosaic_size }}px;"></div>
+          <!-- Estilo Mosaico: Simplificado para evitar alertas de VS Code -->
+          <div class="w-full h-full" style="background-image: url('/static/uploads/{{ banners[0] }}'); background-repeat: repeat; background-size: {{ config_sitio.mosaic_size }}px;"></div>
         
         {% elif config_sitio.banner_style == 'static' %}
           <!-- Estilo Estático (Cubre todo el espacio) -->
-          <img src="{{ url_for('static', filename='uploads/' ~ banners[0]) }}" class="w-full h-full object-cover">
+          <img src="/static/uploads/{{ banners[0] }}" class="w-full h-full object-cover">
         
         {% else %}
           <!-- Estilo Carrusel -->
           {% for b in banners %}
-            <img src="{{ url_for('static', filename='uploads/' ~ b) }}" class="banner-slide absolute w-full h-full object-cover transition-opacity duration-1000 {% if not loop.first %}opacity-0{% else %}opacity-100{% endif %}">
+            <img src="/static/uploads/{{ b }}" class="banner-slide absolute w-full h-full object-cover transition-opacity duration-1000 {% if not loop.first %}opacity-0{% else %}opacity-100{% endif %}">
           {% endfor %}
         {% endif %}
       </div>
       
-      <!-- Script del Carrusel (Solo si es slideshow y hay más de 1 foto) -->
+      <!-- Script del Carrusel -->
       {% if config_sitio.banner_style == 'slideshow' and banners|length > 1 %}
         <script>
           document.addEventListener('DOMContentLoaded', () => {
@@ -89,7 +86,7 @@
       <div class="flex items-center gap-3">
         <div class="bg-white/10 rounded-xl text-white backdrop-blur-sm border border-white/20 flex items-center justify-center overflow-hidden shadow-sm transition-all" style="width: {{ config_sitio.logo_size if config_sitio else 45 }}px; height: {{ config_sitio.logo_size if config_sitio else 45 }}px; padding: 4px;">
           {% if config_sitio and config_sitio.logo %}
-            <img src="{{ url_for('static', filename='uploads/' ~ config_sitio.logo) }}" class="w-full h-full object-contain">
+            <img src="/static/uploads/{{ config_sitio.logo }}" class="w-full h-full object-contain">
           {% else %}
             <i data-lucide="paw-print" class="w-full h-full text-amber-400 drop-shadow-md"></i>
           {% endif %}
@@ -100,18 +97,30 @@
         </div>
       </div>
       
-      <!-- Controles de Sesión -->
+      <!-- Controles de Sesión (Píldora Moderna Clicable) -->
       <div class="flex items-center gap-4">
         {% if 'usuario_id' in session %}
-          <div class="text-right drop-shadow-md">
-            <p class="text-[10px] text-white/70 font-bold uppercase tracking-wider leading-none">{{ session['rol'] }}</p>
-            <p class="text-sm font-black text-amber-400">{{ session.get('nombre', 'Usuario') }}</p>
-          </div>
-          <a href="{{ url_for('logout') }}" class="bg-black/20 hover:bg-red-500/90 backdrop-blur-sm border border-white/20 text-white p-2 rounded-lg transition shadow-sm" title="Cerrar Sesión">
-            <i data-lucide="log-out" class="w-4 h-4"></i>
-          </a>
+          
+          <!-- Lógica inteligente para el OnClick: Si es admin usa MainTab, si no, usa Tab Normal -->
+          <button onclick="{% if session['rol'] == 'admin' %}switchMainTab('perfil'){% else %}switchTab('{{ session['rol'] }}', 'perfil'){% endif %}" class="flex items-center gap-3 pr-4 pl-1.5 py-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 rounded-full shadow-lg transition-all group">
+            
+            <div class="w-9 h-9 rounded-full overflow-hidden bg-white/80 border-2 border-white/50 shadow-sm flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+              {% if usuario_data and usuario_data.foto_perfil and usuario_data.foto_perfil != 'default_user.png' %}
+                <img src="/static/uploads/{{ usuario_data.foto_perfil }}" class="w-full h-full object-cover">
+              {% else %}
+                <i data-lucide="user" class="w-5 h-5 text-indigo-900"></i>
+              {% endif %}
+            </div>
+            
+            <div class="text-left hidden sm:block">
+              <p class="text-[9px] text-white/70 font-black uppercase tracking-widest leading-none mb-0.5">{{ session['rol'] }}</p>
+              <p class="text-sm font-bold text-white leading-none group-hover:text-amber-300 transition-colors">Hola, {{ session['nombre'].split()[0] if session.get('nombre') else 'Usuario' }}</p>
+            </div>
+
+          </button>
         {% endif %}
       </div>
+      
     </div>
   </header>
 
@@ -120,7 +129,6 @@
   </main>
 
   <script>
-    // Lógica ÚNICAMENTE visual (Cambio de pestañas y modales)
     function switchTab(role, tabId) {
       document.querySelectorAll(`.tab-content-${role}`).forEach(el => el.classList.remove('active'));
       document.querySelectorAll(`.tab-btn-${role}`).forEach(btn => { btn.classList.remove('border-indigo-600', 'text-indigo-600'); btn.classList.add('border-transparent', 'text-slate-500'); });

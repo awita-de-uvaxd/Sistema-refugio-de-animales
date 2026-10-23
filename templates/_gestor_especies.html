@@ -1,0 +1,113 @@
+<!--#Este template contiene el código del Gestor de especies, que es compartido entre Rescatista y Veterinario. Se debe incluir UNA sola vez por página, al final del body.
+-->
+{# Gestor de especies compartido (Rescatista y Veterinario). Incluir UNA sola vez por página. #}
+<iframe name="especies-frame" class="hidden" tabindex="-1" aria-hidden="true"></iframe>
+<script id="datos-especies" type="application/json">{{ especies_lista|tojson }}</script>
+<script>
+  let ESPECIES = JSON.parse(document.getElementById('datos-especies').textContent);
+  const URL_ESPECIES = {
+    agregar: "{{ url_for('agregar_especie') }}",
+    editar: "{{ url_for('editar_especie', especie_id=0) }}",
+    borrar: "{{ url_for('borrar_especie', especie_id=0) }}"
+  };
+  const urlEspecie = (base, id) => base.replace(/0$/, id);
+  const escEsp = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  // Actualiza los campos de especie de la página SIN tocar lo demás que se haya escrito
+  function refrescarCamposEspecie(cambio) {
+    document.querySelectorAll('select[data-especie-campo]').forEach(sel => {
+      let actual = sel.value;
+      if (cambio && cambio.a && actual === cambio.de) actual = cambio.a;   // si editaste la que estaba elegida
+      sel.innerHTML = ESPECIES.map(e => '<option value="' + escEsp(e.nombre) + '">' + escEsp(e.nombre) + '</option>').join('');
+      if (ESPECIES.some(e => e.nombre === actual)) sel.value = actual;
+    });
+    document.querySelectorAll('input[data-especie-campo]').forEach(inp => {
+      if (cambio && cambio.a && inp.value === cambio.de) inp.value = cambio.a;
+    });
+    
+  }
+
+    // --- LISTA DESPLEGABLE PROPIA del campo Especie (Veterinario), con el diseño del sistema ---
+  function abrirMenuEspecies(mostrarTodas) {
+    const campo = document.getElementById('form-especie');
+    const menu = document.getElementById('menu-especies');
+    if (!campo || !menu || campo.readOnly) return;
+    const filtro = mostrarTodas ? '' : campo.value.trim().toLowerCase();
+    const items = ESPECIES.filter(e => e.nombre.toLowerCase().includes(filtro));
+    menu.innerHTML = items.length
+      ? items.map(e => '<button type="button" data-nombre="' + escEsp(e.nombre) + '" onmousedown="elegirEspecie(this)" class="block w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition">' + escEsp(e.nombre) + '</button>').join('')
+      : '<p class="px-4 py-3 text-xs text-slate-400 italic">No está en la lista. Usa el engranaje para agregarla.</p>';
+    menu.classList.remove('hidden');
+  }
+
+  
+  function elegirEspecie(boton) {
+    document.getElementById('form-especie').value = boton.dataset.nombre;
+    cerrarMenuEspecies();
+    if (typeof actualizarBotonGuardar === 'function') actualizarBotonGuardar();
+  }
+
+
+
+  function cerrarMenuEspecies() {
+    const menu = document.getElementById('menu-especies');
+    if (menu) menu.classList.add('hidden');
+  }
+
+
+  function cerrarMenuEspeciesTarde() { setTimeout(cerrarMenuEspecies, 150); }   // da tiempo a registrar el clic
+
+
+  // Lo llama especies_respuesta.html desde el iframe oculto
+  function especiesActualizadas(lista, mensaje, tipo, cambio) {
+    ESPECIES = lista;
+    refrescarCamposEspecie(cambio);
+    abrirGestorEspecies(mensaje, tipo);
+  }
+
+  function abrirGestorEspecies(mensaje, tipo) {
+    const aviso = mensaje
+      ? '<div class="mb-4 px-4 py-3 rounded-lg text-sm font-semibold border ' + (tipo === 'error' ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800') + '">' + escEsp(mensaje) + '</div>'
+      : '';
+    const filas = ESPECIES.map(e => `
+      <div class="flex gap-2 items-center">
+        <form method="POST" action="${urlEspecie(URL_ESPECIES.editar, e.id)}" target="especies-frame" class="flex gap-2 flex-1">
+          <input type="text" name="nombre" value="${escEsp(e.nombre)}" maxlength="30" required class="w-full border rounded-lg p-2 text-sm outline-none bg-slate-50">
+          <button type="submit" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-xs font-bold px-3 rounded-lg transition">Guardar</button>
+        </form>
+        <button type="button" onclick="confirmarBorrarEspecie(${e.id})" class="text-red-500 hover:bg-red-50 p-2 rounded-lg transition" title="Borrar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+      </div>`).join('');
+
+    openModal(`
+      <div class="p-4 max-w-md mx-auto">
+        <h2 class="text-2xl font-black text-indigo-950 mb-1">Especies</h2>
+        <p class="text-sm text-slate-500 mb-5">La lista es la misma en Rescatista y Veterinario.</p>
+        ${aviso}
+        <form method="POST" action="${URL_ESPECIES.agregar}" target="especies-frame" class="flex gap-2 mb-5">
+          <input type="text" name="nombre" placeholder="Nueva especie (ej. Conejo)" maxlength="30" required class="w-full border rounded-lg p-2.5 text-sm outline-none">
+          <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 rounded-lg shadow-sm transition">Agregar</button>
+        </form>
+        <div class="space-y-2 max-h-72 overflow-y-auto pr-1">${filas}</div>
+        <button type="button" onclick="closeModal()" class="w-full mt-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition">Cerrar</button>
+      </div>
+    `);
+  }
+
+  function confirmarBorrarEspecie(id) {
+    const esp = ESPECIES.find(e => e.id === id);
+    if (!esp) return;
+    openModal(`
+      <form method="POST" action="${urlEspecie(URL_ESPECIES.borrar, id)}" target="especies-frame" class="text-center p-4 max-w-md mx-auto">
+        <div class="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <i data-lucide="trash-2" class="w-10 h-10 text-red-500"></i>
+        </div>
+        <h2 class="text-2xl font-black text-indigo-950 mb-2">¿Borrar esta especie?</h2>
+        <p class="text-sm text-slate-500 mb-8 leading-relaxed">Se quitará <b>${escEsp(esp.nombre)}</b> de la lista. Los animales ya registrados conservan su especie.</p>
+        <div class="flex gap-4">
+          <button type="button" onclick="abrirGestorEspecies()" class="w-1/2 py-3.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition">Cancelar</button>
+          <button type="submit" class="w-1/2 py-3.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-md transition">Borrar</button>
+        </div>
+      </form>
+    `);
+  }
+</script>

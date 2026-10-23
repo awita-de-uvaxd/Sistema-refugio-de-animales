@@ -1,0 +1,25 @@
+<div id="admin-logs" class="tab-content-main hidden bg-white p-6 rounded-xl shadow-sm space-y-7">
+  <div>
+    <h2 class="text-xl font-black text-indigo-900">Personal y auditoría de empleados</h2>
+    <p class="text-sm text-slate-500">Altas, correos asociados, restauración de accesos y bajas seguras.</p>
+  </div>
+  <div class="bg-slate-50 rounded-2xl p-5 border">
+    <h3 class="font-bold text-indigo-900 mb-4">Crear empleado</h3>
+    <form method="POST" action="{{ url_for('gestion_crear_cuenta') }}" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <input type="hidden" name="_csrf_gestion" value="{{ csrf_gestion() }}">
+      <label class="text-xs font-bold">Nombre completo<input name="nombre" minlength="2" maxlength="100" required class="block w-full p-3 border rounded-xl bg-white mt-1"></label>
+      <label class="text-xs font-bold">Correo institucional<input type="email" name="correo" required maxlength="100" class="block w-full p-3 border rounded-xl bg-white mt-1" placeholder="persona@huellitas.com"></label>
+      <label class="text-xs font-bold">Rol<select name="rol" class="block w-full p-3 border rounded-xl bg-white mt-1"><option value="rescatista">Rescatista</option><option value="veterinario">Veterinario</option></select></label>
+      <label class="text-xs font-bold">Código de acceso<input name="codigo" minlength="3" maxlength="20" required placeholder="RES-002" class="block w-full p-3 border rounded-xl bg-white mt-1"></label>
+      <label class="text-xs font-bold md:col-span-2">Contraseña temporal (mínimo 12 caracteres)
+      <div class="flex gap-2 mt-1"><input type="password" name="password" minlength="12" required autocomplete="new-password" class="w-full p-3 border rounded-xl bg-white"><button type="button" onclick="generarPasswordCuenta(this)" class="px-3 bg-slate-200 rounded-xl">Generar</button></div></label>
+      <button class="md:col-span-2 bg-indigo-700 text-white font-bold px-4 py-3 rounded-xl">Registrar empleado</button>
+    </form>
+  </div>
+  <h3 class="font-bold text-lg text-indigo-900">Empleados registrados</h3>
+  <div class="space-y-3">
+  {% for cuenta in cuentas_empleados %}
+    {% include 'admin_modulos/tarjeta_cuenta.html' %}
+  {% else %}<p class="p-6 rounded-xl bg-slate-50 text-slate-500">No hay empleados registrados.</p>{% endfor %}
+  </div>
+</div>

@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- CONTENEDOR MAESTRO: Controla la posición de todo mediante la clase 'auth-active' -->
+<div id="master-container" class="relative w-full max-w-5xl mx-auto h-[620px] mt-6 {% if modo != 'inicio' %} auth-active {% endif %}">
+
+  <!-- ========================================== -->
+  <!-- 1. EL PERRITO (Aparece y se queda a la izquierda) -->
+  <!-- ========================================== -->
+  <div id="dog-section" class="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 w-1/2 justify-center z-0 transition-all duration-1000 ease-in-out">
+    <div id="dog-wrapper" class="transition-all duration-700 face-right {% if modo != 'registro' %}sleeping{% else %}awake{% endif %} transform scale-[0.55] transform-origin-center">
+      <div class="main">
+        <div class="dog">
+          <div class="dog__paws">
+            <div class="dog__bl-leg leg"><div class="dog__bl-paw paw"></div><div class="dog__bl-top top"></div></div>
+            <div class="dog__fl-leg leg"><div class="dog__fl-paw paw"></div><div class="dog__fl-top top"></div></div>
+            <div class="dog__fr-leg leg"><div class="dog__fr-paw paw"></div><div class="dog__fr-top top"></div></div>
+          </div>
+          <div class="dog__body"><div class="dog__tail"></div></div>
+          <div class="dog__head">
+            <div class="dog__snout">
+              <div class="dog__nose"></div>
+              <div class="dog__eyes"><div class="dog__eye-l"></div><div class="dog__eye-r"></div></div>
+            </div>
+          </div>
+          <div class="dog__head-c"><div class="dog__ear-l"></div><div class="dog__ear-r"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 2. LA TARJETA TRANSFORMABLE                -->
+  <!-- ========================================== -->
+  <!-- Inicialmente en el centro. La clase CSS lo moverá a la derecha -->
+  <div id="card-section" class="absolute top-1/2 -translate-y-1/2 w-full max-w-md transition-all duration-1000 ease-in-out z-10" style="perspective: 1000px;">
+    
+    <div id="auth-card" class="w-full h-[550px] relative transition-transform duration-1000 transform-style-3d {% if modo == 'registro' %}is-flipped{% endif %}">
+      
+      <!-- LADO FRONTAL: CAPAS DESVANECIBLES (Inicio y Login) -->
+      <div id="face-front" class="absolute w-full h-full backface-hidden rounded-[2rem] shadow-2xl border border-slate-100 bg-white overflow-hidden">
+
+        <!-- CAPA 1: MENÚ DE INICIO -->
+        <div id="layer-inicio" class="absolute inset-0 p-8 md:p-10 flex flex-col justify-center transition-opacity duration-700 bg-white z-20">
+          <div class="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <i data-lucide="paw-print" class="w-10 h-10"></i>
+          </div>
+          <h2 class="text-3xl font-black text-slate-800 text-center mb-3">Huellitas de Amor</h2>
+          <p class="text-sm text-slate-500 text-center mb-10 px-2">Únete a nuestra comunidad. Adopta, reporta emergencias o gestiona el refugio de manera segura.</p>
+          
+          <button type="button" onclick="transformarPantalla('login')" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-4 rounded-xl shadow-md transition text-lg flex items-center justify-center gap-2 mb-4">
+            <i data-lucide="log-in" class="w-5 h-5"></i> Iniciar Sesión
+          </button>
+          
+          <button type="button" onclick="transformarPantalla('registro')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-md transition text-lg flex items-center justify-center gap-2">
+            <i data-lucide="user-plus" class="w-5 h-5"></i> Crear Cuenta
+          </button>
+        </div>
+
+        <!-- CAPA 2: FORMULARIO DE LOGIN (Oculto al inicio) -->
+        <div id="layer-login" class="absolute inset-0 p-8 md:p-10 flex flex-col justify-center transition-opacity duration-700 bg-white z-10">
+          <div class="text-center mb-8">
+            <h2 class="text-3xl font-black text-slate-800">Hola de nuevo</h2>
+            <p class="text-sm text-slate-500 mt-2">Me alegra verte. Inicia sesión para continuar.</p>
+          </div>
+          
+          {% with messages = get_flashed_messages() %}
+            {% if messages %}
+              <div class="bg-red-100 text-red-700 px-4 py-2 rounded-lg mb-4 text-xs font-bold text-center">{{ messages[0] }}</div>
+            {% endif %}
+          {% endwith %}
+
+          <form action="{{ url_for('login') }}" method="POST" class="space-y-5">
+            <input type="text" name="credencial" required class="dog-trigger w-full border-2 border-slate-200 rounded-xl p-3.5 bg-slate-50 outline-none focus:border-amber-500 focus:bg-white transition font-semibold" placeholder="Correo o Código">
+            <input type="password" name="password" required class="dog-trigger w-full border-2 border-slate-200 rounded-xl p-3.5 bg-slate-50 outline-none focus:border-amber-500 focus:bg-white transition font-semibold" placeholder="Contraseña">
+            
+            <button type="submit" class="btn-31 w-full mt-4"><span class="text-container"><span class="text">Entrar al Sistema</span></span></button>
+          </form>
+          
+          <p class="text-center text-sm text-slate-500 mt-8">¿Aún no tienes cuenta? <br>
+            <button type="button" onclick="girarTarjeta('registro')" class="text-indigo-600 font-black hover:underline mt-1 cursor-pointer">¡Regístrate aquí!</button>
+          </p>
+        </div>
+
+      </div>
+
+      <!-- LADO TRASERO: REGISTRO (CON PARTÍCULAS DE FONDO) -->
+      <!-- IMPORTANTE: Añadí 'overflow-hidden' para que las partículas no se salgan de los bordes redondeados -->
+      <div id="face-back" class="absolute w-full h-full backface-hidden bg-white p-8 md:p-10 rounded-[2rem] shadow-2xl border border-slate-100 flex flex-col justify-center rotate-y-180 z-0 overflow-hidden">
+        
+        <!-- PARTÍCULAS FLOTANTES (Capa inferior z-0) -->
+        <div class="points_wrapper absolute inset-0 z-0 pointer-events-none">
+          <i class="point"></i><i class="point"></i><i class="point"></i><i class="point"></i><i class="point"></i>
+          <i class="point"></i><i class="point"></i><i class="point"></i><i class="point"></i><i class="point"></i>
+          <i class="point"></i><i class="point"></i><i class="point"></i><i class="point"></i><i class="point"></i>
+          <i class="point"></i><i class="point"></i><i class="point"></i><i class="point"></i><i class="point"></i>
+        </div>
+
+        <!-- CONTENIDO DEL FORMULARIO (Capa superior z-10) -->
+        <div class="relative z-10">
+          <div class="text-center mb-6">
+            <h2 class="text-3xl font-black text-slate-800">Únete a la familia</h2>
+            <p class="text-sm text-slate-500 mt-2">Crea tu cuenta de adoptante en segundos.</p>
+          </div>
+          
+          <form action="{{ url_for('registro') }}" method="POST" class="space-y-4" onsubmit="return prepararRegistro(event)">
+            <input type="hidden" name="nombre" id="nombre-final">
+            
+            <div class="grid grid-cols-2 gap-3">
+              <input type="text" id="reg-nombre" required class="dog-trigger w-full border-2 border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500 transition font-semibold" placeholder="Nombre">
+              <input type="text" id="reg-apellido" required class="dog-trigger w-full border-2 border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500 transition font-semibold" placeholder="Apellido">
+            </div>
+            
+            <input type="email" name="correo" required class="dog-trigger w-full border-2 border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500 transition font-semibold" placeholder="Correo Electrónico">
+            
+            <div class="grid grid-cols-2 gap-3">
+              <input type="password" id="reg-pass1" name="password" required oninput="validarPasswordsEnVivo()" class="dog-trigger w-full border-2 border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500 transition font-semibold" placeholder="Contraseña">
+              <input type="password" id="reg-pass2" required oninput="validarPasswordsEnVivo()" class="dog-trigger w-full border-2 border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500 transition font-semibold" placeholder="Confirmar">
+            </div>
+            
+            <p id="msg-pass" class="text-xs font-bold text-center mt-1 hidden"></p>
+            
+            <button type="submit" id="btn-submit-registro" class="btn-31 btn-31-indigo w-full mt-2">
+              <span class="text-container"><span class="text">Crear Cuenta</span></span>
+            </button>
+          </form>
+          
+          <p class="text-center text-sm text-slate-500 mt-6">
+            ¿Ya tienes una cuenta? <br>
+            <button type="button" onclick="girarTarjeta('login')" class="text-amber-500 font-black hover:underline mt-1 cursor-pointer">Vuelve a Iniciar Sesión</button>
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 3. CSS y Animaciones SPA                   -->
+<!-- ========================================== -->
+<style>
+  /* --- POSICIONAMIENTO DINÁMICO SPA --- */
+  /* Estado Inicial (Inicio): Tarjeta al centro, perro invisible a la izq */
+  #card-section { left: 50%; transform: translate(-50%, -50%); }
+  #dog-section { opacity: 0; transform: translate(-50px, -50%); pointer-events: none; }
+  
+  /* Desvanecimiento de Capas internas */
+  #layer-inicio { opacity: 1; pointer-events: auto; }
+  #layer-login { opacity: 0; pointer-events: none; }
+
+  /* ESTADO AUTH-ACTIVE (Se activa al picar login o registro en desktop) */
+  @media (min-width: 768px) {
+    .auth-active #card-section {
+      left: 100%;
+      transform: translate(calc(-100% - 1rem), -50%);
+    }
+  }
+  .auth-active #dog-section { opacity: 1; transform: translate(0, -50%); pointer-events: auto; }
+  .auth-active #layer-inicio { opacity: 0; pointer-events: none; }
+  .auth-active #layer-login { opacity: 1; pointer-events: auto; }
+
+
+  /* --- TARJETA Y BOTON --- */
+  .transform-style-3d { transform-style: preserve-3d; }
+  .backface-hidden { backface-visibility: hidden; }
+  .rotate-y-180 { transform: rotateY(180deg); }
+  .is-flipped { transform: rotateY(180deg); }
+
+  /* APAGAR CLICS EN LA CARA OCULTA PARA EVITAR BLOQUEOS */
+  #face-front { z-index: 2; pointer-events: auto; }
+  #face-back { z-index: 1; pointer-events: none; }
+  
+  .is-flipped #face-front { pointer-events: none !important; z-index: 1; }
+  .is-flipped #face-back { pointer-events: auto !important; z-index: 2; }
+
+  .btn-31 { -webkit-appearance: button; background-color: #f59e0b; color: #fff; cursor: pointer; font-size: 16px; font-weight: 900; border: none; border-radius: 1rem; padding: 1rem 2rem; position: relative; text-transform: uppercase; overflow: hidden; }
+  .btn-31-indigo { background-color: #4f46e5; }
+  .btn-31:before { --progress: 100%; background: #1e293b; clip-path: polygon(100% 0, var(--progress) var(--progress), 0 100%, 100% 100%); content: ""; inset: 0; position: absolute; transition: clip-path 0.3s ease; }
+  .btn-31:hover:before { --progress: 0%; }
+  .btn-31 .text-container { display: block; overflow: hidden; position: relative; }
+  .btn-31 .text { display: block; font-weight: 900; mix-blend-mode: screen; position: relative; }
+  .btn-31:hover .text { animation: move-up-alternate 0.3s ease forwards; }
+  @keyframes move-up-alternate { 0% { transform: translateY(0); } 50% { transform: translateY(80%); } 51% { transform: translateY(-80%); } to { transform: translateY(0); } }
+
+  /* --- PERRITO Y CORRECCIONES --- */
+  .main { position: relative; width: 23.5vmax; height: 23.5vmax; display: flex; justify-content: center; align-items: center; }
+  .leg { position: absolute; bottom: 0; width: 2vmax; height: 2.125vmax; }
+  .paw { position: absolute; bottom: 0; left: 0; width: 1.95vmax; height: 1.875vmax; overflow: hidden; }
+  .paw::before { content: ""; position: absolute; width: 3.75vmax; height: 3.75vmax; border-radius: 50%; }
+  .top { position: absolute; bottom: 0; left: 0.75vmax; height: 4.5vmax; width: 2.625vmax; border-top-left-radius: 1.425vmax; border-top-right-radius: 1.425vmax; transform-origin: bottom right; transform: rotateZ(90deg) translateX(-0.1vmax) translateY(1.5vmax); z-index: -1; background-image: linear-gradient(70deg, transparent 20%, #ff8b56 20%); }
+  .dog { position: relative; width: 22.5vmax; height: 8.25vmax; }
+  .dog::before { content: ""; position: absolute; bottom: -0.75vmax; right: -0.15vmax; width: 100%; height: 1.5vmax; background-color: rgba(28, 49, 48, 0.1); border-radius: 50%; z-index: -1000; animation: shadow 10s cubic-bezier(0.3, 0.41, 0.18, 1.01) infinite; }
+  .dog__head { position: absolute; left: 4.5vmax; bottom: 0; width: 9.75vmax; height: 8.25vmax; border-top-left-radius: 4.05vmax; border-top-right-radius: 4.05vmax; border-bottom-right-radius: 3.3vmax; border-bottom-left-radius: 3.3vmax; background-color: #ff8147; animation: head 10s cubic-bezier(0.3, 0.41, 0.18, 1.01) infinite; }
+  .dog__head-c { position: absolute; left: 1.5vmax; bottom: 0; width: 9.75vmax; height: 8.25vmax; animation: head 10s cubic-bezier(0.3, 0.41, 0.18, 1.01) infinite; z-index: -1; }
+  .dog__snout { position: absolute; left: -1.5vmax; bottom: 0; width: 7.5vmax; height: 3.75vmax; border-top-right-radius: 3vmax; border-bottom-right-radius: 3vmax; border-bottom-left-radius: 4.5vmax; background-color: #d7dbd2; animation: snout 10s cubic-bezier(0.3, 0.41, 0.18, 1.01) infinite; }
+  .dog__snout::before { content: ""; position: absolute; left: -0.1125vmax; top: -0.15vmax; width: 1.875vmax; height: 1.125vmax; border-top-right-radius: 3vmax; border-bottom-right-radius: 3vmax; border-bottom-left-radius: 4.5vmax; background-color: #1c3130; animation: snout-b 10s cubic-bezier(0.3, 0.41, 0.18, 1.01) infinite; }
+  .dog__nose { position: absolute; top: -1.95vmax; left: 40%; width: 0.75vmax; height: 2.4vmax; border-radius: 0.525vmax; transform-origin: bottom; transform: rotateZ(10deg); background-color: #d7dbd2; }
+  .dog__eye-l, .dog__eye-r { position: absolute; top: -0.9vmax; width: 0.675vmax; height: 0.375vmax; border-radius: 50%; background-color: #1c3130; animation: eye 10s cubic-bezier(0.3, 0.41, 0.18, 1.01) infinite; }
+  .dog__eye-l { left: 27%; } .dog__eye-r { left: 65%; }
+  .dog__ear-l, .dog__ear-r { position: absolute; width: 10.5vmax; height: 3.375vmax; border-bottom-right-radius: 3.3vmax; border-bottom-left-radius: 3.3vmax; background-color: #e26538; }
+  .dog__ear-l { top: 1.5vmax; left: 6vmax; transform-origin: bottom left; transform: rotateZ(-50deg); z-index: -1; animation: ear-l 10s cubic-bezier(0.3, 0.41, 0.18, 1.01) infinite; }
+  .dog__ear-r { top: 1.5vmax; right: 3vmax; transform-origin: bottom right; transform: rotateZ(20deg); z-index: -2; animation: ear-r 10s cubic-bezier(0.3, 0.41, 0.18, 1.01) infinite; }
+  .dog__body { display: flex; justify-content: center; align-items: flex-end; position: absolute; bottom: 0.3vmax; left: 3.75vmax; width: 18.75vmax; height: 7.2vmax; border-top-left-radius: 3vmax; border-top-right-radius: 6vmax; border-bottom-right-radius: 1.5vmax; border-bottom-left-radius: 6vmax; background-color: #ff702e; z-index: -2; animation: body 10s cubic-bezier(0.3, 0.41, 0.18, 1.01) infinite; }
+  .dog__tail { position: absolute; right: -3vmax; height: 1.5vmax; width: 4.5vmax; background-color: #e96839; border-radius: 1.5vmax; }
+  .dog__bl-leg { left: -3vmax; z-index: -10; } .dog__bl-paw::before { background-color: #bec4b6; } .dog__bl-top { background-image: linear-gradient(80deg, transparent 20%, #e96839 20%); }
+  .dog__fl-leg { z-index: 10; left: 0; } .dog__fl-paw::before { background-color: #d7dbd2; } .dog__fr-leg { right: 0; } .dog__fr-paw::before { background-color: #d7dbd2; }
+
+  @keyframes head { 0%, 10%, 20%, 26%, 28%, 90%, 100% { height: 8.25vmax; bottom: 0; transform-origin: bottom right; transform: rotateZ(0); } 5%, 15%, 22%, 24%, 30% { height: 8.1vmax; } 32%, 50% { height: 8.25vmax; } 55%, 60% { bottom: 0.75vmax; transform-origin: bottom right; transform: rotateZ(0); } 70%, 80% { bottom: 0.75vmax; transform-origin: bottom right; transform: rotateZ(10deg); } }
+  @keyframes body { 0%, 10%, 20%, 26%, 28%, 32%, 100% { height: 7.2vmax; } 5%, 15%, 22%, 24%, 30% { height: 7.05vmax; } }
+  @keyframes ear-l { 0%, 10%, 20%, 26%, 28%, 82%, 100% { transform: rotateZ(-50deg); } 5%, 15%, 22%, 24% { transform: rotateZ(-48deg); } 30%, 31% { transform: rotateZ(-30deg); } 32%, 80% { transform: rotateZ(-60deg); } }
+  @keyframes ear-r { 0%, 10%, 20%, 26%, 28% { transform: rotateZ(20deg); } 5%, 15%, 22%, 24% { transform: rotateZ(18deg); } 30%, 31% { transform: rotateZ(10deg); } 32% { transform: rotateZ(25deg); } }
+  @keyframes snout { 0%, 10%, 20%, 26%, 28%, 82%, 100% { height: 3.75vmax; } 5%, 15%, 22%, 24% { height: 3.45vmax; } }
+  @keyframes snout-b { 0%, 10%, 20%, 26%, 28%, 98%, 100% { width: 1.875vmax; } 5%, 15%, 22%, 24% { width: 1.8vmax; } 34%, 98% { width: 1.275vmax; } }
+  @keyframes shadow { 0%, 10%, 20%, 26%, 28%, 30%, 84%, 100% { width: 99%; } 5%, 15%, 22%, 24% { width: 101%; } 34%, 81% { width: 96%; } }
+
+  /* DURMIENDO: Todo respira normal (body), pero la cabeza baja, los ojos se cierran y tapamos el cuello */
+  .sleeping .dog__head, .sleeping .dog__head-c, .sleeping .dog__snout, .sleeping .dog__snout::before, .sleeping .dog__ear-l, .sleeping .dog__ear-r, .sleeping .dog__body, .sleeping .dog::before {
+    animation: none !important;
+  }
+  
+ /* CORRECCIÓN DE CUELLO: Ajuste en X e Y para solapar la cabeza con el torso perfectamente */
+  .sleeping .dog__head, .sleeping .dog__head-c {
+    transform: translateX(-0.1vmax) translateY(0.2vmax) rotateZ(-1deg) !important;
+  }
+  
+  /* Ojos cerrados (líneas) */
+  .sleeping .dog__eye-l, .sleeping .dog__eye-r {
+    animation: none !important;
+    height: 0.1vmax !important;
+    width: 0.6vmax !important;
+    transform: translateY(0.2vmax) !important;
+  }
+  
+  /* Orejas relajadas hacia atrás */
+  .sleeping .dog__ear-l { transform: rotateZ(-38deg) !important; } 
+  .sleeping .dog__ear-r { transform: rotateZ(13deg) !important; }
+
+  /* DESPIERTO (Escribiendo): Ojos abiertos y orejas alerta */
+  .awake .dog__eye-l, .awake .dog__eye-r {
+    animation: none !important;
+    height: 0.55vmax !important;
+    width: 0.55vmax !important;
+    transform: translateY(-0.1vmax) !important;
+  }
+  .awake .dog__ear-l { transform: rotateZ(-40deg) !important; }
+  .awake .dog__ear-r { transform: rotateZ(10deg) !important; }
+
+  .face-right { transform: scaleX(-1); }
+
+/* ========================================== */
+  /* --- PARTÍCULAS FLOTANTES DE FONDO --- */
+  /* ========================================== */
+  .points_wrapper {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .points_wrapper .point {
+    --sz-point: 4px; /* Tamaño por defecto */
+    top: -15px; /* Inician arriba, fuera de la tarjeta */
+    position: absolute;
+    animation: floating-points infinite ease-in-out;
+    pointer-events: none;
+    width: var(--sz-point);
+    height: var(--sz-point);
+    background-color: #7c3aed; /* Color base: Morado */
+    border-radius: 50%;
+  }
+
+  /* Le damos variaciones de color a algunas partículas para que resalten */
+  .points_wrapper .point:nth-child(even) { background-color: #4f46e5; /* Índigo */ }
+  .points_wrapper .point:nth-child(3n) { background-color: #c026d3; /* Fucsia */ }
+
+  /* Animación de caída sutil */
+  @keyframes floating-points {
+    0% { transform: translate(0, 0); opacity: 0; }
+    15% { opacity: 0.8; }
+    85% { opacity: 0.8; }
+    100% { opacity: 0; transform: translate(calc(100vw / 12), 600px); } /* Caen hacia la derecha y abajo */
+  }
+
+  /* Distribución, velocidad y tamaño de las 20 partículas */
+  .points_wrapper .point:nth-child(1) { left: 5%; animation-duration: 3.5s; animation-delay: 0.2s; }
+  .points_wrapper .point:nth-child(2) { left: 15%; animation-duration: 4.1s; animation-delay: 0.5s; --sz-point: 6px; }
+  .points_wrapper .point:nth-child(3) { left: 25%; animation-duration: 3.2s; animation-delay: 0.1s; }
+  .points_wrapper .point:nth-child(4) { left: 35%; animation-duration: 4.5s; animation-delay: 1.2s; --sz-point: 5px; }
+  .points_wrapper .point:nth-child(5) { left: 45%; animation-duration: 3.9s; animation-delay: 0.8s; }
+  .points_wrapper .point:nth-child(6) { left: 55%; animation-duration: 3.4s; animation-delay: 1.5s; --sz-point: 3px; }
+  .points_wrapper .point:nth-child(7) { left: 65%; animation-duration: 4.2s; animation-delay: 0.3s; }
+  .points_wrapper .point:nth-child(8) { left: 75%; animation-duration: 4.8s; animation-delay: 0.9s; --sz-point: 5px; }
+  .points_wrapper .point:nth-child(9) { left: 85%; animation-duration: 3.6s; animation-delay: 0.1s; }
+  .points_wrapper .point:nth-child(10) { left: 95%; animation-duration: 4.0s; animation-delay: 1.2s; --sz-point: 6px; }
+  
+  .points_wrapper .point:nth-child(11) { left: 8%; animation-duration: 4.3s; animation-delay: 1.1s; }
+  .points_wrapper .point:nth-child(12) { left: 18%; animation-duration: 3.8s; animation-delay: 0.7s; --sz-point: 3px; }
+  .points_wrapper .point:nth-child(13) { left: 28%; animation-duration: 4.7s; animation-delay: 1.4s; }
+  .points_wrapper .point:nth-child(14) { left: 38%; animation-duration: 3.9s; animation-delay: 0.4s; --sz-point: 5px; }
+  .points_wrapper .point:nth-child(15) { left: 48%; animation-duration: 4.5s; animation-delay: 0.9s; }
+  .points_wrapper .point:nth-child(16) { left: 58%; animation-duration: 3.7s; animation-delay: 1.3s; --sz-point: 4px; }
+  .points_wrapper .point:nth-child(17) { left: 68%; animation-duration: 4.2s; animation-delay: 0.6s; }
+  .points_wrapper .point:nth-child(18) { left: 78%; animation-duration: 3.9s; animation-delay: 1.7s; --sz-point: 3px; }
+  .points_wrapper .point:nth-child(19) { left: 88%; animation-duration: 4.4s; animation-delay: 0.3s; }
+  .points_wrapper .point:nth-child(20) { left: 92%; animation-duration: 3.3s; animation-delay: 1.8s; --sz-point: 6px; }
+
+</style>
+
+<script>
+  // LÓGICA DE TRANSFORMACIÓN DE LA PANTALLA (SPA)
+  function transformarPantalla(destino) {
+    const contenedor = document.getElementById('master-container');
+    const tarjeta = document.getElementById('auth-card');
+    
+    // Activa la animación CSS que mueve todo a la derecha y desvanece las capas
+    contenedor.classList.add('auth-active');
+    
+    // Cambia la URL silenciosamente sin recargar la página
+    window.history.pushState({}, '', '/' + destino);
+    
+    // Decide si voltea la tarjeta
+    if(destino === 'registro') {
+      tarjeta.classList.add('is-flipped');
+    } else {
+      tarjeta.classList.remove('is-flipped');
+    }
+  }
+
+  function girarTarjeta(modo) {
+    const card = document.getElementById('auth-card');
+    window.history.pushState({}, '', '/' + modo);
+    if(modo === 'registro') card.classList.add('is-flipped');
+    else card.classList.remove('is-flipped');
+  }
+
+  // --- VALIDACIÓN DE CONTRASEÑAS Y LÓGICA DEL PERRITO ---
+  function validarPasswordsEnVivo() {
+    const pass1 = document.getElementById('reg-pass1').value;
+    const pass2 = document.getElementById('reg-pass2').value;
+    const msg = document.getElementById('msg-pass');
+    if (pass2.length === 0) { msg.classList.add('hidden'); return; }
+    msg.classList.remove('hidden');
+    if (pass1 === pass2) { msg.innerText = "¡Las contraseñas coinciden!"; msg.className = "text-xs font-bold text-center mt-1 text-emerald-600"; } 
+    else { msg.innerText = "Las contraseñas no coinciden."; msg.className = "text-xs font-bold text-center mt-1 text-red-500"; }
+  }
+
+  function prepararRegistro(event) {
+    const pass1 = document.getElementById('reg-pass1').value;
+    const pass2 = document.getElementById('reg-pass2').value;
+    if (pass1 !== pass2) {
+      event.preventDefault();
+      document.getElementById('reg-pass1').classList.add('border-red-500', 'animate-pulse');
+      document.getElementById('reg-pass2').classList.add('border-red-500', 'animate-pulse');
+      setTimeout(() => {
+        document.getElementById('reg-pass1').classList.remove('border-red-500', 'animate-pulse');
+        document.getElementById('reg-pass2').classList.remove('border-red-500', 'animate-pulse');
+      }, 1000);
+      return false;
+    }
+    document.getElementById('nombre-final').value = document.getElementById('reg-nombre').value.trim() + " " + document.getElementById('reg-apellido').value.trim();
+    return true;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const dogWrapper = document.getElementById('dog-wrapper');
+    const inputs = document.querySelectorAll('.dog-trigger');
+    inputs.forEach(input => {
+      input.addEventListener('focus', () => { dogWrapper.classList.remove('sleeping'); dogWrapper.classList.add('awake'); });
+      input.addEventListener('blur', () => {
+        setTimeout(() => {
+          if (!document.activeElement.classList.contains('dog-trigger')) {
+            dogWrapper.classList.remove('awake'); dogWrapper.classList.add('sleeping');
+          }
+        }, 100);
+      });
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,106 @@
+ <!-- ======================================================= -->
+  <!-- PESTAÑA 1: ADOPTAR (Aquí metimos el código nuevo)       -->
+  <!-- ======================================================= -->
+  <div id="usuario-adoptar" class="tab-content tab-content-usuario active">
+    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      {% if adopciones %}
+        {% for mascota in adopciones %}
+        <!-- Tarjeta de la mascota -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="h-48 bg-slate-200 flex items-center justify-center text-slate-400 overflow-hidden">
+            {% if mascota.foto %}
+              <img src="{{ url_for('static', filename='uploads/' ~ mascota.foto) }}" class="w-full h-full object-cover">
+            {% else %}
+              <i data-lucide="camera" class="w-8 h-8"></i>
+            {% endif %}
+          </div>
+          <div class="p-4">
+            <h3 class="font-bold text-lg text-indigo-950">{{ mascota.nombre }}</h3>
+            <p class="text-sm text-slate-500">{{ mascota.especie }} - {{ mascota.sexo }}</p>
+            <button onclick="abrirPerfilAdopcion('{{ mascota.id }}')" class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-lg transition">Ver Perfil Completo y Solicitar</button>
+          </div>
+        </div>
+
+        <!-- VENTANA MODAL (Oculta) PARA EL PERFIL COMPLETO DE ESTA MASCOTA -->
+        <div id="perfil-mascota-{{ mascota.id }}" class="hidden">
+          <div class="flex items-center gap-4 border-b pb-4 mb-4">
+            <div class="w-24 h-24 bg-slate-200 rounded-xl overflow-hidden border border-slate-200">
+               {% if mascota.foto %}
+                 <img src="{{ url_for('static', filename='uploads/' ~ mascota.foto) }}" class="w-full h-full object-cover">
+               {% else %}
+                 <div class="w-full h-full flex items-center justify-center"><i data-lucide="paw-print" class="text-slate-400"></i></div>
+               {% endif %}
+            </div>
+            <div>
+              <h2 class="text-2xl font-black text-indigo-950">#{{ mascota.id }} - {{ mascota.nombre }}</h2>
+              <span class="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded-full border border-indigo-100">{{ mascota.especie }} • {{ mascota.sexo }}</span>
+            </div>
+          </div>
+
+          <!-- Resumen Clínico que viene del Veterinario -->
+          <div class="bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 mb-6">
+            <h4 class="text-indigo-900 font-bold text-sm mb-3 flex items-center gap-2"><i data-lucide="file-text" class="w-4 h-4"></i> Resumen Clínico Actualizado</h4>
+            <div class="text-sm text-slate-700 space-y-2">
+              {% set ultima_consulta = mascota.consultas|first %}
+              {% if ultima_consulta %}
+                <p><strong>Último Diagnóstico Médico:</strong> {{ ultima_consulta.diagnostico }}</p>
+                <p><strong>Último Tratamiento/Receta:</strong> {{ ultima_consulta.tratamiento }}</p>
+              {% else %}
+                <p><strong>Último Diagnóstico Médico:</strong> Sin registro clínico</p>
+                <p><strong>Último Tratamiento/Receta:</strong> Sin tratamiento</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Galería Histórica de Fotos -->
+          <h4 class="text-indigo-900 font-bold text-sm mb-3 flex items-center gap-2"><i data-lucide="image" class="w-4 h-4"></i> Galería Histórica de Fotografías</h4>
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6">
+            <div class="flex gap-2 overflow-x-auto pb-2">
+              {% if mascota.rescate_obj and mascota.rescate_obj.alerta_obj and mascota.rescate_obj.alerta_obj.foto %}
+                <div class="w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden border border-slate-300"><a href="{{ url_for('static', filename='uploads/' ~ mascota.rescate_obj.alerta_obj.foto) }}" target="_blank"><img src="{{ url_for('static', filename='uploads/' ~ mascota.rescate_obj.alerta_obj.foto) }}" class="w-full h-full object-cover"></a></div>
+              {% endif %}
+              {% if mascota.foto %}
+                 <div class="w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden border border-slate-300"><a href="{{ url_for('static', filename='uploads/' ~ mascota.foto) }}" target="_blank"><img src="{{ url_for('static', filename='uploads/' ~ mascota.foto) }}" class="w-full h-full object-cover"></a></div>
+              {% endif %}
+              {% for consulta in mascota.consultas %}
+                {% if consulta.evidencia_fotos %}
+                  {% set fotos = consulta.evidencia_fotos.split(',') %}
+                  {% for f in fotos %}
+                    <div class="w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden border border-slate-300"><a href="{{ url_for('static', filename='uploads/' ~ f) }}" target="_blank"><img src="{{ url_for('static', filename='uploads/' ~ f) }}" class="w-full h-full object-cover"></a></div>
+                  {% endfor %}
+                {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Botones de Acción Inteligentes -->
+          {% if mi_cv and mi_cv.dpi %}
+            <!-- Si ya llenó el CV, el botón es verde y envía el formulario -->
+            <form action="{{ url_for('crear_solicitud', paciente_id=mascota.id) }}" method="POST" onsubmit="enviarSolicitudAdopcion(event, this)">
+              <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl transition flex items-center justify-center gap-2 mb-4 shadow-md">
+                <i data-lucide="heart" class="w-5 h-5"></i> Solicitar Adopción Oficial
+              </button>
+            </form>
+          {% else %}
+            <!-- Si NO ha llenado el CV, el botón es gris y lo manda a llenarlo -->
+            <button type="button" onclick="alert('Debes completar tu Formulario de Adopción (CV) antes de solicitar una mascota.'); closeModal(); switchTab('usuario', 'cv');" class="w-full bg-slate-200 text-slate-500 font-bold py-4 rounded-xl flex items-center justify-center gap-2 mb-4 border border-slate-300">
+              <i data-lucide="lock" class="w-5 h-5"></i> Completa tu Formulario para Adoptar
+            </button>
+          {% endif %}
+          
+          <div class="text-center">
+            <p class="text-xs text-slate-500 mb-2 mt-4">¿Reconoces a este animal como tuyo y se había extraviado?</p>
+            <button type="button" class="w-full bg-red-50 hover:bg-red-100 text-red-700 font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 border border-red-200" onclick="iniciarReclamo('{{ mascota.id }}')">
+              <i data-lucide="alert-triangle" class="w-4 h-4 text-red-500"></i> Realizar Reclamo de Propiedad Legítima
+            </button>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="col-span-full text-center text-slate-500 py-10 bg-white rounded-xl border italic">No hay mascotas disponibles para adopción en este momento. ¡Vuelve pronto!</p>
+      {% endif %}
+    </div>
+  </div>
+  <!-- FIN DE LA PESTAÑA 1 -->
+
+  {% include 'componentes/modal_exito_adopcion.html' %}

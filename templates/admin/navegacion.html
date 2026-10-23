@@ -1,0 +1,18 @@
+<nav class="flex overflow-x-auto border-b border-slate-200 text-sm font-medium mb-6 bg-white rounded-t-xl shadow-sm scroll-hide">
+{% set tabs = [
+  ('adopciones','Solicitudes','solicitudes'),
+  ('voluntariado','Voluntariado','voluntariado'),
+  ('donaciones','Donaciones','donaciones'),
+  ('logs','Auditoría Empleados','personal'),
+  ('clientes','Usuarios','usuarios'),
+  ('administradores','Administradores', 'superadmin'),
+  ('shop','Tienda','tienda'),
+  ('apariencia','Diseño Web','apariencia')
+] %}
+{% for id, etiqueta, permiso in tabs %}
+  {% if (permiso == 'superadmin' and superadmin) or (permiso != 'superadmin' and puede_admin(permiso)) %}
+  <button type="button" onclick="switchMainTab('{{ id }}')" class="tab-btn-main px-5 py-4 border-b-2 border-transparent text-slate-500 hover:text-indigo-600 flex whitespace-nowrap" data-tab="{{ id }}">{{ etiqueta }}</button>
+  {% endif %}
+{% endfor %}
+  <button type="button" onclick="switchMainTab('perfil')" class="tab-btn-main px-5 py-4 border-b-2 border-transparent text-slate-500 hover:text-indigo-600 flex whitespace-nowrap" data-tab="perfil">Mi Perfil</button>
+</nav>

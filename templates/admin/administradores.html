@@ -1,0 +1,29 @@
+<div id="admin-administradores" class="tab-content-main hidden bg-white p-6 rounded-xl shadow-sm space-y-6">
+  <h2 class="text-xl font-black text-indigo-900">Administradores y permisos</h2>
+  <p class="text-sm text-slate-500">Solo la administración principal puede crear otros administradores y definir qué pueden gestionar.</p>
+  <div class="bg-slate-50 p-5 border rounded-2xl">
+    <h3 class="font-bold mb-4">Nuevo perfil administrativo</h3>
+    <form action="{{ url_for('gestion_crear_cuenta') }}" method="POST" class="grid sm:grid-cols-2 gap-3">
+      <input type="hidden" name="_csrf_gestion" value="{{ csrf_gestion() }}"><input type="hidden" name="rol" value="admin"><input type="hidden" name="volver" value="administradores">
+      <label class="text-xs font-bold">Nombre<input class="w-full p-3 border rounded-xl block mt-1" name="nombre" minlength="2" maxlength="100" required></label>
+      <label class="text-xs font-bold">Correo<input class="w-full p-3 border rounded-xl block mt-1" type="email" name="correo" maxlength="100" required></label>
+      <label class="text-xs font-bold">Código (ej. ADM-002)<input class="w-full p-3 border rounded-xl block mt-1" name="codigo" required maxlength="20"></label>
+      <label class="text-xs font-bold">Contraseña temporal<div class="flex gap-2 mt-1"><input class="w-full p-3 border rounded-xl" name="password" type="password" minlength="12" required autocomplete="new-password"><button type="button" onclick="generarPasswordCuenta(this)" class="px-3 rounded-xl bg-slate-200">Generar</button></div></label>
+      <fieldset class="sm:col-span-2 border bg-white p-4 rounded-xl"><legend class="font-bold text-sm px-1">Funciones autorizadas</legend>
+        <div class="grid sm:grid-cols-2 gap-3">
+        {% for clave, nombre in permisos_catalogo.items() %}
+        <label class="text-sm flex gap-2 items-center"><input type="checkbox" name="permisos" value="{{ clave }}" class="accent-indigo-600"> {{ nombre }}</label>
+        {% endfor %}</div>
+      </fieldset>
+      <button class="sm:col-span-2 bg-indigo-700 text-white rounded-xl p-3 font-bold">Crear administrador</button>
+    </form>
+  </div>
+  <h3 class="font-bold text-lg">Administradores registrados</h3>
+  <div class="space-y-3">{% for cuenta in cuentas_administradores %}
+    {% include 'admin_modulos/tarjeta_cuenta.html' %}
+  {% endfor %}</div>
+  <h3 class="font-bold text-lg">Historial de seguridad (últimos 35 movimientos)</h3>
+  <div class="overflow-x-auto border rounded-xl"><table class="w-full text-xs text-left"><thead class="bg-slate-100"><tr><th class="p-3">Fecha UTC</th><th class="p-3">Administrador ID</th><th class="p-3">Cuenta ID</th><th class="p-3">Acción</th><th class="p-3">Detalle</th></tr></thead><tbody>
+  {% for log in auditoria_cuentas %}<tr class="border-t"><td class="p-3 whitespace-nowrap">{{ log.fecha.strftime('%Y-%m-%d %H:%M') }}</td><td class="p-3">{{ log.actor_id }}</td><td class="p-3">{{ log.objetivo_id or '—' }}</td><td class="p-3 font-bold">{{ log.accion }}</td><td class="p-3">{{ log.detalle }}</td></tr>{% else %}<tr><td colspan="5" class="p-4 text-slate-400">Sin registros aún</td></tr>{% endfor %}
+  </tbody></table></div>
+</div>

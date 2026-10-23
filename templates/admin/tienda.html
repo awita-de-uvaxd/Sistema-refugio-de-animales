@@ -1,0 +1,208 @@
+  <!-- Pestaña Principal 3: TIENDA / SHOP (Contenedor Maestro de la Tienda) -->
+  <div id="admin-shop" class="tab-content-main hidden bg-white p-6 rounded-xl shadow-sm space-y-6">
+    
+    <!-- SUB-NAVEGACIÓN INTERNA DE LA TIENDA -->
+    <div class="border-b pb-4">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+        <div>
+          <h2 class="text-2xl font-black text-indigo-900">Módulo de Tienda y Comercio</h2>
+          <p class="text-xs text-slate-500">Administración general de productos, ventas, inventario y métricas.</p>
+        </div>
+      </div>
+
+      <nav class="flex overflow-x-auto bg-slate-100 p-1.5 rounded-2xl gap-1 text-xs font-semibold scroll-hide">
+        <button onclick="switchShopSubTab('pedidos')" class="tab-btn-shop px-4 py-2.5 rounded-xl transition bg-white text-indigo-700 shadow-sm font-bold" data-subtab="pedidos"> Gestión de Pedidos</button>
+        <button onclick="switchShopSubTab('cobro')" class="tab-btn-shop px-4 py-2.5 rounded-xl transition text-slate-600 hover:bg-slate-200/60" data-subtab="cobro"> Cobro / Venta Refugio</button>
+        <button onclick="switchShopSubTab('inventario')" class="tab-btn-shop px-4 py-2.5 rounded-xl transition text-slate-600 hover:bg-slate-200/60" data-subtab="inventario"> Inventario y Control</button>
+        <button onclick="switchShopSubTab('metricas')" class="tab-btn-shop px-4 py-2.5 rounded-xl transition text-slate-600 hover:bg-slate-200/60" data-subtab="metricas"> Métricas y Reportes</button>s
+      </nav>
+    </div>
+
+    <!-- SUB-PESTAÑA 1: GESTIÓN DE PEDIDOS -->
+    <div id="shop-pedidos" class="tab-content-shop space-y-8">
+      <!-- SERVICIO A DOMICILIO -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 overflow-x-auto space-y-3 shadow-sm">
+        <div class="flex justify-between items-center border-b pb-2">
+          <div>
+            <h4 class="font-bold text-sm text-slate-800">Órdenes con Servicio a Domicilio</h4>
+            <p class="text-[11px] text-slate-500">Valida pagos antes de procesar el despacho.</p>
+          </div>
+          <span class="text-xs bg-blue-100 text-blue-700 font-bold px-2.5 py-1 rounded-full">Exclusivo Domicilio</span>
+        </div>
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-100 uppercase font-bold text-slate-600">
+            <tr><th class="p-3">ID Pedido</th><th class="p-3">Cliente</th><th class="p-3">Detalle Pago</th><th class="p-3">Monto</th><th class="p-3">Acciones / Flujo</th></tr>
+          </thead>
+          <tbody id="tbody-domicilio"></tbody>
+        </table>
+      </div>
+
+      <!-- ENTREGA EN TIENDA -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 overflow-x-auto space-y-3 shadow-sm">
+        <div class="flex justify-between items-center border-b pb-2">
+          <div>
+            <h4 class="font-bold text-sm text-slate-800">Órdenes para Entrega en Tienda (Recoger en Refugio)</h4>
+            <p class="text-[11px] text-slate-500">Actualiza el progreso. Al presionar <strong>5. Finalizar</strong> pasa a estar disponible para cobro en <strong>Caja Refugio</strong>.</p>
+          </div>
+          <span class="text-xs bg-indigo-100 text-indigo-700 font-bold px-2.5 py-1 rounded-full">Recoger en Refugio</span>
+        </div>
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-100 uppercase font-bold text-slate-600">
+            <tr><th class="p-3">ID Pedido</th><th class="p-3">Cliente</th><th class="p-3">Progreso del Pedido</th><th class="p-3">Total</th><th class="p-3">Estatus Caja</th></tr>
+          </thead>
+          <tbody id="tbody-tienda"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SUB-PESTAÑA 2: COBRO / VENTA REFUGIO -->
+    <div id="shop-cobro" class="tab-content-shop hidden space-y-6 max-w-2xl mx-auto">
+      <div class="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
+        <div class="border-b pb-3 flex justify-between items-center">
+          <div>
+            <h3 class="font-black text-slate-800 text-base">Caja Refugio - Cobro de Pedidos Presenciales</h3>
+            <p class="text-xs text-slate-500">Solo muestra pedidos marcados como <strong>5. Finalizar</strong> pendientes de cobro.</p>
+          </div>
+          <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-full">Caja Registradora</span>
+        </div>
+
+        <div class="space-y-2">
+          <label class="block text-xs font-bold text-slate-700">Seleccionar Orden Finalizada:</label>
+          <select id="select-pos-order" onchange="cargarDetallePos()" class="w-full p-2.5 border rounded-xl text-xs bg-slate-50 font-bold outline-indigo-600"></select>
+        </div>
+
+        <div id="pos-details" class="hidden bg-slate-50 p-4 rounded-2xl border space-y-3 text-xs">
+          <div class="flex justify-between items-center border-b pb-2">
+            <div><p class="font-bold text-indigo-600 text-sm" id="pos-id">#PED-0000</p><p id="pos-cli" class="text-[11px] text-slate-500">Cliente: ---</p></div>
+            <span class="px-2 py-1 bg-amber-100 text-amber-800 font-bold text-[10px] rounded-full">Pendiente de Pago</span>
+          </div>
+
+          <ul id="pos-items" class="space-y-1 list-disc list-inside text-slate-600"></ul>
+
+          <div class="border-t pt-2 space-y-2">
+            <label class="block font-bold">Método de Pago Presencial:</label>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <label class="p-2 border rounded-xl bg-white flex items-center gap-1 cursor-pointer"><input type="radio" name="pos-method" value="Efectivo" checked onchange="toggleCuponPos()"><span class="font-semibold text-xs"> Efectivo</span></label>
+              <label class="p-2 border rounded-xl bg-white flex items-center gap-1 cursor-pointer"><input type="radio" name="pos-method" value="Tarjeta POS" onchange="toggleCuponPos()"><span class="font-semibold text-xs"> Tarjeta</span></label>
+              <label class="p-2 border rounded-xl bg-white flex items-center gap-1 cursor-pointer"><input type="radio" name="pos-method" value="Transferencia" onchange="toggleCuponPos()"><span class="font-semibold text-xs"> Transf.</span></label>
+              <label class="p-2 border rounded-xl bg-white flex items-center gap-1 cursor-pointer"><input type="radio" name="pos-method" value="Cupón Refugio" onchange="toggleCuponPos()"><span class="font-semibold text-xs"> Cupón</span></label>
+            </div>
+          </div>
+
+          <div id="pos-cupon-box" class="hidden space-y-2 bg-amber-50 p-3 rounded-xl border border-amber-200">
+            <div class="flex gap-2">
+              <input type="text" id="pos-cupon-code" placeholder="Ej: REFUGIO10" class="w-full p-2 border rounded-xl text-xs uppercase bg-white">
+              <button type="button" onclick="aplicarCuponPos()" class="px-3 py-1.5 bg-amber-600 text-white font-bold text-xs rounded-xl">Aplicar</button>
+            </div>
+            <p id="pos-cupon-msg" class="text-[10px] font-bold text-emerald-700"></p>
+          </div>
+
+          <div class="border-t pt-3 flex justify-between items-center text-sm font-black">
+            <span>Total a Cobrar:</span>
+            <span id="pos-total" class="text-indigo-600 text-base">Q0.00</span>
+          </div>
+
+          <button onclick="completarCobroRefugio()" class="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700 transition">
+            ✓ Procesar Pago, Finalizar Cancelación y Emitir Factura
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUB-PESTAÑA 3: INVENTARIO Y CONTROL -->
+    <div id="shop-inventario" class="tab-content-shop hidden space-y-4">
+      <div id="vencimiento-alerts" class="space-y-2"></div>
+      <div class="bg-white rounded-2xl border p-4 space-y-3 shadow-sm">
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-3">
+          <input type="text" id="inv-search" oninput="renderizarInventario()" placeholder="Buscar producto..." class="px-3 py-2 border rounded-xl text-xs w-full sm:w-64 bg-slate-50">
+          <button onclick="toggleModalProd()" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-sm hover:bg-indigo-700 transition">+ Agregar Producto</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-100 uppercase font-bold text-slate-600">
+              <tr><th class="p-3">ID</th><th class="p-3">Producto</th><th class="p-3">Categoría</th><th class="p-3">Stock</th><th class="p-3">Precio</th><th class="p-3">Visibilidad</th><th class="p-3 text-right">Opciones</th></tr>
+            </thead>
+            <tbody id="tbody-inventario">
+              {% if productos %}
+                {% for p in productos %}
+                <tr class="border-b hover:bg-slate-50">
+                    <td class="p-3 font-bold">PROD-{{ p.id }}</td>
+                    <td class="p-3 flex items-center gap-3">
+                        {% if p.foto %}
+                        <img src="{{ url_for('static', filename='uploads/' ~ p.foto) }}" class="w-10 h-10 object-cover rounded-xl border border-slate-200 shadow-sm">
+                        {% else %}
+                        <img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=300" class="w-10 h-10 object-cover rounded-xl border border-slate-200 shadow-sm">
+                        {% endif %}
+                        <span class="font-bold text-slate-800">{{ p.nombre }}</span>
+                    </td>
+                    <td class="p-3">{{ p.categoria }}</td>
+                    <td class="p-3 font-bold {% if p.stock <= 5 %}text-red-600 font-extrabold{% endif %}">{{ p.stock }}</td>
+                    <td class="p-3 font-semibold">Q{{ "%.2f"|format(p.precio) }}</td>
+                    <td class="p-3"><span class="text-xs font-bold">{% if p.visible %}👁 Visible{% else %}Oculto{% endif %}</span></td>
+                    <td class="p-3 text-right">#{{ p.id }}</td>
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr><td colspan="7" class="p-4 text-center text-slate-400">No hay productos registrados en la base de datos</td></tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUB-PESTAÑA 4: MÉTRICAS Y REPORTES -->
+    <div id="shop-metricas" class="tab-content-shop hidden space-y-6">
+      <!-- TARJETAS DE MÉTRICAS / KPI -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white p-4 rounded-2xl border shadow-sm border-indigo-100">
+          <p class="text-xs font-bold text-slate-400">Ventas Totales Realizadas</p>
+          <h2 id="kpi-total-ventas" class="text-2xl font-black text-indigo-600 mt-1">Q0.00</h2>
+          <p class="text-[10px] text-emerald-600 font-bold mt-1">✓ Facturación acumulada</p>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border shadow-sm border-blue-100">
+          <p class="text-xs font-bold text-slate-400">Total de Pedidos Completados</p>
+          <h2 id="kpi-total-pedidos" class="text-2xl font-black text-blue-600 mt-1">0</h2>
+          <p class="text-[10px] text-slate-500 mt-1">Transacciones procesadas</p>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border shadow-sm border-amber-100">
+          <p class="text-xs font-bold text-slate-400">Producto Estrella</p>
+          <h2 id="kpi-prod-estrella" class="text-lg font-black text-amber-600 mt-1 truncate">---</h2>
+          <p class="text-[10px] text-slate-500 mt-1">Más unidades vendidas</p>
+        </div>
+      </div>
+
+      <!-- GRÁFICO DE VENTAS -->
+      <div class="bg-white p-5 rounded-2xl border space-y-3 shadow-sm">
+        <h4 class="font-bold text-sm text-slate-800">Gráfico de Ventas por Producto</h4>
+        <div class="h-64"><canvas id="chartVentas"></canvas></div>
+      </div>
+
+      <!-- HISTORIAL DETALLADO DE TRANSACCIONES -->
+      <div class="bg-white rounded-2xl border p-5 space-y-3 shadow-sm overflow-x-auto">
+        <div class="flex justify-between items-center border-b pb-2">
+          <div>
+            <h4 class="font-bold text-sm text-slate-800">Historial General de Ventas y Transacciones</h4>
+            <p class="text-[11px] text-slate-500">Registro histórico de compras realizadas en la plataforma y en refugio.</p>
+          </div>
+          <span class="text-xs bg-slate-100 font-bold text-slate-600 px-3 py-1 rounded-full">Reporte Oficial</span>
+        </div>
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-100 uppercase font-bold text-slate-600">
+            <tr>
+              <th class="p-3">ID Pedido</th>
+              <th class="p-3">Cliente</th>
+              <th class="p-3">Tipo / Canal</th>
+              <th class="p-3">Productos Adquiridos</th>
+              <th class="p-3">Método de Pago</th>
+              <th class="p-3">Monto Total</th>
+              <th class="p-3">Estado</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-historial-metricas"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
