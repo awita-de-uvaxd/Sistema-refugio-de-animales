@@ -887,7 +887,6 @@ def crear_consulta():
         'peso': 'El peso',
         'diagnostico': 'El diagnóstico',
         'tratamiento': 'El tratamiento',
-        'sintomas_ocultos': 'Al menos un síntoma',
     }
     for campo, etiqueta in obligatorios.items():
         if not (request.form.get(campo) or '').strip():
@@ -902,8 +901,16 @@ def crear_consulta():
         foto_perfil = secure_filename(archivo.filename)
         archivo.save(os.path.join(app.config['UPLOAD_FOLDER'], foto_perfil))
 
-    # 2. Paciente (Crear nuevo o Actualizar en seguimiento)
+        # 2. Paciente (Crear nuevo o Actualizar en seguimiento)
     if not paciente_id:
+        # Extraemos las contraseñas
+        codigo = request.form.get('codigo_acceso')
+        password = request.form.get('password_acceso')
+        
+        # Si vienen vacías (""), las convertimos en None (NULL) para que SQLite no choque
+        if not codigo: codigo = None
+        if not password: password = None
+            
         nuevo_paciente = Paciente(
             nombre=request.form.get('nombre_paciente'), 
             especie=especie_oficial, 
@@ -911,9 +918,10 @@ def crear_consulta():
             disponible_adopcion=request.form.get('adopcion_status', 'No Aplica'),
             foto=foto_perfil,
             rescate_id=rescate_id,
-            codigo_acceso=request.form.get('codigo_acceso'),    # NUEVO
-            password_acceso=request.form.get('password_acceso')
+            codigo_acceso=codigo,    
+            password_acceso=password
         )
+        
         db.session.add(nuevo_paciente)
         db.session.commit()
         paciente_id = nuevo_paciente.id
