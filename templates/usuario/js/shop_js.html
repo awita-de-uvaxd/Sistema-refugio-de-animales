@@ -112,47 +112,62 @@
         }
     }
 
-    function prepararAgregarCarrito(btn) {
-        const id = btn.dataset.id;
-        const nombre = btn.dataset.nombre;
-        const precio = parseFloat(btn.dataset.precio);
-        const stockMax = parseInt(btn.dataset.stock);
+    // Reemplazar únicamente estas dos funciones en <script>
+function prepararAgregarCarrito(btn) {
+    const id = btn.dataset.id;
+    const nombre = btn.dataset.nombre;
+    const precio = parseFloat(btn.dataset.precio) || 0;
+    const stockMax = parseInt(btn.dataset.stock) || 0;
 
-        agregarAlCarrito(id, nombre, precio, stockMax);
-    }
+    agregarAlCarrito(id, nombre, precio, stockMax);
+}
 
     function agregarAlCarrito(id, nombre, precio, stockMaxParam) {
-        const p = productos.find(x => String(x.id) === String(id) || parseInt(String(x.id).replace(/\D/g, '')) === parseInt(String(id).replace(/\D/g, '')));
+        const numId = parseInt(String(id).replace(/\D/g, ''));
+        const p = productos.find(x => String(x.id) === String(id) || parseInt(String(x.id).replace(/\D/g, '')) === numId);
+        
         const stockMax = p ? parseInt(p.stock) : (parseInt(stockMaxParam) || 0);
 
-        if (stockMax <= 0) return;
+        if (stockMax <= 0) {
+            mostrarNotificacionFlotante('Producto agotado o sin disponibilidad.');
+            return;
+        }
 
+        const prodNombre = nombre || (p ? p.nombre : 'Producto');
+        const prodPrecio = parseFloat(precio) || (p ? parseFloat(p.precio) : 0);
         const itemExistente = carrito.find(i => String(i.id) === String(id));
+
         if (itemExistente) {
-            itemExistente.cantidad = Math.min(itemExistente.cantidad + 1, stockMax);
+            if (itemExistente.cantidad < stockMax) {
+                itemExistente.cantidad += 1;
+                mostrarNotificacionFlotante(`+1 "${prodNombre}" agregado al carrito`);
+            } else {
+                mostrarNotificacionFlotante(`Límite de stock alcanzado (${stockMax} disponibles).`);
+                return;
+            }
         } else {
-            const prodNombre = nombre || (p ? p.nombre : 'Producto');
-            const prodPrecio = parseFloat(precio) || (p ? parseFloat(p.precio) : 0);
             carrito.push({ id, nombre: prodNombre, precio: prodPrecio, cantidad: 1 });
+            mostrarNotificacionFlotante(`"${prodNombre}" agregado al carrito`);
         }
+
         actualizarCarritoUI();
     }
 
-    function cambiarCantidadCarrito(id, d) {
-        const item = carrito.find(x => String(x.id) === String(id));
-        if (!item) return;
+        function cambiarCantidadCarrito(id, d) {
+            const item = carrito.find(x => String(x.id) === String(id));
+            if (!item) return;
 
-        const p = productos.find(x => String(x.id) === String(id) || parseInt(String(x.id).replace(/\D/g, '')) === parseInt(String(id).replace(/\D/g, '')));
-        const stockMax = p ? parseInt(p.stock) : item.cantidad;
+            const p = productos.find(x => String(x.id) === String(id) || parseInt(String(x.id).replace(/\D/g, '')) === parseInt(String(id).replace(/\D/g, '')));
+            const stockMax = p ? parseInt(p.stock) : item.cantidad;
 
-        const nuevaCant = item.cantidad + d;
-        if (nuevaCant <= 0) {
-            carrito = carrito.filter(x => String(x.id) !== String(id));
-        } else {
-            item.cantidad = Math.min(nuevaCant, stockMax);
+            const nuevaCant = item.cantidad + d;
+            if (nuevaCant <= 0) {
+                carrito = carrito.filter(x => String(x.id) !== String(id));
+            } else {
+                item.cantidad = Math.min(nuevaCant, stockMax);
+            }
+            actualizarCarritoUI();
         }
-        actualizarCarritoUI();
-    }
 
     function actualizarCarritoUI() {
         const totalCant = carrito.reduce((a, b) => a + b.cantidad, 0);

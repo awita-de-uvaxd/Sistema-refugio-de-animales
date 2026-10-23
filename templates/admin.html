@@ -341,59 +341,6 @@
         </table>
       </div>
       
-      <!-- MODAL FLOTANTE: VER ORDEN DE COMPRA -->
-      <div id="modal-detalle-orden" class="fixed inset-0 bg-slate-900/50 hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 text-xs shadow-xl max-h-[90vh] overflow-y-auto">
-          
-          <!-- Encabezado -->
-          <div class="flex justify-between items-center border-b pb-3">
-            <div>
-              <h3 class="font-black text-slate-800 text-base" id="mod-ord-id">Orden #PED-0000</h3>
-              <p class="text-[11px] text-slate-500" id="mod-ord-fecha">Fecha: --/--/----</p>
-            </div>
-            <button type="button" onclick="cerrarModalOrden()" class="text-slate-400 hover:text-slate-600 font-bold text-xl px-2">&times;</button>
-          </div>
-
-          <!-- Datos del Cliente -->
-          <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-1">
-            <p class="font-bold text-slate-800" id="mod-ord-cliente">Cliente: --</p>
-            <p class="text-slate-600" id="mod-ord-tel">Teléfono: --</p>
-            <p class="text-slate-600" id="mod-ord-dir">Dirección: --</p>
-            <p class="text-slate-600" id="mod-ord-pago">Pago: --</p>
-          </div>
-
-          <!-- Lista de Productos Solicitados -->
-          <div>
-            <h4 class="font-bold text-slate-700 uppercase tracking-wider mb-2">Productos en este Pedido:</h4>
-            <div class="border rounded-2xl overflow-hidden bg-white">
-              <table class="w-full text-left text-xs">
-                <thead class="bg-slate-100 font-bold text-slate-600 border-b">
-                  <tr>
-                    <th class="p-2.5">Producto</th>
-                    <th class="p-2.5 text-center">Cant.</th>
-                    <th class="p-2.5 text-right">Precio</th>
-                    <th class="p-2.5 text-right">Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody id="mod-ord-items-body" class="divide-y divide-slate-100">
-                  <!-- Inyectado por JS -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Total -->
-          <div class="border-t pt-3 flex justify-between items-center text-sm font-bold text-slate-800">
-            <span>Total del Pedido:</span>
-            <span id="mod-ord-total" class="text-indigo-600 font-black text-base">Q0.00</span>
-          </div>
-
-          <button type="button" onclick="cerrarModalOrden()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition">
-            Cerrar Ventana
-          </button>
-        </div>
-      </div>
-      
       <!-- ENTREGA EN TIENDA -->
       <div class="bg-white rounded-2xl border border-slate-200 p-4 overflow-x-auto space-y-3 shadow-sm">
         <div class="flex justify-between items-center border-b pb-2">
@@ -1173,65 +1120,77 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function renderizarPedidos() {
-        const dom = historialVentas.filter(o => o.tipo === 'Domicilio');
-        const tie = historialVentas.filter(o => o.tipo === 'Tienda');
+      const dom = historialVentas.filter(o => o.tipo === 'Domicilio');
+      const tie = historialVentas.filter(o => o.tipo === 'Tienda');
 
-        // Tabla de Servicio a Domicilio
-        const tbodyDom = document.getElementById('tbody-domicilio');
-        if (tbodyDom) {
-            tbodyDom.innerHTML = dom.length === 0 ? `<tr><td colspan="5" class="p-4 text-center text-slate-400">No hay órdenes a domicilio activas</td></tr>` :
-            dom.map(o => `
-                <tr class="border-b">
-                    <td class="p-3 font-bold text-indigo-600">${o.id}</td>
-                    <td class="p-3">${o.clienteNombre}<br><span class="text-[10px] text-slate-400">${o.clienteTel || ''}</span></td>
-                    <td class="p-3">${o.metodoPago}<br><span class="font-bold ${o.estadoPago === 'PAGADO' ? 'text-emerald-600' : 'text-amber-600'}">${o.estadoPago}</span></td>
-                    <td class="p-3 font-bold">Q${o.total.toFixed(2)}</td>
-                    <td class="p-3">
-                        ${o.estadoPago.includes('PENDIENTE DE VERIFICACIÓN') ? `
-                            <button onclick="confirmarPago('${o.id}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold transition">✓ Confirmar Pago</button>
-                        ` : `
-                            <div class="flex flex-wrap gap-1">
-                                ${["1. Tomando", "2. Aceptado", "3. Procesando", "4. Empacando", "5. Finalizar"].map(st => `
-                                    <button onclick="cambiarFlujo('${o.id}', '${st}')" class="px-1.5 py-0.5 text-[9px] rounded ${o.estadoOrden === st ? 'bg-indigo-600 text-white font-bold' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">${st}</button>
-                                `).join('')}
-                            </div>
-                        `}
-                    </td>
-                </tr>
-            `).join('');
-        }
+      // Tabla Servicio a Domicilio
+      const tbodyDom = document.getElementById('tbody-domicilio');
+      if (tbodyDom) {
+          tbodyDom.innerHTML = dom.length === 0 ? `<tr><td colspan="5" class="p-4 text-center text-slate-400">No hay órdenes a domicilio activas</td></tr>` :
+          dom.map(o => `
+              <tr class="border-b">
+                  <td class="p-3">
+                      <span class="font-bold text-indigo-600">${o.id}</span>
+                      <br>
+                      <button onclick="verDetalleOrden('${o.id}')" class="mt-1 px-2 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded text-[10px] transition border border-indigo-200">
+                          👁️ Ver orden
+                      </button>
+                  </td>
+                  <td class="p-3">${o.clienteNombre}<br><span class="text-[10px] text-slate-400">${o.clienteTel || ''}</span></td>
+                  <td class="p-3">${o.metodoPago}<br><span class="font-bold ${o.estadoPago === 'PAGADO' ? 'text-emerald-600' : 'text-amber-600'}">${o.estadoPago}</span></td>
+                  <td class="p-3 font-bold">Q${o.total.toFixed(2)}</td>
+                  <td class="p-3">
+                      ${o.estadoPago.includes('PENDIENTE DE VERIFICACIÓN') ? `
+                          <button onclick="confirmarPago('${o.id}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold transition">✓ Confirmar Pago</button>
+                      ` : `
+                          <div class="flex flex-wrap gap-1">
+                              ${["1. Tomando", "2. Aceptado", "3. Procesando", "4. Empacando", "5. Finalizar"].map(st => `
+                                  <button onclick="cambiarFlujo('${o.id}', '${st}')" class="px-1.5 py-0.5 text-[9px] rounded ${o.estadoOrden === st ? 'bg-indigo-600 text-white font-bold' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">${st}</button>
+                              `).join('')}
+                          </div>
+                      `}
+                  </td>
+              </tr>
+          `).join('');
+      }
 
-        // Tabla de Recoger en Tienda
-        const tbodyTie = document.getElementById('tbody-tienda');
-        if (tbodyTie) {
-            tbodyTie.innerHTML = tie.length === 0 ? `<tr><td colspan="5" class="p-4 text-center text-slate-400">No hay órdenes para retirar en tienda activas</td></tr>` :
-            tie.map(o => `
-                <tr class="border-b">
-                    <td class="p-3 font-bold text-indigo-600">${o.id}</td>
-                    <td class="p-3">${o.clienteNombre}<br><span class="text-[10px] text-slate-400">${o.clienteTel || ''}</span></td>
-                    <td class="p-3">
-                        <div class="flex flex-wrap gap-1">
-                            ${["1. Tomando", "2. Aceptado", "3. Procesando", "4. Empacando", "5. Finalizar"].map(st => `
-                                <button onclick="cambiarFlujo('${o.id}', '${st}')" class="px-1.5 py-0.5 text-[9px] rounded ${o.estadoOrden === st ? 'bg-indigo-600 text-white font-bold' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">${st}</button>
-                            `).join('')}
-                        </div>
-                    </td>
-                    <td class="p-3 font-bold">Q${o.total.toFixed(2)}</td>
-                    <td class="p-3">
-                        ${o.entregado ? `
-                            <span class="px-2 py-1 bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded-full">✓ Entregado & Stock Rebajado</span>
-                        ` : o.estadoOrden === '5. Finalizar' ? `
-                            <button onclick="marcarEntregadoRefugio('${o.id}')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] rounded-lg shadow-sm transition flex items-center gap-1">
-                                📦 Entregado
-                            </button>
-                        ` : `
-                            <span class="px-2 py-1 bg-amber-50 text-amber-700 font-bold text-[10px] rounded-full">En Preparación</span>
-                        `}
-                    </td>
-                </tr>
-            `).join('');
-        }
-    }
+      // Tabla Entrega en Tienda / Refugio
+      const tbodyTie = document.getElementById('tbody-tienda');
+      if (tbodyTie) {
+          tbodyTie.innerHTML = tie.length === 0 ? `<tr><td colspan="5" class="p-4 text-center text-slate-400">No hay órdenes para retirar en tienda activas</td></tr>` :
+          tie.map(o => `
+              <tr class="border-b">
+                  <td class="p-3">
+                      <span class="font-bold text-indigo-600">${o.id}</span>
+                      <br>
+                      <button onclick="verDetalleOrden('${o.id}')" class="mt-1 px-2 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded text-[10px] transition border border-indigo-200">
+                          👁️ Ver orden
+                      </button>
+                  </td>
+                  <td class="p-3">${o.clienteNombre}<br><span class="text-[10px] text-slate-400">${o.clienteTel || ''}</span></td>
+                  <td class="p-3">
+                      <div class="flex flex-wrap gap-1">
+                          ${["1. Tomando", "2. Aceptado", "3. Procesando", "4. Empacando", "5. Finalizar"].map(st => `
+                              <button onclick="cambiarFlujo('${o.id}', '${st}')" class="px-1.5 py-0.5 text-[9px] rounded ${o.estadoOrden === st ? 'bg-indigo-600 text-white font-bold' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">${st}</button>
+                          `).join('')}
+                      </div>
+                  </td>
+                  <td class="p-3 font-bold">Q${o.total.toFixed(2)}</td>
+                  <td class="p-3">
+                      ${o.entregado ? `
+                          <span class="px-2 py-1 bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded-full">✓ Entregado & Stock Rebajado</span>
+                      ` : o.estadoOrden === '5. Finalizar' ? `
+                          <button onclick="marcarEntregadoRefugio('${o.id}')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] rounded-lg shadow-sm transition flex items-center gap-1">
+                              📦 Entregado
+                          </button>
+                      ` : `
+                          <span class="px-2 py-1 bg-amber-50 text-amber-700 font-bold text-[10px] rounded-full">En Preparación</span>
+                      `}
+                  </td>
+              </tr>
+          `).join('');
+      }
+  }
 
     // Función exclusiva para confirmar la entrega presencial y descontar stock
     // 1. Confirmar entrega presencial
@@ -1507,6 +1466,46 @@ function completarCobroRefugio() {
         `;
     }).join('');
   }
+
+// Abrir ventana flotante con el detalle de la orden
+function verDetalleOrden(id) {
+    const orden = historialVentas.find(o => o.id === id);
+    if (!orden) return;
+
+    document.getElementById('v-ord-id').innerText = `Orden #${orden.id}`;
+    document.getElementById('v-ord-fecha').innerText = `Fecha: ${orden.fecha || 'N/A'}`;
+    document.getElementById('v-ord-cliente').innerText = `Cliente: ${orden.clienteNombre || 'N/A'}`;
+    document.getElementById('v-ord-tel').innerText = `Teléfono: ${orden.clienteTel || 'N/A'}`;
+    document.getElementById('v-ord-dir').innerText = `Dirección / Entrega: ${orden.clienteDir || (orden.tipo === 'Domicilio' ? 'Servicio a Domicilio' : 'Retiro en Refugio')}`;
+    document.getElementById('v-ord-pago').innerText = `Método de Pago: ${orden.metodoPago || 'N/A'} (${orden.estadoPago || ''})`;
+
+    const items = orden.itemsDetalle || orden.items || [];
+    const body = document.getElementById('v-ord-items-body');
+    
+    body.innerHTML = items.length === 0 
+        ? `<tr><td colspan="4" class="p-3 text-center text-slate-400">Sin productos registrados en esta orden.</td></tr>`
+        : items.map(i => {
+            const precio = parseFloat(i.precio || 0);
+            const cant = parseInt(i.cantidad || 1);
+            const sub = precio * cant;
+            return `
+                <tr>
+                    <td class="p-2.5 font-bold text-slate-800">${i.nombre}</td>
+                    <td class="p-2.5 text-center font-semibold">${cant}</td>
+                    <td class="p-2.5 text-right text-slate-600">Q${precio.toFixed(2)}</td>
+                    <td class="p-2.5 text-right font-bold text-slate-800">Q${sub.toFixed(2)}</td>
+                </tr>
+            `;
+        }).join('');
+
+    document.getElementById('v-ord-total').innerText = `Q${parseFloat(orden.total || 0).toFixed(2)}`;
+    document.getElementById('modal-ver-orden').classList.remove('hidden');
+}
+
+// Cerrar ventana flotante
+function cerrarModalVerOrden() {
+    document.getElementById('modal-ver-orden').classList.add('hidden');
+}
 
   async function toggleVis(id) {
     const numId = parseInt(String(id).replace(/\D/g, ''));
@@ -2168,4 +2167,58 @@ function mostrarNotificacionFlotante(mensaje, icono = '⚠️') {
 }
 
 </script>
+
+<!-- COLOCAR AL FINAL DEL ARCHIVO (FUERA DE PESTAÑAS OCULTAS) -->
+<div id="modal-ver-orden" class="fixed inset-0 bg-slate-900/50 hidden z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 text-xs shadow-xl max-h-[90vh] overflow-y-auto">
+    
+    <!-- Encabezado -->
+    <div class="flex justify-between items-center border-b pb-3">
+      <div>
+        <h3 class="font-black text-slate-800 text-base" id="v-ord-id">Orden #PED-0000</h3>
+        <p class="text-[11px] text-slate-500" id="v-ord-fecha">Fecha: --/--/----</p>
+      </div>
+      <button type="button" onclick="cerrarModalVerOrden()" class="text-slate-400 hover:text-slate-600 font-bold text-xl px-2">&times;</button>
+    </div>
+
+    <!-- Datos del Cliente -->
+    <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-1">
+      <p class="font-bold text-slate-800" id="v-ord-cliente">Cliente: --</p>
+      <p class="text-slate-600" id="v-ord-tel">Teléfono: --</p>
+      <p class="text-slate-600" id="v-ord-dir">Dirección / Entrega: --</p>
+      <p class="text-slate-600" id="v-ord-pago">Método de Pago: --</p>
+    </div>
+
+    <!-- Lista de Productos -->
+    <div>
+      <h4 class="font-bold text-slate-700 uppercase tracking-wider mb-2">Productos solicitados:</h4>
+      <div class="border rounded-2xl overflow-hidden bg-white">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-100 font-bold text-slate-600 border-b">
+            <tr>
+              <th class="p-2.5">Producto</th>
+              <th class="p-2.5 text-center">Cant.</th>
+              <th class="p-2.5 text-right">Precio</th>
+              <th class="p-2.5 text-right">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody id="v-ord-items-body" class="divide-y divide-slate-100">
+            <!-- Renderizado dinámicamente por JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Total -->
+    <div class="border-t pt-3 flex justify-between items-center text-sm font-bold text-slate-800">
+      <span>Total del Pedido:</span>
+      <span id="v-ord-total" class="text-indigo-600 font-black text-base">Q0.00</span>
+    </div>
+
+    <button type="button" onclick="cerrarModalVerOrden()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition">
+      Cerrar Ventana
+    </button>
+  </div>
+</div>
+
 {% endblock %}
