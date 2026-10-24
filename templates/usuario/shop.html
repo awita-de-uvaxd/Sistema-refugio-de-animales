@@ -28,7 +28,7 @@
     <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         <section id="sec-catalogo" class="space-y-6 relative">
             <div class="flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                <input type="text" id="catalogo-search" oninput="filtrarCatalogo()" placeholder="Buscar alimento, juguetes, medicina..." class="w-full md:w-80 px-4 py-2 border rounded-xl text-xs outline-purple-primary">
+                <input type="text" id="catalogo-search" oninput="this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, ''); filtrarCatalogo();" placeholder="Buscar alimento, juguetes, medicina..." class="w-full md:w-80 px-4 py-2 border rounded-xl text-xs outline-purple-primary">
                 <div class="flex flex-wrap items-center gap-2">
                     <button onclick="filtrarCategoria('Todos')" class="px-3 py-1.5 rounded-lg font-bold text-xs bg-purple-primary text-white">Todos</button>
                     <button onclick="filtrarCategoria('Comida')" class="px-3 py-1.5 rounded-lg font-bold text-xs bg-slate-100 text-slate-600 hover:bg-slate-200">Comida</button>
@@ -255,12 +255,13 @@
         </div>
        <!-- CAMPOS DE ENTREGA Y PAGO UNIFICADOS -->
       <div id="campos-cliente-pago" class="space-y-3 text-xs border-t pt-3">
-          <input type="text" id="recibe-nombre" placeholder="Nombre completo *" class="w-full p-2 border rounded-xl">
-          <input type="tel" id="recibe-telefono" placeholder="Teléfono *" class="w-full p-2 border rounded-xl">
+          <input type="text" id="recibe-nombre" maxlength="50" oninput="this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '').slice(0, 50);" placeholder="Nombre completo *" class="w-full p-2 border rounded-xl">
+          <input type="tel" id="recibe-telefono" maxlength="9" oninput="this.value = this.value.replace(/\D/g, '').slice(0, 8).replace(/^(\d{4})(\d{1,4})$/, '$1-$2');" placeholder="Teléfono *" class="w-full p-2 border rounded-xl">
           
           <!-- Campo Dirección: solo visible si es Servicio a Domicilio -->
           <div id="box-direccion">
-              <input type="text" id="recibe-direccion" placeholder="Dirección exacta *" class="w-full p-2 border rounded-xl">
+              <input type="text" id="recibe-direccion" maxlength="100" oninput="this.value = this.value.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-]/g, '').slice(0, 100);" placeholder="Dirección exacta *" class="w-full p-2 border rounded-xl">
+                ```<ElicitationsGroup></ElicitationsGroup>
           </div>
 
           <label class="block font-bold text-slate-700 pt-2">Método de Pago *</label>
@@ -278,10 +279,10 @@
           <!-- Formulario Tarjeta -->
           <div id="form-tarjeta" class="space-y-2 pt-1 bg-purple-50 p-3 rounded-xl border border-purple-200">
               <input type="text" id="card-holder" placeholder="Nombre en tarjeta *" class="w-full p-2 border bg-white rounded-xl text-xs">
-              <input type="text" id="card-number" maxlength="16" placeholder="Número de tarjeta (16 dígitos) *" class="w-full p-2 border bg-white rounded-xl text-xs">
+              <input type="text" id="card-number" maxlength="16" oninput="this.value = this.value.replace(/\D/g, '').slice(0, 16);" placeholder="Número de tarjeta (16 dígitos) *" class="w-full p-2 border bg-white rounded-xl text-xs">
               <div class="grid grid-cols-2 gap-2">
-                  <input type="text" id="card-exp" placeholder="MM/AA *" class="p-2 border bg-white rounded-xl text-xs">
-                  <input type="password" id="card-cvv" placeholder="CVV *" class="p-2 border bg-white rounded-xl text-xs">
+                  <input type="text" id="card-exp" maxlength="5" oninput="this.value = this.value.replace(/\D/g, '').slice(0, 4).replace(/^(\d{2})(\d{1,2})$/, '$1/$2');" placeholder="MM/AA *" class="p-2 border bg-white rounded-xl text-xs">
+                  <input type="password" id="card-cvv" maxlength="3" oninput="this.value = this.value.replace(/\D/g, '').slice(0, 3);" placeholder="CVV *" class="p-2 border bg-white rounded-xl text-xs">
               </div>
           </div>
 
@@ -294,7 +295,7 @@
               </select>
               <div class="grid grid-cols-2 gap-2 pt-1">
                   <input type="number" step="0.01" id="deposito-monto" placeholder="Monto Q *" class="p-2 border bg-white rounded-xl text-xs">
-                  <input type="text" id="deposito-ref" placeholder="No. Referencia *" class="p-2 border bg-white rounded-xl text-xs">
+                  <input type="text" id="deposito-ref" oninput="this.value = this.value.replace(/\D/g, '');" placeholder="No. Referencia *" class="p-2 border bg-white rounded-xl text-xs">
               </div>
           </div>
       </div>
@@ -307,7 +308,7 @@
             </label>
             
             <div id="campo-nit-container" class="hidden pt-1">
-                <input type="text" id="recibe-nit" placeholder="Ingresa tu NIT (Ej. 1234567-8) *" class="w-full p-2 border rounded-xl text-xs bg-white font-medium uppercase">
+                <input type="text" id="recibe-nit" maxlength="8" oninput="this.value = this.value.replace(/\D/g, '').slice(0, 8);" placeholder="Ingresa tu NIT (8 dígitos) *" class="w-full p-2 border rounded-xl text-xs bg-white font-medium uppercase">
             </div>
         </div>
 

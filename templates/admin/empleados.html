@@ -1,25 +1,91 @@
-<div id="admin-logs" class="tab-content-main hidden bg-white p-6 rounded-xl shadow-sm space-y-7">
-  <div>
-    <h2 class="text-xl font-black text-indigo-900">Personal y auditoría de empleados</h2>
-    <p class="text-sm text-slate-500">Altas, correos asociados, restauración de accesos y bajas seguras.</p>
+<!-- Auditoría del personal, administradores y credenciales -->
+<div id="admin-logs" class="tab-content-main hidden bg-white p-6 rounded-xl shadow-sm space-y-8">
+  <div class="flex flex-col md:flex-row md:justify-between gap-4 border-b pb-4">
+    <div><h2 class="text-xl font-black text-indigo-900">Auditoría, empleados y administradores</h2>
+    <p class="text-sm text-slate-500">Crear, desactivar y reactivar empleados; gestionar correos, administradores y claves. Los resultados se muestran como avisos sobre este panel.</p></div>
+    <span class="text-xs font-bold bg-indigo-50 text-indigo-700 rounded-xl p-3">Personal activo: {{ empleados|length }} · Administradores: {{ administradores|length }}</span>
   </div>
-  <div class="bg-slate-50 rounded-2xl p-5 border">
-    <h3 class="font-bold text-indigo-900 mb-4">Crear empleado</h3>
-    <form method="POST" action="{{ url_for('gestion_crear_cuenta') }}" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-      <input type="hidden" name="_csrf_gestion" value="{{ csrf_gestion() }}">
-      <label class="text-xs font-bold">Nombre completo<input name="nombre" minlength="2" maxlength="100" required class="block w-full p-3 border rounded-xl bg-white mt-1"></label>
-      <label class="text-xs font-bold">Correo institucional<input type="email" name="correo" required maxlength="100" class="block w-full p-3 border rounded-xl bg-white mt-1" placeholder="persona@huellitas.com"></label>
-      <label class="text-xs font-bold">Rol<select name="rol" class="block w-full p-3 border rounded-xl bg-white mt-1"><option value="rescatista">Rescatista</option><option value="veterinario">Veterinario</option></select></label>
-      <label class="text-xs font-bold">Código de acceso<input name="codigo" minlength="3" maxlength="20" required placeholder="RES-002" class="block w-full p-3 border rounded-xl bg-white mt-1"></label>
-      <label class="text-xs font-bold md:col-span-2">Contraseña temporal (mínimo 12 caracteres)
-      <div class="flex gap-2 mt-1"><input type="password" name="password" minlength="12" required autocomplete="new-password" class="w-full p-3 border rounded-xl bg-white"><button type="button" onclick="generarPasswordCuenta(this)" class="px-3 bg-slate-200 rounded-xl">Generar</button></div></label>
-      <button class="md:col-span-2 bg-indigo-700 text-white font-bold px-4 py-3 rounded-xl">Registrar empleado</button>
+  <div class="grid lg:grid-cols-3 gap-6">
+    <form action="{{ url_for('crear_empleado') }}" method="POST" class="lg:col-span-1 bg-slate-50 border p-5 rounded-2xl space-y-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <h3 class="font-bold text-indigo-900 text-lg">Crear empleado o administrador</h3>
+      <p class="text-xs text-slate-600">Puedes registrar rescatistas, veterinarios, administradores y usuarios normales.</p>
+      <div><label class="block text-xs font-bold mb-1">Nombre completo</label><input class="w-full p-2 border rounded-lg" name="nombre" minlength="2" maxlength="100" data-validar="persona" autocomplete="name" title="Solo letras, tildes, espacios y signos propios de nombres" required></div>
+      <div><label class="block text-xs font-bold mb-1">Correo electrónico</label><input class="w-full p-2 border rounded-lg" type="email" name="correo" maxlength="100" autocomplete="email" required></div>
+      <div><label class="block text-xs font-bold mb-1">Rol</label><select class="w-full p-2 border rounded-lg" name="rol" required>
+        <option value="rescatista">Rescatista</option>
+        <option value="veterinario">Veterinario</option>
+        <option value="admin">Administrador (acceso completo al panel)</option>
+        <option value="usuario">Usuario / Adoptante</option>
+      </select></div>
+      <section aria-live="polite" id="descripcion-permisos" class="p-3 border border-indigo-100 rounded-xl bg-white text-xs space-y-1">
+        <h4 id="permiso-titulo" class="font-bold text-indigo-900">Permisos del rol Rescatista</h4>
+        <p id="permiso-descripcion" class="text-slate-600">Accede a su área de rescates y alertas, sin entrar al panel administrativo.</p>
+        <p class="text-[11px] text-slate-400">Los permisos se asignan en el servidor según el rol elegido; esta descripción es informativa.</p>
+      </section>
+      <div><label class="block text-xs font-bold mb-1">Código de acceso <span id="nota-codigo-personal">(obligatorio para personal)</span></label>
+      <input class="w-full p-2 border rounded-lg" name="codigo" minlength="3" maxlength="20" data-validar="codigo" placeholder="RES-002" required>
+      <p class="text-[11px] text-slate-500">Al crear un usuario normal, puedes dejarlo vacío: utilizará el correo para acceder.</p></div>
+      <div><label class="block text-xs font-bold mb-1">Contraseña inicial (mín. 12 caracteres)</label><input class="w-full p-2 border rounded-lg" type="password" name="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
+      <button class="w-full p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold" type="submit">Crear cuenta</button>
+      <script>
+      (function () {
+        const formulario = document.currentScript.closest('form');
+        const selector = formulario.querySelector('select[name="rol"]');
+        const codigo = formulario.querySelector('input[name="codigo"]');
+        const nota = formulario.querySelector('#nota-codigo-personal');
+        const tituloPermiso = formulario.querySelector('#permiso-titulo');
+        const descripcionPermiso = formulario.querySelector('#permiso-descripcion');
+        const permisos = {
+          admin: ['Administrador — Acceso al panel administrativo', 'Puede administrar personal, credenciales, solicitudes, tienda, donaciones, voluntariado y diseño web.'],
+          rescatista: ['Rescatista — Acceso operativo', 'Puede usar el área de rescates y alertas; no administra cuentas ni ajustes globales.'],
+          veterinario: ['Veterinario — Acceso clínico', 'Puede usar el área veterinaria de pacientes y citas; no administra cuentas ni ajustes globales.'],
+          usuario: ['Usuario — Acceso personal', 'Puede acceder a adopciones y funciones de usuario; no administra el sistema.']
+        };
+        function actualizar() {
+          const esUsuario = selector.value === 'usuario';
+          codigo.required = !esUsuario;
+          nota.textContent = esUsuario ? '(opcional para usuario)' : '(obligatorio para personal)';
+          const detalle = permisos[selector.value] || permisos.rescatista;
+          tituloPermiso.textContent = detalle[0];
+          descripcionPermiso.textContent = detalle[1];
+          if (esUsuario && !codigo.value.trim()) codigo.setCustomValidity('');
+        }
+        selector.addEventListener('change', actualizar);
+        actualizar();
+      })();
+      </script>
     </form>
+    <div class="lg:col-span-2 space-y-5">
+      <section>
+        <h3 class="font-bold text-indigo-900 mb-3">Empleados activos</h3>
+        <div class="max-h-[480px] overflow-y-auto space-y-3">
+          {% for cuenta in empleados %}{% include 'admin/_ficha_cuenta.html' %}
+          {% else %}<p class="text-slate-500 text-sm">No hay empleados activos.</p>{% endfor %}
+        </div>
+      </section>
+      <section>
+        <h3 class="font-bold text-indigo-900 mb-3">Administradores</h3>
+        <div class="space-y-3 max-h-[380px] overflow-y-auto">
+          {% for cuenta in administradores %}{% include 'admin/_ficha_cuenta.html' %}
+          {% else %}<p class="text-slate-500 text-sm">No hay administradores activos.</p>{% endfor %}
+        </div>
+      </section>
+    </div>
   </div>
-  <h3 class="font-bold text-lg text-indigo-900">Empleados registrados</h3>
-  <div class="space-y-3">
-  {% for cuenta in cuentas_empleados %}
-    {% include 'admin_modulos/tarjeta_cuenta.html' %}
-  {% else %}<p class="p-6 rounded-xl bg-slate-50 text-slate-500">No hay empleados registrados.</p>{% endfor %}
-  </div>
+  <section class="border-t pt-5"><h3 class="font-bold text-indigo-900 mb-3">Cuentas de personal dadas de baja</h3>
+    <p class="text-xs text-slate-500 mb-3">Se retira el acceso sin borrar el historial de rescates, consultas ni auditorías.</p>
+    <div class="grid md:grid-cols-2 gap-3">
+    {% for cuenta in personal_inactivo %}{% include 'admin/_ficha_cuenta.html' %}
+    {% else %}<p class="text-sm text-slate-400">Sin bajas.</p>{% endfor %}
+    </div>
+  </section>
+  <section class="border-t pt-5"><h3 class="font-bold text-indigo-900 mb-3">Últimos movimientos de auditoría</h3>
+    <div class="overflow-x-auto"><table class="w-full text-xs"><thead class="bg-slate-100"><tr>
+       <th class="p-3 text-left">Fecha UTC</th><th class="p-3 text-left">Administrador</th><th class="p-3 text-left">Acción</th><th class="p-3 text-left">Cuenta afectada</th>
+    </tr></thead><tbody>
+       {% for evento in auditoria_cuentas %}<tr class="border-b"><td class="p-3">{{ evento.fecha.strftime('%Y-%m-%d %H:%M') }}</td><td class="p-3">{{ evento.administrador_nombre }}</td><td class="p-3">{{ evento.accion }}</td><td class="p-3">{{ evento.objetivo_nombre }}</td></tr>
+       {% else %}<tr><td colspan="4" class="p-4 text-slate-400">Sin movimientos registrados.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
 </div>

@@ -1,6 +1,6 @@
 import os
 from flask import send_from_directory
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, abort
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -8,6 +8,8 @@ from datetime import datetime, timedelta
 import json
 import re
 import calendar
+import secrets
+import hmac
 
 app = Flask(__name__)
 @app.route('/js/<path:filename>')
@@ -19,6 +21,31 @@ def serve_js(filename):
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///huellitas.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.secret_key = 'huellitas_secreto_2026'
+
+# ==========================================
+# CSRF - SOLUCIÓN SIMPLE, SIN MÓDULOS EXTERNOS
+# Habilita {{ csrf_token() }} y {{ csrf_gestion() }} en Jinja2.
+# ==========================================
+def csrf_token():
+    token = session.get('_csrf_cuentas')
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session['_csrf_cuentas'] = token
+    return token
+
+# Jinja tiene acceso a esta función desde cualquier plantilla.
+app.jinja_env.globals['csrf_token'] = csrf_token
+# Compatibilidad con plantillas anteriores de empleados.html.
+app.jinja_env.globals['csrf_gestion'] = csrf_token
+
+def validar_csrf_cuentas():
+    """Comprueba el CSRF antes de crear cuentas desde el panel."""
+    esperado = session.get('_csrf_cuentas', '')
+    recibido = (request.form.get('csrf_token', '')
+                or request.form.get('_csrf_gestion', ''))
+    if not esperado or not recibido or not hmac.compare_digest(esperado, recibido):
+        abort(400, description='Token de seguridad inválido. Actualiza la página e inténtalo de nuevo.')
+
 
 # NUEVO: Configuración para guardar imágenes    
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
@@ -50,7 +77,19 @@ class Usuario(db.Model):
     foto_perfil = db.Column(db.String(200), default='default_user.png') # <-- ESTO GUARDA LA FOTO
     password = db.Column(db.String(200), nullable=False)
     rol = db.Column(db.String(20), nullable=False, default='usuario')
+    activo = db.Column(db.Boolean, nullable=False, default=True)
+    sesion_version = db.Column(db.Integer, nullable=False, default=0)
     perfil_cv = db.relationship('PerfilAdopcion', backref='usuario', uselist=False, lazy=True)
+
+class AuditoriaCuenta(db.Model):
+    # Registra las operaciones sobre cuentas sin eliminar historiales relacionados.
+    id = db.Column(db.Integer, primary_key=True)
+    administrador_id = db.Column(db.Integer, nullable=False)
+    administrador_nombre = db.Column(db.String(100), nullable=False)
+    objetivo_id = db.Column(db.Integer, nullable=False)
+    objetivo_nombre = db.Column(db.String(100), nullable=False)
+    accion = db.Column(db.String(40), nullable=False)
+    fecha = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
 class PerfilAdopcion(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -349,6 +388,20 @@ def editar_apariencia():
     return redirect(url_for('admin'))
 
 
+@app.before_request
+def validar_sesion_de_cuenta():
+    usuario_id = session.get('usuario_id')
+    if usuario_id is None:
+        return None
+    usuario_actual = db.session.get(Usuario, usuario_id)
+    if (usuario_actual is None or not usuario_actual.activo
+            or usuario_actual.rol != session.get('rol')
+            or (usuario_actual.sesion_version or 0) != session.get('sesion_version', 0)):
+        session.clear()
+        flash('Tu acceso cambió o fue desactivado. Inicia sesión nuevamente.', 'error')
+        return redirect(url_for('login'))
+    return None
+
 @app.route('/logout')
 def logout():
     session.clear()
@@ -365,8 +418,10 @@ def login():
         correo_o_codigo = request.form.get('credencial')
         password = request.form.get('password')
         usuario = Usuario.query.filter((Usuario.correo == correo_o_codigo) | (Usuario.codigo_empleado == correo_o_codigo)).first()
-        if usuario and check_password_hash(usuario.password, password):
+        if usuario and usuario.activo and check_password_hash(usuario.password, password):
+            session.clear()
             session['usuario_id'] = usuario.id
+            session['sesion_version'] = usuario.sesion_version or 0
             session['rol'] = usuario.rol
             session['nombre'] = usuario.nombre
             if usuario.rol == 'admin': return redirect(url_for('admin'))
@@ -440,7 +495,11 @@ def usuario():
 def admin(): 
     if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
     
-    empleados_db = Usuario.query.filter(Usuario.rol.in_(['veterinario', 'rescatista'])).all()
+    empleados_db = Usuario.query.filter(Usuario.rol.in_(['veterinario', 'rescatista']), Usuario.activo.is_(True)).order_by(Usuario.nombre).all()
+    administradores_db = Usuario.query.filter_by(rol='admin', activo=True).order_by(Usuario.nombre).all()
+    personal_inactivo_db = Usuario.query.filter(Usuario.rol.in_(['admin','veterinario','rescatista']), Usuario.activo.is_(False)).order_by(Usuario.nombre).all()
+    usuarios_db = Usuario.query.filter_by(rol='usuario').order_by(Usuario.nombre).all()
+    auditoria_db = AuditoriaCuenta.query.order_by(AuditoriaCuenta.id.desc()).limit(30).all()
     pacientes_con_solicitudes = Paciente.query.filter(
         Paciente.solicitudes_recibidas.any(estado='En Revisión') | 
         Paciente.reclamos_recibidos.any(estado='En Revisión')
@@ -452,7 +511,7 @@ def admin():
     pedidos_db = Pedido.query.all() 
     user_data = Usuario.query.get(session['usuario_id']) # Inyección de datos
 
-    return render_template('admin.html', empleados=empleados_db, pacientes=pacientes_con_solicitudes, programas=programas_db, voluntariados=solicitudes_vol, info_donacion=info_don, productos=productos_db, pedidos=pedidos_db, usuario_data=user_data)
+    return render_template('admin.html', empleados=empleados_db, administradores=administradores_db, personal_inactivo=personal_inactivo_db, cuentas_empleados=empleados_db, cuentas_clientes=usuarios_db, cuentas_usuarios=usuarios_db, auditoria_cuentas=auditoria_db, pacientes=pacientes_con_solicitudes, programas=programas_db, voluntariados=solicitudes_vol, info_donacion=info_don, productos=productos_db, pedidos=pedidos_db, usuario_data=user_data)
     if 'usuario_id' not in session or session['rol'] != 'rescatista': return redirect(url_for('login'))
     rescates_db = Rescate.query.filter_by(rescatista_id=session['usuario_id']).all()
     alertas_db = Alerta.query.filter_by(estado='Pendiente').order_by(Alerta.id.desc()).all()
@@ -662,12 +721,8 @@ def vincular_mascota():
     
 @app.route('/crear_empleado', methods=['POST'])
 def crear_empleado():
-    if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
-    password_encriptada = generate_password_hash(request.form.get('password'))
-    nuevo_empleado = Usuario(nombre=request.form.get('nombre'), codigo_empleado=request.form.get('codigo'), password=password_encriptada, rol=request.form.get('rol'))
-    db.session.add(nuevo_empleado)
-    db.session.commit()
-    return redirect(url_for('admin'))
+    from modulos.cuentas import crear_empleado_seguro
+    return crear_empleado_seguro(db, Usuario, AuditoriaCuenta)
 
 @app.route('/crear_alerta', methods=['POST'])
 def crear_alerta():
@@ -1248,9 +1303,20 @@ def editar_mascota(paciente_id):
         
     return redirect(url_for('usuario'))
 
+# Registra cuentas.reactivar, cuentas.baja, cuentas.cambiar_rol,
+# cuentas.restablecer_clave y cuentas.actualizar_correo.
+from modulos.cuentas import registrar_cuentas, asegurar_columnas_existentes
+registrar_cuentas(app, db, Usuario, AuditoriaCuenta)
+# CSRF: mismo token para plantillas antiguas y las rutas nuevas.
+from modulos.cuentas import token_csrf
+app.jinja_env.globals['csrf_token'] = token_csrf
+app.jinja_env.globals['csrf_gestion'] = token_csrf
+
 if __name__ == '__main__':    
     with app.app_context():
         db.create_all()
+        # Cambios no destructivos en SQLite: conservar perfiles existentes.
+        asegurar_columnas_existentes(db)
         
         # Catálogo de especies: solo la primera vez (Perro, Gato y las que ya existían en pacientes/rescates)
         if not Especie.query.first():
