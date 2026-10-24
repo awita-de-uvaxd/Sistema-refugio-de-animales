@@ -374,8 +374,41 @@ function validarYEnviarConsulta() {
   } else {
     if (divResumen) divResumen.classList.add('hidden');
     // Envía el formulario si todo está correcto
-    document.getElementById('form-consulta-vet').submit();
-  }
+    const tipo = document.getElementById('form-tipo-ingreso').value;
+    const isNew = document.getElementById('form-paciente-id').value === '';
+    const codeGenerado = document.getElementById('hidden-codigo-acceso').value;
+
+    if (tipo === 'Externo' && isNew && !codeGenerado) {
+      const code = 'EXT-' + Math.floor(1000 + Math.random() * 9000);
+      const pin = Math.floor(1000 + Math.random() * 9000).toString();
+
+      document.getElementById('select-adopcion').value = 'Mascota Externa';
+
+      openModal(`
+        <div class="text-center p-4">
+          <i data-lucide="shield-check" class="w-16 h-16 text-emerald-500 mx-auto mb-4"></i>
+          <h2 class="text-2xl font-black text-slate-800 mb-2">Credenciales Generadas</h2>
+          <p class="text-sm text-slate-500 mb-6">Entrega estas credenciales al dueño para que pueda vincular su mascota desde su perfil en la plataforma.</p>
+          <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 mb-8 space-y-4">
+            <div>
+              <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Código de Paciente</p>
+              <p class="text-3xl font-mono font-black text-indigo-900 tracking-wider">` + code + `</p>
+            </div>
+            <div class="border-t border-slate-200 pt-4">
+              <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Contraseña Temporal</p>
+              <p class="text-3xl font-mono font-black text-indigo-900 tracking-wider">` + pin + `</p>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <button type="button" onclick="closeModal();" class="w-1/2 py-3.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition">Cancelar</button>
+            <button type="button" onclick="document.getElementById('hidden-codigo-acceso').value='` + code + `'; document.getElementById('hidden-password-acceso').value='` + pin + `'; document.getElementById('form-consulta-vet').submit();" class="w-1/2 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition">Confirmar y Generar Expediente</button>
+          </div>
+        </div>
+      `);
+      lucide.createIcons();
+    } else {
+      document.getElementById('form-consulta-vet').submit();
+    }  }
 }
 
   function aplicarRuta(tipo) {
