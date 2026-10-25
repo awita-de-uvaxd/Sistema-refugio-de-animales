@@ -35,8 +35,8 @@
   {% endif %}
   <form id="clave-{{ cuenta.id }}" class="hidden rounded-xl bg-white border p-3 space-y-2" method="POST" action="{{ url_for('cuentas.restablecer_clave', user_id=cuenta.id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label class="text-xs font-bold block">Nueva contraseña (opcional)</label>
-    <input type="password" name="nueva_password" minlength="12" maxlength="128" autocomplete="new-password" placeholder="Vacío = generar contraseña aleatoria" class="w-full p-2 border rounded-lg text-xs">
+    <label class="text-xs font-bold block">Nueva contraseña (opcional, mínimo 8 caracteres)</label>
+    <input type="password" name="nueva_password" minlength="8" maxlength="128" autocomplete="new-password" placeholder="Vacío = generar contraseña aleatoria" class="w-full p-2 border rounded-lg text-xs">
     <p class="text-[11px] text-slate-500">Si lo dejas vacío, el sistema generará una contraseña segura. Se mostrará una sola vez.</p>
     <button class="w-full p-2 bg-indigo-700 rounded-lg font-bold text-white text-xs">Confirmar restablecimiento</button>
   </form>
