@@ -83,11 +83,23 @@
               {% endif %}
             {% endwith %}
 
-            <form action="{{ url_for('login') }}" method="POST" class="space-y-5 relative">
-              <input type="text" name="credencial" required class="dog-trigger w-full border-2 border-transparent rounded-xl p-3.5 bg-white/10 text-white placeholder-slate-400 outline-none focus:border-amber-500 focus:bg-white/20 transition font-semibold backdrop-blur-md" placeholder="Correo o Código">
-              <input type="password" name="password" required class="dog-trigger w-full border-2 border-transparent rounded-xl p-3.5 bg-white/10 text-white placeholder-slate-400 outline-none focus:border-amber-500 focus:bg-white/20 transition font-semibold backdrop-blur-md" placeholder="Contraseña">
+            <form action="{{ url_for('login') }}" method="POST" class="space-y-3 relative">
+              <div>
+                <input type="text" name="credencial" required class="dog-trigger w-full border-2 border-transparent rounded-xl p-3 bg-white/10 text-white placeholder-slate-400 outline-none focus:border-amber-500 focus:bg-white/20 transition font-semibold backdrop-blur-md text-sm" placeholder="Correo o Código" oninput="limitarEntrada(this, '[^a-zA-Z0-9@\\-_.]', 30, 'cnt-log-cred')">
+                <p id="cnt-log-cred" class="text-[10px] text-slate-400 text-right pr-2 pt-1 font-bold">0/30</p>
+              </div>
               
-              <button type="submit" class="btn-31 w-full mt-4"><span class="text-container"><span class="text">Entrar al Sistema</span></span></button>
+              <div>
+                <div class="relative">
+                  <input type="password" id="login-pass" name="password" minlength="3" required class="dog-trigger w-full border-2 border-transparent rounded-xl p-3 bg-white/10 text-white placeholder-slate-400 outline-none focus:border-amber-500 focus:bg-white/20 transition font-semibold backdrop-blur-md text-sm pr-12" placeholder="Contraseña" oninput="limitarEntrada(this, '', 15, 'cnt-log-pass')">
+                  <button type="button" onclick="togglePassword('login-pass', 'eye-login')" class="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-white transition">
+                    <i data-lucide="eye" id="eye-login" class="w-5 h-5"></i>
+                  </button>
+                </div>
+                <p id="cnt-log-pass" class="text-[10px] text-slate-400 text-right pr-2 pt-1 font-bold">0/15</p>
+              </div>
+              
+              <button type="submit" class="btn-31 w-full mt-2"><span class="text-container"><span class="text">Entrar al Sistema</span></span></button>
             </form>
             
             <p class="text-center text-sm text-slate-400 mt-8">¿Aún no tienes cuenta? <br>
@@ -117,22 +129,47 @@
             <p class="text-sm text-slate-500 mt-2">Crea tu cuenta de adoptante en segundos.</p>
           </div>
           
-          <form action="{{ url_for('registro') }}" method="POST" class="space-y-4" onsubmit="return prepararRegistro(event)">
+          <form action="{{ url_for('registro') }}" method="POST" class="space-y-2" onsubmit="return prepararRegistro(event)">
             <input type="hidden" name="nombre" id="nombre-final">
             
             <div class="grid grid-cols-2 gap-3">
-              <input type="text" id="reg-nombre" required class="dog-trigger w-full border-2 border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500 transition font-semibold" placeholder="Nombre">
-              <input type="text" id="reg-apellido" required class="dog-trigger w-full border-2 border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500 transition font-semibold" placeholder="Apellido">
+              <div>
+                <input type="text" id="reg-nombre" required class="dog-trigger w-full border-2 border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500 transition font-semibold text-sm" placeholder="Nombre" oninput="limitarEntrada(this, '[^a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]', 10, 'cnt-nom')">
+                <p id="cnt-nom" class="text-[10px] text-slate-400 text-right pr-2 pt-0.5 font-bold">0/10</p>
+              </div>
+              <div>
+                <input type="text" id="reg-apellido" required class="dog-trigger w-full border-2 border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500 transition font-semibold text-sm" placeholder="Apellido" oninput="limitarEntrada(this, '[^a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]', 10, 'cnt-ape')">
+                <p id="cnt-ape" class="text-[10px] text-slate-400 text-right pr-2 pt-0.5 font-bold">0/10</p>
+              </div>
             </div>
             
-            <input type="email" name="correo" required class="dog-trigger w-full border-2 border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500 transition font-semibold" placeholder="Correo Electrónico">
+            <div>
+              <input type="text" name="correo" required class="dog-trigger w-full border-2 border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500 transition font-semibold text-sm" placeholder="Correo Electrónico" oninput="limitarEntrada(this, '[^a-zA-Z0-9@\\-_.]', 30, 'cnt-correo')">
+              <p id="cnt-correo" class="text-[10px] text-slate-400 text-right pr-2 pt-0.5 font-bold">0/30</p>
+            </div>
             
             <div class="grid grid-cols-2 gap-3">
-              <input type="password" id="reg-pass1" name="password" required oninput="validarPasswordsEnVivo()" class="dog-trigger w-full border-2 border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500 transition font-semibold" placeholder="Contraseña">
-              <input type="password" id="reg-pass2" required oninput="validarPasswordsEnVivo()" class="dog-trigger w-full border-2 border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500 transition font-semibold" placeholder="Confirmar">
+              <div>
+                <div class="relative">
+                  <input type="password" id="reg-pass1" name="password" minlength="5" required oninput="limitarEntrada(this, '', 15, 'cnt-pass1'); validarPasswordsEnVivo()" class="dog-trigger w-full border-2 border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500 transition font-semibold text-sm pr-10" placeholder="Contraseña">
+                  <button type="button" onclick="togglePassword('reg-pass1', 'eye-reg1')" class="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-indigo-600 transition">
+                    <i data-lucide="eye" id="eye-reg1" class="w-4 h-4"></i>
+                  </button>
+                </div>
+                <p id="cnt-pass1" class="text-[10px] text-slate-400 text-right pr-2 pt-0.5 font-bold">0/15</p>
+              </div>
+              <div>
+                <div class="relative">
+                  <input type="password" id="reg-pass2" minlength="5" required oninput="limitarEntrada(this, '', 15, 'cnt-pass2'); validarPasswordsEnVivo()" class="dog-trigger w-full border-2 border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500 transition font-semibold text-sm pr-10" placeholder="Confirmar">
+                  <button type="button" onclick="togglePassword('reg-pass2', 'eye-reg2')" class="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-indigo-600 transition">
+                    <i data-lucide="eye" id="eye-reg2" class="w-4 h-4"></i>
+                  </button>
+                </div>
+                <p id="cnt-pass2" class="text-[10px] text-slate-400 text-right pr-2 pt-0.5 font-bold">0/15</p>
+              </div>
             </div>
             
-            <p id="msg-pass" class="text-xs font-bold text-center mt-1 hidden"></p>
+            <p id="msg-pass" class="text-xs font-bold text-center mt-0 hidden"></p>
             
             <button type="submit" id="btn-submit-registro" class="btn-31 btn-31-indigo w-full mt-2">
               <span class="text-container"><span class="text">Crear Cuenta</span></span>
@@ -391,5 +428,35 @@
       });
     });
   });
+
+  function togglePassword(inputId, iconId) {
+    const input = document.getElementById(inputId);
+    const icon = document.getElementById(iconId);
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.setAttribute('data-lucide', 'eye-off');
+    } else {
+      input.type = 'password';
+      icon.setAttribute('data-lucide', 'eye');
+    }
+    lucide.createIcons(); // Refresca el icono para que cambie visualmente
+  }
+
+  // Limpia caracteres no permitidos en tiempo real y actualiza el contador
+  function limitarEntrada(input, regexStr, maxLen, counterId) {
+    if (regexStr) {
+      const regex = new RegExp(regexStr, 'g');
+      input.value = input.value.replace(regex, ''); // Borra lo prohibido
+    }
+    
+    if (input.value.length > maxLen) {
+      input.value = input.value.substring(0, maxLen); // Corta al límite
+    }
+    
+    if (counterId) {
+      document.getElementById(counterId).innerText = input.value.length + '/' + maxLen;
+    }
+  }
+
 </script>
 {% endblock %}
