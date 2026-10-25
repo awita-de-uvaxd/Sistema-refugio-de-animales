@@ -418,7 +418,14 @@ def login():
         correo_o_codigo = request.form.get('credencial')
         password = request.form.get('password')
         usuario = Usuario.query.filter((Usuario.correo == correo_o_codigo) | (Usuario.codigo_empleado == correo_o_codigo)).first()
+        
         if usuario and usuario.activo and check_password_hash(usuario.password, password):
+            
+            # --- BLINDAJE: Si ya tiene correo, el código temporal queda inhabilitado ---
+            if correo_o_codigo == usuario.codigo_empleado and usuario.correo:
+                flash('Por seguridad, el acceso con código fue desactivado. Inicia sesión con tu correo electrónico.', 'error')
+                return redirect(url_for('login'))
+            
             session.clear()
             session['usuario_id'] = usuario.id
             session['sesion_version'] = usuario.sesion_version or 0
@@ -721,8 +728,98 @@ def vincular_mascota():
     
 @app.route('/crear_empleado', methods=['POST'])
 def crear_empleado():
-    from modulos.cuentas import crear_empleado_seguro
-    return crear_empleado_seguro(db, Usuario, AuditoriaCuenta)
+    if 'usuario_id' not in session or session['rol'] != 'admin': 
+        return redirect(url_for('login'))
+        
+    nombre = request.form.get('nombre')
+    correo = request.form.get('correo') or None
+    codigo = request.form.get('codigo') or None
+    password = request.form.get('password')
+    rol = request.form.get('rol')
+    
+    if not correo and not codigo:
+        flash("Debes ingresar un correo o un código de acceso.", "error")
+        return redirect(url_for('admin'))
+        
+    password_encriptada = generate_password_hash(password)
+    
+    nuevo_empleado = Usuario(
+        nombre=nombre, 
+        correo=correo, 
+        codigo_empleado=codigo, 
+        password=password_encriptada, 
+        rol=rol
+    )
+    
+    db.session.add(nuevo_empleado)
+    db.session.commit()
+    
+    auditoria = AuditoriaCuenta(
+        administrador_id=session['usuario_id'],
+        administrador_nombre=session['nombre'],
+        objetivo_id=nuevo_empleado.id,
+        objetivo_nombre=nombre,
+        accion="ALTA_" + rol.upper()
+    )
+    db.session.add(auditoria)
+    db.session.commit()
+    
+    flash(f"Cuenta de {rol.capitalize()} creada exitosamente.", "success")
+    return redirect(url_for('admin'))
+
+@app.route('/admin/baja/<int:user_id>', methods=['POST'])
+def baja_cuenta(user_id):
+    if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
+    usuario = Usuario.query.get(user_id)
+    if usuario:
+        usuario.activo = False
+        db.session.commit()
+        flash(f"Cuenta de {usuario.nombre} dada de baja.", "success")
+    return redirect(url_for('admin'))
+
+@app.route('/admin/reactivar/<int:user_id>', methods=['POST'])
+def reactivar_cuenta(user_id):
+    if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
+    usuario = Usuario.query.get(user_id)
+    if usuario:
+        usuario.activo = True
+        db.session.commit()
+        flash(f"Cuenta de {usuario.nombre} reactivada.", "success")
+    return redirect(url_for('admin'))
+
+@app.route('/admin/cambiar_rol/<int:user_id>', methods=['POST'])
+def cambiar_rol(user_id):
+    if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
+    usuario = Usuario.query.get(user_id)
+    if usuario:
+        usuario.rol = request.form.get('rol')
+        db.session.commit()
+        flash(f"Rol actualizado para {usuario.nombre}.", "success")
+    return redirect(url_for('admin'))
+
+@app.route('/admin/restablecer_clave/<int:user_id>', methods=['POST'])
+def restablecer_clave(user_id):
+    if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
+    usuario = Usuario.query.get(user_id)
+    if usuario:
+        nueva_clave = request.form.get('nueva_password')
+        if nueva_clave:
+            usuario.password = generate_password_hash(nueva_clave)
+            db.session.commit()
+            flash(f"Contraseña actualizada para {usuario.nombre}.", "success")
+        else:
+            flash("Debes escribir una contraseña nueva.", "error")
+    return redirect(url_for('admin'))
+
+@app.route('/admin/actualizar_correo/<int:user_id>', methods=['POST'])
+def actualizar_correo(user_id):
+    if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
+    usuario = Usuario.query.get(user_id)
+    if usuario:
+        usuario.correo = request.form.get('correo')
+        db.session.commit()
+        flash(f"Correo actualizado para {usuario.nombre}.", "success")
+    return redirect(url_for('admin'))
 
 @app.route('/crear_alerta', methods=['POST'])
 def crear_alerta():
@@ -1316,20 +1413,11 @@ def editar_mascota(paciente_id):
         
     return redirect(url_for('usuario'))
 
-# Registra cuentas.reactivar, cuentas.baja, cuentas.cambiar_rol,
-# cuentas.restablecer_clave y cuentas.actualizar_correo.
-from modulos.cuentas import registrar_cuentas, asegurar_columnas_existentes
-registrar_cuentas(app, db, Usuario, AuditoriaCuenta)
-# CSRF: mismo token para plantillas antiguas y las rutas nuevas.
-from modulos.cuentas import token_csrf
-app.jinja_env.globals['csrf_token'] = token_csrf
-app.jinja_env.globals['csrf_gestion'] = token_csrf
+
 
 if __name__ == '__main__':    
     with app.app_context():
         db.create_all()
-        # Cambios no destructivos en SQLite: conservar perfiles existentes.
-        asegurar_columnas_existentes(db)
         
         # Catálogo de especies: solo la primera vez (Perro, Gato y las que ya existían en pacientes/rescates)
         if not Especie.query.first():

@@ -1,271 +1,335 @@
-<div class="max-w-6xl mx-auto mt-6">
-  <div class="flex flex-col md:flex-row gap-8">
+{% set esta_verificado = usuario_data.telefono and usuario_data.correo %}
 
-    <!-- ========================================== -->
-    <!-- SIDEBAR (IZQUIERDA) - MENÚ Y TARJETA       -->
-    <!-- ========================================== -->
-    <div class="w-full md:w-1/3 space-y-6">
+<div class="max-w-4xl mx-auto mt-6">
+  <!-- ========================================== -->
+  <!-- 1. TARJETA CENTRAL DE IDENTIDAD            -->
+  <!-- ========================================== -->
+  <div class="bg-white rounded-3xl border border-slate-200 shadow-sm text-center relative overflow-hidden">
+    
+    <!-- Banner de fondo -->
+    <div class="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-indigo-500 to-purple-600 z-0"></div>
+    
+    <div class="relative z-10 pt-16 pb-10 px-6 flex flex-col items-center">
       
-      <!-- Tarjeta de Identidad -->
-      <div class="bg-white rounded-3xl border border-slate-200 shadow-sm text-center relative overflow-hidden">
-        <!-- Fondo de color superior (tipo banner de perfil) -->
-        <div class="absolute top-0 left-0 w-full h-24 bg-gradient-to-br from-indigo-500 to-purple-600 z-0"></div>
-
-        <div class="relative z-10 pt-10 pb-6 px-6">
-          <!-- Foto flotante -->
-          <div class="w-28 h-28 mx-auto rounded-full border-4 border-white shadow-lg overflow-hidden bg-white mb-4">
-            {% if usuario_data.foto_perfil and usuario_data.foto_perfil != 'default_user.png' %}
-              <img src="{{ url_for('static', filename='uploads/' ~ usuario_data.foto_perfil) }}" class="w-full h-full object-cover">
-            {% else %}
-              <div class="w-full h-full flex items-center justify-center bg-slate-50 text-slate-400">
-                <i data-lucide="user" class="w-12 h-12"></i>
-              </div>
-            {% endif %}
+      <!-- Foto Inteligente -->
+      <div class="w-32 h-32 rounded-full border-4 border-white shadow-xl overflow-hidden bg-white mb-4">
+        {% if usuario_data.foto_perfil and usuario_data.foto_perfil != 'default_user.png' %}
+          <img src="{{ url_for('static', filename='uploads/' ~ usuario_data.foto_perfil) }}" class="w-full h-full object-cover">
+        {% else %}
+          <div class="w-full h-full flex items-center justify-center bg-slate-50 text-slate-400">
+            <i data-lucide="user" class="w-16 h-16"></i>
           </div>
-          
-          <h2 class="text-xl font-black text-slate-800">{{ usuario_data.nombre }}</h2>
-          <p class="text-xs font-bold text-white bg-indigo-600 px-3 py-1 rounded-full uppercase tracking-widest inline-block mt-2 shadow-sm">{{ usuario_data.rol }}</p>
+        {% endif %}
+      </div>
+      
+      <h2 class="text-3xl font-black text-slate-800">{{ usuario_data.nombre }}</h2>
+      
+      <!-- ID Empleado (Solo aparece si no es usuario normal y tiene ID) -->
+      {% if usuario_data.rol != 'usuario' and usuario_data.codigo_empleado %}
+        <p class="text-sm font-bold text-slate-500 mt-1">ID: {{ usuario_data.codigo_empleado }}</p>
+      {% endif %}
 
-          <!-- Estadísticas Rápidas (Dinámicas por Rol) -->
-          <div class="flex justify-center gap-6 mt-6 border-t border-slate-100 pt-4">
+      <p class="text-xs font-bold text-white bg-indigo-600 px-4 py-1.5 rounded-full uppercase tracking-widest mt-3 shadow-sm inline-block">{{ usuario_data.rol }}</p>
+
+      <!-- Contacto (Oculto si no existen) -->
+      <div class="mt-5 flex flex-wrap justify-center gap-6 text-sm text-slate-600 font-medium">
+        {% if usuario_data.telefono %}
+        <span class="flex items-center gap-1.5"><i data-lucide="phone" class="w-4 h-4 text-indigo-500"></i> {{ usuario_data.telefono }}</span>
+        {% endif %}
+        {% if usuario_data.correo %}
+        <span class="flex items-center gap-1.5"><i data-lucide="mail" class="w-4 h-4 text-indigo-500"></i> {{ usuario_data.correo }}</span>
+        {% endif %}
+      </div>
+
+      <!-- SECCIÓN DE ESTADÍSTICAS Y VERIFICACIÓN -->
+      <div class="flex justify-center gap-12 mt-8 border-t border-slate-100 pt-8 w-full max-w-md">
+        
+        <!-- Izquierda: Dinámico por rol -->
+        <div class="text-center">
+          <p class="text-2xl font-black text-slate-700">
             {% if usuario_data.rol == 'usuario' %}
-              <div class="text-center">
-                <p class="text-xl font-black text-slate-700">{% if mis_mascotas %}{{ mis_mascotas|length }}{% else %}0{% endif %}</p>
-                <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-1">Mascotas</p>
-              </div>
-              <div class="w-px bg-slate-200"></div>
-              <div class="text-center">
-                <p class="text-xl font-black text-emerald-600"><i data-lucide="check-circle-2" class="w-6 h-6 inline"></i></p>
-                <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-1">Verificado</p>
-              </div>
-            {% elif usuario_data.rol == 'admin' %}
-              <div class="text-center">
-                <p class="text-xl font-black text-red-600">Total</p>
-                <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-1">Acceso</p>
-              </div>
-              <div class="w-px bg-slate-200"></div>
-              <div class="text-center">
-                <p class="text-xl font-black text-emerald-600"><i data-lucide="shield-check" class="w-6 h-6 inline"></i></p>
-                <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-1">Sistema</p>
-              </div>
-            {% elif usuario_data.rol == 'veterinario' %}
-              <div class="text-center">
-                <p class="text-xl font-black text-indigo-600">Clínica</p>
-                <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-1">Sector</p>
-              </div>
-              <div class="w-px bg-slate-200"></div>
-              <div class="text-center">
-                <p class="text-xl font-black text-emerald-600"><i data-lucide="stethoscope" class="w-6 h-6 inline"></i></p>
-                <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-1">Activo</p>
-              </div>
+              {{ mis_mascotas|length if mis_mascotas else 0 }}
             {% else %}
-              <div class="text-center">
-                <p class="text-xl font-black text-amber-600">Campo</p>
-                <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-1">Sector</p>
-              </div>
-              <div class="w-px bg-slate-200"></div>
-              <div class="text-center">
-                <p class="text-xl font-black text-emerald-600"><i data-lucide="activity" class="w-6 h-6 inline"></i></p>
-                <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-1">Activo</p>
-              </div>
+              <i data-lucide="shield" class="w-7 h-7 inline text-indigo-600"></i>
             {% endif %}
-          </div>
+          </p>
+          <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-1">
+            {% if usuario_data.rol == 'usuario' %}Mascotas{% else %}Acceso{% endif %}
+          </p>
+        </div>
+        
+        <div class="w-px bg-slate-200"></div>
+        
+        <!-- Derecha: Estado de Verificación -->
+        <div class="text-center">
+          {% if esta_verificado %}
+             <p class="text-2xl font-black text-emerald-600"><i data-lucide="check-circle-2" class="w-7 h-7 inline"></i></p>
+             <p class="text-[10px] text-emerald-600 uppercase font-bold tracking-wider mt-1">Verificado</p>
+          {% else %}
+             <p class="text-2xl font-black text-amber-500"><i data-lucide="alert-circle" class="w-7 h-7 inline"></i></p>
+             <p class="text-[10px] text-amber-500 uppercase font-bold tracking-wider mt-1">Pendiente</p>
+          {% endif %}
         </div>
       </div>
 
-      <!-- Menú de Navegación Lateral -->
-      <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-3 space-y-1">
-        <button onclick="switchPerfilPanel('info')" id="btn-panel-info" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold bg-indigo-50 text-indigo-700 transition">
+      <!-- BOTONES DISPARADORES DE MENÚS -->
+      <div class="flex flex-wrap justify-center gap-4 mt-10">
+        <button onclick="abrirCajon('cajon-editar')" class="px-8 py-3.5 bg-indigo-50 text-indigo-700 font-bold rounded-xl hover:bg-indigo-100 transition flex items-center gap-2 shadow-sm">
           <i data-lucide="user-cog" class="w-5 h-5"></i> Editar Perfil
         </button>
-        <button onclick="switchPerfilPanel('seguridad')" id="btn-panel-seguridad" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition">
+        <button onclick="abrirCajon('cajon-seguridad')" class="px-8 py-3.5 bg-slate-50 text-slate-700 font-bold rounded-xl hover:bg-slate-100 border border-slate-200 transition flex items-center gap-2">
           <i data-lucide="shield-check" class="w-5 h-5"></i> Seguridad
         </button>
-        
-        <div class="h-px bg-slate-100 my-2"></div>
-        
-        <!-- Componente Modular Uiverse: Botón Cerrar Sesión centrado -->
-        <div class="flex justify-center py-2">
-          {% include 'componentes/btn_logout.html' %}
-        </div>
-      </div>
-    </div>
-
-    <!-- ========================================== -->
-    <!-- CONTENIDO CENTRAL (DERECHA)                -->
-    <!-- ========================================== -->
-    <div class="w-full md:w-2/3">
-
-      <!-- 1. PANEL: EDITAR PERFIL -->
-      <div id="panel-perfil-info" class="bg-white rounded-3xl border border-slate-200 shadow-sm p-8">
-        <div class="flex items-center gap-3 mb-6 border-b pb-4">
-            <div class="p-2 bg-indigo-100 text-indigo-600 rounded-lg"><i data-lucide="user-cog" class="w-6 h-6"></i></div>
-            <h3 class="text-2xl font-black text-slate-800">Información Personal</h3>
-        </div>
-
-        <form action="{{ url_for('actualizar_perfil') }}" method="POST" enctype="multipart/form-data" class="space-y-6" onsubmit="return validarPerfil(event)">
-          
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="md:col-span-2">
-              <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Nombre Completo</label>
-              <input type="text" name="nombre" value="{{ usuario_data.nombre }}" required maxlength="50" oninput="filtrarLetrasPerfil(this)" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition">
-            </div>
-
-            <div>
-              <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Teléfono</label>
-              <input type="text" id="perfil-tel" name="telefono" value="{{ usuario_data.telefono or '' }}" maxlength="8" oninput="filtrarNumerosPerfil(this)" placeholder="Ej. 12345678" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition">
-            </div>
-
-            <div>
-              <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Correo Electrónico</label>
-              <input type="email" name="correo" value="{{ usuario_data.correo or '' }}" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition">
-            </div>
-
-            <div class="md:col-span-2 border-t border-slate-100 pt-6 mt-2">
-              <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Cambiar Foto de Perfil</label>
-              <div class="flex items-center gap-4">
-                <div class="w-16 h-16 rounded-full bg-slate-100 border border-slate-200 overflow-hidden flex-shrink-0">
-                  <img id="preview-nueva-foto" src="{% if usuario_data.foto_perfil and usuario_data.foto_perfil != 'default_user.png' %}{{ url_for('static', filename='uploads/' ~ usuario_data.foto_perfil) }}{% endif %}" class="w-full h-full object-cover {% if not usuario_data.foto_perfil or usuario_data.foto_perfil == 'default_user.png' %}hidden{% endif %}">
-                </div>
-                <input type="file" name="foto_perfil" accept="image/*" onchange="previsualizarFotoPerfil(event)" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
-              </div>
-            </div>
-          </div>
-
-          <div class="pt-4">
-            <button type="submit" class="w-full md:w-auto px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2">
-              <i data-lucide="save" class="w-5 h-5"></i> Guardar Cambios
-            </button>
-          </div>
-        </form>
       </div>
 
-      <!-- 2. PANEL: SEGURIDAD (Oculto por defecto) -->
-      <div id="panel-perfil-seguridad" class="hidden bg-white rounded-3xl border border-slate-200 shadow-sm p-8">
-        <div class="flex items-center gap-3 mb-4 border-b pb-4">
-            <div class="p-2 bg-red-100 text-red-600 rounded-lg"><i data-lucide="shield-alert" class="w-6 h-6"></i></div>
-            <h3 class="text-2xl font-black text-slate-800">Seguridad y Contraseña</h3>
-        </div>
-        
-        <p class="text-sm text-slate-500 mb-8 leading-relaxed">Protege tu cuenta con una contraseña fuerte. Debe contener al menos 8 caracteres, una letra mayúscula, un número y un carácter especial.</p>
-
-        <form action="{{ url_for('cambiar_password') }}" method="POST" class="space-y-6" onsubmit="return validarPasswordSegura(event)">
-
-          <div class="space-y-6 max-w-md">
-            <div>
-              <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Contraseña Actual</label>
-              <input type="password" name="password_actual" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-slate-400 transition">
-            </div>
-
-            <div class="border-t border-slate-100 pt-6">
-              <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Nueva Contraseña</label>
-              <!-- Evento oninput para evaluar la fuerza en vivo -->
-              <input type="password" id="nueva-pass" name="password_nueva" required oninput="checarFuerzaPassword(this.value)" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 transition">
-              
-              <!-- Lista de verificación de contraseña -->
-              <div class="mt-4 space-y-2.5 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <p id="req-length" class="text-xs text-slate-400 flex items-center gap-2 font-medium"><i data-lucide="circle" class="w-3.5 h-3.5"></i> Mínimo 8 caracteres</p>
-                <p id="req-upper" class="text-xs text-slate-400 flex items-center gap-2 font-medium"><i data-lucide="circle" class="w-3.5 h-3.5"></i> Al menos una letra mayúscula</p>
-                <p id="req-number" class="text-xs text-slate-400 flex items-center gap-2 font-medium"><i data-lucide="circle" class="w-3.5 h-3.5"></i> Al menos un número</p>
-                <p id="req-special" class="text-xs text-slate-400 flex items-center gap-2 font-medium"><i data-lucide="circle" class="w-3.5 h-3.5"></i> Al menos un carácter especial (!@#$%^&*)</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="pt-4">
-            <button type="submit" class="w-full md:w-auto px-8 py-3.5 bg-slate-800 hover:bg-black text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2">
-              <i data-lucide="lock" class="w-5 h-5"></i> Actualizar Contraseña
-            </button>
-          </div>
-        </form>
+      <!-- BOTÓN DE CERRAR SESIÓN ANIMADO -->
+      <div class="mt-8 pt-6 border-t border-slate-100 flex justify-center w-full max-w-md mx-auto">
+        {% include 'componentes/btn_logout.html' %}
       </div>
 
     </div>
   </div>
 </div>
 
-<script>
-  // Control de Pestañas Internas del Perfil
-  function switchPerfilPanel(panel) {
-    document.getElementById('panel-perfil-info').classList.add('hidden');
-    document.getElementById('panel-perfil-seguridad').classList.add('hidden');
+<!-- ========================================== -->
+<!-- 2. ALERTA FLOTANTE: COMPLETAR PERFIL       -->
+<!-- ========================================== -->
+{% if not esta_verificado %}
+<div id="modal-verificacion" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-opacity">
+  <div class="bg-white p-8 rounded-3xl max-w-md w-full relative shadow-2xl">
+    <button onclick="cerrarAlerta()" class="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-full transition"><i data-lucide="x" class="w-5 h-5"></i></button>
     
-    document.getElementById('btn-panel-info').className = 'w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition';
-    document.getElementById('btn-panel-seguridad').className = 'w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition';
+    <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+      <i data-lucide="alert-triangle" class="w-8 h-8"></i>
+    </div>
+    
+    <h3 class="text-2xl font-black text-center text-slate-800 mb-2">Perfil Incompleto</h3>
+    <p class="text-sm text-center text-slate-500 mb-6">Completa estos pasos para asegurar tu cuenta y obtener la insignia de <span class="font-bold text-emerald-600">Verificado</span>.</p>
+    
+    <ul class="space-y-4 mb-8 bg-slate-50 p-5 rounded-2xl border border-slate-100">
+      <li class="flex items-center gap-3 text-sm font-bold {% if usuario_data.telefono %}text-emerald-600{% else %}text-slate-600{% endif %}">
+        <i data-lucide="{% if usuario_data.telefono %}check-circle-2{% else %}circle{% endif %}" class="w-5 h-5"></i> Ligar un número de teléfono
+      </li>
+      <li class="flex items-center gap-3 text-sm font-bold {% if usuario_data.correo %}text-emerald-600{% else %}text-slate-600{% endif %}">
+        <i data-lucide="{% if usuario_data.correo %}check-circle-2{% else %}circle{% endif %}" class="w-5 h-5"></i> Registrar un correo electrónico
+      </li>
 
-    document.getElementById('panel-perfil-' + panel).classList.remove('hidden');
-    document.getElementById('btn-panel-' + panel).className = 'w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold bg-indigo-50 text-indigo-700 transition shadow-sm';
+      {% if usuario_data.rol != 'usuario' %}
+      <li class="flex items-center gap-3 text-sm font-bold text-slate-600">
+        <i data-lucide="circle" class="w-5 h-5"></i> Cambiar contraseña temporal
+      </li>
+      {% endif %}
+
+    </ul>
+
+    <button onclick="irAEditar()" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl shadow-md transition">
+      Completar Ahora
+    </button>
+  </div>
+</div>
+{% endif %}
+
+<!-- ========================================== -->
+<!-- 3. MENÚS LATERALES (OFF-CANVAS)            -->
+<!-- ========================================== -->
+
+<!-- Fondo oscuro para cerrar al hacer clic afuera -->
+<div id="overlay-cajon" onclick="cerrarCajones()" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 hidden opacity-0 transition-opacity duration-300"></div>
+
+<!-- CAJÓN: EDITAR PERFIL -->
+<div id="cajon-editar" class="fixed top-0 right-0 h-full w-full md:w-[450px] bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300 flex flex-col">
+  
+  <!-- Cabecera del menú -->
+  <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-white">
+    <h3 class="text-xl font-black text-slate-800 flex items-center gap-2"><i data-lucide="user-cog" class="text-indigo-600"></i> Editar Perfil</h3>
+    <button onclick="cerrarCajones()" class="p-2 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-full transition"><i data-lucide="x"></i></button>
+  </div>
+
+  <!-- Contenido desplazable -->
+  <div class="p-6 overflow-y-auto flex-1 custom-scroll bg-slate-50/50">
+    <form action="{{ url_for('actualizar_perfil') }}" method="POST" enctype="multipart/form-data" class="space-y-8">
+      
+      <!-- SECCIÓN 1: FOTOGRAFÍA -->
+      <div>
+        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Fotografía</label>
+        <div class="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-full bg-slate-100 overflow-hidden flex-shrink-0">
+              <img id="preview-nueva-foto" src="{% if usuario_data.foto_perfil and usuario_data.foto_perfil != 'default_user.png' %}{{ url_for('static', filename='uploads/' ~ usuario_data.foto_perfil) }}{% endif %}" class="w-full h-full object-cover {% if not usuario_data.foto_perfil or usuario_data.foto_perfil == 'default_user.png' %}hidden{% endif %}">
+            </div>
+            <!-- Este texto suplanta al feo botón default de archivos -->
+            <div id="txt-cambiar-foto" onclick="document.getElementById('input-foto').click()" class="text-sm font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer hidden">Elegir Nueva Imagen</div>
+          </div>
+          <!-- Botón de desbloqueo -->
+          <button type="button" onclick="desbloquearFoto()" id="btn-edit-foto" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition"><i data-lucide="edit-2" class="w-5 h-5"></i></button>
+          
+          <input type="file" id="input-foto" name="foto_perfil" accept="image/*" onchange="previsualizarFoto(event)" class="hidden">
+        </div>
+      </div>
+
+      <hr class="border-slate-200">
+
+      <!-- SECCIÓN 2: DATOS BÁSICOS -->
+      <div>
+        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Información Básica</label>
+        <div class="space-y-3">
+          
+          <!-- Nombre (Read-only por defecto) -->
+          <div class="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm transition-all duration-200">
+            <div class="w-full">
+              <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Nombre Completo</label>
+              <input type="text" id="in-nombre" name="nombre" value="{{ usuario_data.nombre }}" readonly oninput="this.value = this.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ ]/g, '')" class="w-full bg-transparent border-none outline-none text-slate-800 font-semibold p-0 text-sm focus:ring-0">
+            </div>
+            <button type="button" onclick="desbloquearCampo('in-nombre', this)" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition"><i data-lucide="edit-2" class="w-5 h-5"></i></button>
+          </div>
+
+          <!-- Teléfono (Read-only) -->
+          <div class="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm transition-all duration-200">
+            <div class="w-full">
+              <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Teléfono</label>
+              <input type="text" id="in-tel" name="telefono" value="{{ usuario_data.telefono or '' }}" readonly placeholder="Vacio" oninput="this.value = this.value.replace(/[^0-9-]/g, '')" maxlength="15" class="w-full bg-transparent border-none outline-none text-slate-800 font-semibold p-0 text-sm focus:ring-0">
+            </div>
+            <button type="button" onclick="desbloquearCampo('in-tel', this)" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition"><i data-lucide="edit-2" class="w-5 h-5"></i></button>
+          </div>
+
+          <!-- Correo (Read-only) -->
+          <div class="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm transition-all duration-200">
+            <div class="w-full">
+              <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Correo Electrónico</label>
+              <input type="email" id="in-correo" name="correo" value="{{ usuario_data.correo or '' }}" readonly placeholder="Vacio" class="w-full bg-transparent border-none outline-none text-slate-800 font-semibold p-0 text-sm focus:ring-0">
+            </div>
+            <button type="button" onclick="desbloquearCampo('in-correo', this)" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition"><i data-lucide="edit-2" class="w-5 h-5"></i></button>
+          </div>
+
+        </div>
+      </div>
+  </div>
+  
+  <!-- Footer del Cajón con Botones -->
+  <div class="p-6 bg-white border-t border-slate-100 flex gap-3 shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
+    <button type="button" onclick="cerrarCajones()" class="w-1/3 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition">Atrás</button>
+    <button type="submit" class="w-2/3 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2">
+      <i data-lucide="save" class="w-4 h-4"></i> Guardar
+    </button>
+    </form>
+  </div>
+</div>
+
+<!-- CAJÓN: SEGURIDAD (Idéntico formato) -->
+<div id="cajon-seguridad" class="fixed top-0 right-0 h-full w-full md:w-[450px] bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300 flex flex-col">
+  <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-white">
+    <h3 class="text-xl font-black text-slate-800 flex items-center gap-2"><i data-lucide="shield-alert" class="text-red-600"></i> Seguridad</h3>
+    <button onclick="cerrarCajones()" class="p-2 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-full transition"><i data-lucide="x"></i></button>
+  </div>
+
+  <div class="p-6 overflow-y-auto flex-1 custom-scroll bg-slate-50/50">
+    <p class="text-sm text-slate-500 mb-6 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">Cambiar tu contraseña cerrará las sesiones activas en otros dispositivos.</p>
+    
+    <form action="{{ url_for('cambiar_password') }}" method="POST" class="space-y-6">
+      <div>
+        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Contraseña Actual</label>
+        <div class="relative">
+          <input type="password" id="pass-old" name="password_actual" required class="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-sm font-semibold outline-none focus:border-slate-400">
+          <button type="button" onclick="togglePassword('pass-old', 'eye-old')" class="absolute inset-y-0 right-3 flex items-center text-slate-400"><i data-lucide="eye" id="eye-old" class="w-4 h-4"></i></button>
+        </div>
+      </div>
+
+      <hr class="border-slate-200">
+
+      <div>
+        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Nueva Contraseña</label>
+        <div class="relative mb-3">
+          <input type="password" id="pass-new" name="password_nueva" required class="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-sm font-semibold outline-none focus:border-red-400">
+          <button type="button" onclick="togglePassword('pass-new', 'eye-new')" class="absolute inset-y-0 right-3 flex items-center text-slate-400"><i data-lucide="eye" id="eye-new" class="w-4 h-4"></i></button>
+        </div>
+        <div class="relative">
+          <input type="password" id="pass-confirm" required placeholder="Confirmar" class="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-sm font-semibold outline-none focus:border-red-400">
+          <button type="button" onclick="togglePassword('pass-confirm', 'eye-confirm')" class="absolute inset-y-0 right-3 flex items-center text-slate-400"><i data-lucide="eye" id="eye-confirm" class="w-4 h-4"></i></button>
+        </div>
+      </div>
+  </div>
+
+  <div class="p-6 bg-white border-t border-slate-100 flex gap-3 shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
+    <button type="button" onclick="cerrarCajones()" class="w-1/3 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition">Atrás</button>
+    <button type="submit" class="w-2/3 py-3.5 bg-slate-800 hover:bg-black text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2">
+      <i data-lucide="lock" class="w-4 h-4"></i> Actualizar
+    </button>
+    </form>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- SCRIPTS DE CONTROL                         -->
+<!-- ========================================== -->
+<script>
+  // CONTROL DE CAJONES (OFF-CANVAS)
+  function abrirCajon(id) {
+    document.getElementById('overlay-cajon').classList.remove('hidden');
+    setTimeout(() => { document.getElementById('overlay-cajon').classList.remove('opacity-0'); }, 10);
+    document.getElementById(id).classList.remove('translate-x-full');
   }
 
-  // Previsualizar la foto de perfil antes de subirla
-  function previsualizarFotoPerfil(event) {
+  function cerrarCajones() {
+    document.getElementById('cajon-editar').classList.add('translate-x-full');
+    document.getElementById('cajon-seguridad').classList.add('translate-x-full');
+    document.getElementById('overlay-cajon').classList.add('opacity-0');
+    setTimeout(() => { document.getElementById('overlay-cajon').classList.add('hidden'); }, 300);
+  }
+
+  // DESBLOQUEO DE CAMPOS READ-ONLY
+  function desbloquearCampo(inputId, btn) {
+    const input = document.getElementById(inputId);
+    input.removeAttribute('readonly'); // Permite escribir
+    input.focus(); // Centra el cursor automáticamente
+    
+    // Cambia visualmente el contenedor para indicar que está "vivo"
+    const contenedor = input.parentElement.parentElement;
+    contenedor.classList.remove('border-slate-200');
+    contenedor.classList.add('border-indigo-400', 'ring-4', 'ring-indigo-50');
+    
+    // Desaparece el lápiz
+    btn.classList.add('hidden');
+  }
+
+  function desbloquearFoto() {
+    document.getElementById('txt-cambiar-foto').classList.remove('hidden');
+    document.getElementById('btn-edit-foto').classList.add('hidden');
+  }
+
+  // PREVISUALIZAR FOTO ELEGIDA
+  function previsualizarFoto(event) {
     const img = document.getElementById('preview-nueva-foto');
     if(event.target.files.length > 0){
       img.src = URL.createObjectURL(event.target.files[0]);
       img.classList.remove('hidden');
+      document.getElementById('txt-cambiar-foto').innerText = "¡Imagen Lista!";
+      document.getElementById('txt-cambiar-foto').classList.add('text-emerald-600');
     }
   }
 
-  // Filtros Básicos
-  function filtrarLetrasPerfil(input) { input.value = input.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ ]/g, ''); }
-  function filtrarNumerosPerfil(input) { input.value = input.value.replace(/\D/g, ''); }
-
-  function validarPerfil(event) {
-      const telefono = document.getElementById('perfil-tel').value;
-      if (telefono.length > 0 && telefono.length !== 8) {
-          alert("El número de teléfono debe contener exactamente 8 dígitos.");
-          event.preventDefault();
-          return false;
-      }
-      return true;
+  // CONTROL DEL MODAL DE VERIFICACIÓN
+  function cerrarAlerta() {
+    const modal = document.getElementById('modal-verificacion');
+    modal.classList.add('opacity-0');
+    setTimeout(() => modal.classList.add('hidden'), 300);
+  }
+  
+  function irAEditar() {
+    cerrarAlerta();
+    abrirCajon('cajon-editar');
   }
 
-  // Lógica reactiva para validar la fuerza de la contraseña
-  function checarFuerzaPassword(val) {
-    const reqLength = document.getElementById('req-length');
-    const reqUpper = document.getElementById('req-upper');
-    const reqNumber = document.getElementById('req-number');
-    const reqSpecial = document.getElementById('req-special');
-
-    // Reglas de validación
-    const hasLength = val.length >= 8;
-    const hasUpper = /[A-Z]/.test(val);
-    const hasNumber = /[0-9]/.test(val);
-    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(val);
-
-    toggleRequisito(reqLength, hasLength);
-    toggleRequisito(reqUpper, hasUpper);
-    toggleRequisito(reqNumber, hasNumber);
-    toggleRequisito(reqSpecial, hasSpecial);
-  }
-
-  // Cambia el estilo del requisito de gris a verde
-  function toggleRequisito(el, cumplido) {
-    if(cumplido) {
-      el.classList.remove('text-slate-400');
-      el.classList.add('text-emerald-600');
-      el.innerHTML = '<i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> ' + el.innerText;
+  // FUNCIÓN PARA VER CONTRASEÑAS
+  function togglePassword(inputId, iconId) {
+    const input = document.getElementById(inputId);
+    const icon = document.getElementById(iconId);
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.setAttribute('data-lucide', 'eye-off');
     } else {
-      el.classList.remove('text-emerald-600');
-      el.classList.add('text-slate-400');
-      el.innerHTML = '<i data-lucide="circle" class="w-3.5 h-3.5"></i> ' + el.innerText;
+      input.type = 'password';
+      icon.setAttribute('data-lucide', 'eye');
     }
     lucide.createIcons();
-  }
-
-  // Validación final al intentar guardar la contraseña
-  function validarPasswordSegura(event) {
-    const val = document.getElementById('nueva-pass').value;
-    const hasLength = val.length >= 8;
-    const hasUpper = /[A-Z]/.test(val);
-    const hasNumber = /[0-9]/.test(val);
-    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(val);
-
-    if(!(hasLength && hasUpper && hasNumber && hasSpecial)) {
-      alert("La nueva contraseña debe cumplir con todos los requisitos de seguridad.");
-      event.preventDefault();
-      return false;
-    }
-    return true;
   }
 </script>

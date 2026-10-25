@@ -6,95 +6,93 @@
     <span class="text-xs font-bold bg-indigo-50 text-indigo-700 rounded-xl p-3">Personal activo: {{ empleados|length }} · Administradores: {{ administradores|length }}</span>
   </div>
   <div class="grid lg:grid-cols-3 gap-6">
-    <form action="{{ url_for('crear_empleado') }}" method="POST" class="lg:col-span-1 bg-slate-50 border p-5 rounded-2xl space-y-3">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <h3 class="font-bold text-indigo-900 text-lg">Crear empleado o administrador</h3>
-      <p class="text-xs text-slate-600">Puedes registrar rescatistas, veterinarios, administradores y usuarios normales.</p>
-      <div><label class="block text-xs font-bold mb-1">Nombre completo</label><input class="w-full p-2 border rounded-lg" name="nombre" minlength="2" maxlength="100" data-validar="persona" autocomplete="name" title="Solo letras, tildes, espacios y signos propios de nombres" required></div>
-      <div><label class="block text-xs font-bold mb-1">Rol</label><select class="w-full p-2 border rounded-lg" name="rol" required>
-        <option value="rescatista">Rescatista</option>
-        <option value="veterinario">Veterinario</option>
-        <option value="admin">Administrador (acceso completo al panel)</option>
-        <option value="usuario">Usuario / Adoptante</option>
-      </select></div>
-      <section aria-live="polite" id="descripcion-permisos" class="p-3 border border-indigo-100 rounded-xl bg-white text-xs space-y-1">
-        <h4 id="permiso-titulo" class="font-bold text-indigo-900">Permisos del rol Rescatista</h4>
-        <p id="permiso-descripcion" class="text-slate-600">Accede a su área de rescates y alertas, sin entrar al panel administrativo.</p>
-        <p class="text-[11px] text-slate-400">Los permisos se asignan en el servidor según el rol elegido; esta descripción es informativa.</p>
-      </section>
-      <!-- La cuenta utiliza únicamente un identificador: código O correo. -->
+    <form action="{{ url_for('crear_empleado') }}" method="POST" class="lg:col-span-1 bg-white border border-slate-200 p-6 rounded-3xl shadow-sm space-y-5">
+      <div class="flex items-center gap-3 mb-2 border-b pb-4">
+        <div class="p-2 bg-indigo-100 text-indigo-600 rounded-lg"><i data-lucide="user-plus" class="w-5 h-5"></i></div>
+        <h3 class="font-black text-slate-800 text-lg">Nueva Cuenta</h3>
+      </div>
+      
+      <!-- Nombre -->
       <div>
-        <label for="metodo-acceso-cuenta" class="block text-xs font-bold mb-1">Método de inicio de sesión</label>
-        <select id="metodo-acceso-cuenta" class="w-full p-2 border rounded-lg bg-white">
-          <option value="codigo" selected>Código de acceso</option>
-          <option value="correo">Correo electrónico</option>
+        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Nombre Completo</label>
+        <input type="text" name="nombre" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 transition">
+      </div>
+
+      <!-- Rol (Ahora con opción de Usuario Normal) -->
+      <div>
+        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Asignar Rol</label>
+        <select name="rol" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 transition cursor-pointer">
+          <option value="rescatista">Rescatista (Acceso Operativo)</option>
+          <option value="veterinario">Veterinario (Acceso Clínico)</option>
+          <option value="admin">Administrador (Acceso Total)</option>
+          <option value="usuario">Usuario / Adoptante</option>
         </select>
-        <p class="text-[11px] text-slate-500 mt-1">Puedes guardar con código (solo números o letras y números) o con correo, sin completar ambos.</p>
       </div>
-      <div id="campo-codigo-cuenta">
-        <label for="codigo-nueva-cuenta" class="block text-xs font-bold mb-1">Código de inicio de sesión (1 a 20 caracteres)</label>
-        <input id="codigo-nueva-cuenta" class="w-full p-2 border rounded-lg" name="codigo" minlength="1" maxlength="20" data-validar="codigo" autocomplete="off" placeholder="Ej.: 123456, 00123 o RES2026" inputmode="text" required>
-      </div>
-      <div id="campo-correo-cuenta" class="hidden">
-        <label for="correo-nueva-cuenta" class="block text-xs font-bold mb-1">Correo para iniciar sesión</label>
-        <input id="correo-nueva-cuenta" class="w-full p-2 border rounded-lg" type="email" name="correo" maxlength="100" autocomplete="email" placeholder="ejemplo@correo.com" disabled>
-      </div>
+
+      <hr class="border-slate-100">
+
+      <!-- Método de Acceso Dinámico -->
       <div>
-        <label for="clave-temporal-cuenta" class="block text-xs font-bold mb-1">Contraseña temporal (mínimo 8 caracteres)</label>
-        <div class="flex items-center gap-2">
-          <input id="clave-temporal-cuenta" class="w-full min-w-0 p-2 border rounded-lg" type="password" name="password" minlength="8" maxlength="128" autocomplete="new-password" placeholder="Escribe la contraseña temporal" required>
-          <button id="ver-clave-cuenta" type="button" class="shrink-0 flex items-center justify-center p-2.5 border rounded-lg bg-white hover:bg-slate-100" aria-label="Mostrar contraseña" aria-controls="clave-temporal-cuenta" aria-pressed="false" title="Mostrar contraseña">
-            <svg id="icono-ojo-cuenta" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Método de Acceso</label>
+        <select id="tipo-acceso" onchange="alternarMetodoAcceso()" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 transition cursor-pointer mb-3">
+          <option value="codigo">Código de Acceso (Personal / Temporal)</option>
+          <option value="correo">Correo Electrónico (Definitivo)</option>
+        </select>
+
+        <!-- Contenedor Código -->
+        <div id="caja-codigo">
+          <input type="text" id="input-codigo" name="codigo" maxlength="30" pattern="[a-zA-Z0-9\-_]+" title="Solo letras, números y guiones. Máx 30 caracteres." placeholder="Código (Ej. RES-001)" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 transition" required>
+        </div>
+
+        <!-- Contenedor Correo (Oculto por defecto) -->
+        <div id="caja-correo" class="hidden">
+          <input type="email" id="input-correo" name="correo" maxlength="30" pattern="[a-zA-Z0-9@\-_.]+" title="Formato de correo válido. Máx 30 caracteres." placeholder="Correo Electrónico" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 transition" disabled>
+        </div>
+      </div>
+
+      <!-- Contraseña -->
+      <div>
+        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Contraseña Inicial</label>
+        <div class="relative">
+          <input type="password" id="pass-nueva-cuenta" name="password" minlength="5" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 transition pr-10" placeholder="Escribe la clave">
+          <button type="button" onclick="togglePassword('pass-nueva-cuenta', 'eye-nueva-cuenta')" class="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-indigo-600 transition">
+            <i data-lucide="eye" id="eye-nueva-cuenta" class="w-5 h-5"></i>
           </button>
         </div>
-        <p class="text-[11px] text-slate-500 mt-1">Es una clave inicial: evita contraseñas comunes. Para obligar a cambiarla en el primer acceso se necesita configurar también el servidor.</p>
       </div>
-      <button class="w-full p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold" type="submit">Crear cuenta</button>
+
+      <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl shadow-md transition flex items-center justify-center gap-2 mt-2">
+        <i data-lucide="save" class="w-5 h-5"></i> Registrar Cuenta
+      </button>
+
       <script>
-      (function () {
-        const formulario = document.currentScript.closest('form');
-        const selector = formulario.querySelector('select[name="rol"]');
-        const metodo = formulario.querySelector('#metodo-acceso-cuenta');
-        const codigo = formulario.querySelector('#codigo-nueva-cuenta');
-        const correo = formulario.querySelector('#correo-nueva-cuenta');
-        const contenedorCodigo = formulario.querySelector('#campo-codigo-cuenta');
-        const contenedorCorreo = formulario.querySelector('#campo-correo-cuenta');
-        const clave = formulario.querySelector('#clave-temporal-cuenta');
-        const botonOjo = formulario.querySelector('#ver-clave-cuenta');
-        const tituloPermiso = formulario.querySelector('#permiso-titulo');
-        const descripcionPermiso = formulario.querySelector('#permiso-descripcion');
-        const permisos = {
-          admin: ['Administrador — Acceso al panel administrativo', 'Puede administrar personal, credenciales, solicitudes, tienda, donaciones, voluntariado y diseño web.'],
-          rescatista: ['Rescatista — Acceso operativo', 'Puede usar el área de rescates y alertas; no administra cuentas ni ajustes globales.'],
-          veterinario: ['Veterinario — Acceso clínico', 'Puede usar el área veterinaria de pacientes y citas; no administra cuentas ni ajustes globales.'],
-          usuario: ['Usuario — Acceso personal', 'Puede acceder a adopciones y funciones de usuario; no administra el sistema.']
-        };
-        function actualizar() {
-          const porCorreo = metodo.value === 'correo';
-          contenedorCodigo.classList.toggle('hidden', porCorreo);
-          contenedorCorreo.classList.toggle('hidden', !porCorreo);
-          codigo.disabled = porCorreo;
-          codigo.required = !porCorreo;
-          correo.disabled = !porCorreo;
-          correo.required = porCorreo;
-          // El formulario nunca enviará ambos identificadores al servidor.
-          if (porCorreo) codigo.value = '';
-          else correo.value = '';
-          const detalle = permisos[selector.value] || permisos.rescatista;
-          tituloPermiso.textContent = detalle[0];
-          descripcionPermiso.textContent = detalle[1];
+        function alternarMetodoAcceso() {
+          const tipo = document.getElementById('tipo-acceso').value;
+          const cajaCodigo = document.getElementById('caja-codigo');
+          const inputCodigo = document.getElementById('input-codigo');
+          const cajaCorreo = document.getElementById('caja-correo');
+          const inputCorreo = document.getElementById('input-correo');
+
+          if (tipo === 'codigo') {
+            cajaCodigo.classList.remove('hidden');
+            inputCodigo.disabled = false;
+            inputCodigo.setAttribute('required', 'true');
+
+            cajaCorreo.classList.add('hidden');
+            inputCorreo.disabled = true;
+            inputCorreo.removeAttribute('required');
+            inputCorreo.value = '';
+          } else {
+            cajaCorreo.classList.remove('hidden');
+            inputCorreo.disabled = false;
+            inputCorreo.setAttribute('required', 'true');
+
+            cajaCodigo.classList.add('hidden');
+            inputCodigo.disabled = true;
+            inputCodigo.removeAttribute('required');
+            inputCodigo.value = '';
+          }
         }
-        metodo.addEventListener('change', actualizar);
-        botonOjo.addEventListener('click', () => {
-          const mostrar = clave.type === 'password';
-          clave.type = mostrar ? 'text' : 'password';
-          botonOjo.setAttribute('aria-label', mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña');
-          botonOjo.setAttribute('title', mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña');
-          botonOjo.setAttribute('aria-pressed', String(mostrar));
-        });
-        selector.addEventListener('change', actualizar);
-        actualizar();
-      })();
       </script>
     </form>
     <div class="lg:col-span-2 space-y-5">
