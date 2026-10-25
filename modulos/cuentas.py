@@ -16,6 +16,7 @@ from modulos.validaciones import nombre_persona
 
 
 ROLES_PERSONAL = frozenset({'admin', 'rescatista', 'veterinario'})
+ROLES_ALTA = ROLES_PERSONAL | frozenset({'usuario'})
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
 
@@ -50,15 +51,16 @@ def correo_validado(valor):
 
 
 def clave_validada(valor):
-    if not valor or not 12 <= len(valor) <= 128:
-        raise ValueError('La contraseña debe contener entre 12 y 128 caracteres.')
+    """Claves temporales de al menos 8 caracteres; se guardan como hash."""
+    if not valor or not 8 <= len(valor) <= 128:
+        raise ValueError('La contraseña debe contener entre 8 y 128 caracteres.')
     return valor
 
 
 def codigo_validado(valor):
     codigo = (valor or '').strip().upper()
-    if not re.fullmatch(r'[A-Z0-9][A-Z0-9_-]{2,19}', codigo):
-        raise ValueError('El código debe tener de 3 a 20 caracteres: letras, números, _ o -.')
+    if not re.fullmatch(r'[A-Z0-9][A-Z0-9_-]{0,19}', codigo):
+        raise ValueError('El código debe tener de 1 a 20 caracteres: solo números, letras y números, o letras; también admite _ y -.')
     return codigo
 
 
@@ -82,14 +84,19 @@ def crear_empleado_seguro(db, Usuario, AuditoriaCuenta):
     try:
         nombre = nombre_persona(request.form.get('nombre'))
         rol = request.form.get('rol')
-        if rol not in ROLES_PERSONAL:
+        if rol not in ROLES_ALTA:
             raise ValueError('Rol no autorizado.')
-        correo = correo_validado(request.form.get('correo'))
-        codigo = codigo_validado(request.form.get('codigo'))
+        # Un unico identificador por cuenta: correo O codigo.
+        correo_entrada = (request.form.get('correo') or '').strip()
+        codigo_entrada = (request.form.get('codigo') or '').strip()
+        if bool(correo_entrada) == bool(codigo_entrada):
+            raise ValueError('Indica un correo o un código de acceso, pero no ambos.')
+        correo = correo_validado(correo_entrada) if correo_entrada else None
+        codigo = codigo_validado(codigo_entrada) if codigo_entrada else None
         clave = clave_validada(request.form.get('password'))
-        if email_ya_usado(db, Usuario, correo):
+        if correo and email_ya_usado(db, Usuario, correo):
             raise ValueError('Ese correo ya está registrado.')
-        if Usuario.query.filter_by(codigo_empleado=codigo).first():
+        if codigo and Usuario.query.filter_by(codigo_empleado=codigo).first():
             raise ValueError('Ese código ya está registrado.')
         persona = Usuario(nombre=nombre, correo=correo, codigo_empleado=codigo,
                           password=generate_password_hash(clave), rol=rol,
@@ -98,11 +105,11 @@ def crear_empleado_seguro(db, Usuario, AuditoriaCuenta):
         db.session.flush()
         auditar(db, AuditoriaCuenta, admin, persona, 'ALTA_' + rol.upper())
         db.session.commit()
-        flash('Perfil creado correctamente. Puede iniciar sesión con su correo o código.', 'success')
+        flash('Cuenta creada correctamente. Inicia sesión con el correo o código elegido y la contraseña temporal.', 'success')
     except (ValueError, IntegrityError) as error:
         db.session.rollback()
         flash(str(error) if isinstance(error, ValueError) else 'Código o correo ya utilizado.', 'error')
-    return redirect(url_for('admin') + '#logs')
+    return redirect(url_for('admin') + ('#usuarios' if request.form.get('rol') == 'usuario' else '#logs'))
 
 
 def registrar_cuentas(app, db, Usuario, AuditoriaCuenta):
@@ -153,6 +160,8 @@ def registrar_cuentas(app, db, Usuario, AuditoriaCuenta):
             if email_ya_usado(db, Usuario, correo, except_id=user_id):
                 raise ValueError('Ese correo ya pertenece a otra cuenta.')
             persona.correo = correo
+            # Tras asignar correo, ese será el único identificador para iniciar sesión.
+            persona.codigo_empleado = None
             persona.sesion_version = (persona.sesion_version or 0) + 1
             auditar(db, AuditoriaCuenta, admin, persona, 'CAMBIAR_CORREO')
             db.session.commit()

@@ -1,0 +1,12 @@
+{% extends 'base.html' %}{% block content %}
+<div class="max-w-xl mx-auto mt-12 bg-white rounded-2xl shadow-lg p-8 space-y-5 border">
+  <h1 class="text-2xl font-black text-indigo-900">Contraseña restablecida</h1>
+  <p class="text-sm text-slate-600">Acceso actualizado para <strong>{{ cuenta.nombre }}</strong> ({{ cuenta.correo or cuenta.codigo_empleado }}).</p>
+  <div class="p-4 rounded-xl bg-amber-50 border border-amber-200">
+    <p class="text-sm text-amber-900 font-bold">Muestra la contraseña solamente a su titular. No se almacena en texto plano.</p>
+    <input class="w-full mt-3 p-3 border rounded-lg font-mono text-lg" value="{{ nueva_clave }}" readonly onclick="this.select()" aria-label="Contraseña temporal">
+    <p class="text-xs mt-2">Este dato solo se presenta ahora. Después no podrá consultarse; puede generar otro restablecimiento.</p>
+  </div>
+  <p class="text-sm text-slate-600">Todas las sesiones anteriores de esa cuenta quedan revocadas.</p>
+  <a href="{{ url_for('admin') }}#{{ 'usuarios' if cuenta.rol == 'usuario' else 'logs' }}" class="block rounded-xl p-3 bg-indigo-700 text-white font-bold text-center">Volver al panel</a>
+</div>{% endblock %}

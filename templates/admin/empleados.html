@@ -6,54 +6,93 @@
     <span class="text-xs font-bold bg-indigo-50 text-indigo-700 rounded-xl p-3">Personal activo: {{ empleados|length }} · Administradores: {{ administradores|length }}</span>
   </div>
   <div class="grid lg:grid-cols-3 gap-6">
-    <form action="{{ url_for('crear_empleado') }}" method="POST" class="lg:col-span-1 bg-slate-50 border p-5 rounded-2xl space-y-3">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <h3 class="font-bold text-indigo-900 text-lg">Crear empleado o administrador</h3>
-      <p class="text-xs text-slate-600">Puedes registrar rescatistas, veterinarios, administradores y usuarios normales.</p>
-      <div><label class="block text-xs font-bold mb-1">Nombre completo</label><input class="w-full p-2 border rounded-lg" name="nombre" minlength="2" maxlength="100" data-validar="persona" autocomplete="name" title="Solo letras, tildes, espacios y signos propios de nombres" required></div>
-      <div><label class="block text-xs font-bold mb-1">Correo electrónico</label><input class="w-full p-2 border rounded-lg" type="email" name="correo" maxlength="100" autocomplete="email" required></div>
-      <div><label class="block text-xs font-bold mb-1">Rol</label><select class="w-full p-2 border rounded-lg" name="rol" required>
-        <option value="rescatista">Rescatista</option>
-        <option value="veterinario">Veterinario</option>
-        <option value="admin">Administrador (acceso completo al panel)</option>
-        <option value="usuario">Usuario / Adoptante</option>
-      </select></div>
-      <section aria-live="polite" id="descripcion-permisos" class="p-3 border border-indigo-100 rounded-xl bg-white text-xs space-y-1">
-        <h4 id="permiso-titulo" class="font-bold text-indigo-900">Permisos del rol Rescatista</h4>
-        <p id="permiso-descripcion" class="text-slate-600">Accede a su área de rescates y alertas, sin entrar al panel administrativo.</p>
-        <p class="text-[11px] text-slate-400">Los permisos se asignan en el servidor según el rol elegido; esta descripción es informativa.</p>
-      </section>
-      <div><label class="block text-xs font-bold mb-1">Código de acceso <span id="nota-codigo-personal">(obligatorio para personal)</span></label>
-      <input class="w-full p-2 border rounded-lg" name="codigo" minlength="3" maxlength="20" data-validar="codigo" placeholder="RES-002" required>
-      <p class="text-[11px] text-slate-500">Al crear un usuario normal, puedes dejarlo vacío: utilizará el correo para acceder.</p></div>
-      <div><label class="block text-xs font-bold mb-1">Contraseña inicial (mín. 12 caracteres)</label><input class="w-full p-2 border rounded-lg" type="password" name="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
-      <button class="w-full p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold" type="submit">Crear cuenta</button>
+    <form action="{{ url_for('crear_empleado') }}" method="POST" class="lg:col-span-1 bg-white border border-slate-200 p-6 rounded-3xl shadow-sm space-y-5">
+      <div class="flex items-center gap-3 mb-2 border-b pb-4">
+        <div class="p-2 bg-indigo-100 text-indigo-600 rounded-lg"><i data-lucide="user-plus" class="w-5 h-5"></i></div>
+        <h3 class="font-black text-slate-800 text-lg">Nueva Cuenta</h3>
+      </div>
+      
+      <!-- Nombre -->
+      <div>
+        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Nombre Completo</label>
+        <input type="text" name="nombre" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 transition">
+      </div>
+
+      <!-- Rol (Ahora con opción de Usuario Normal) -->
+      <div>
+        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Asignar Rol</label>
+        <select name="rol" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 transition cursor-pointer">
+          <option value="rescatista">Rescatista (Acceso Operativo)</option>
+          <option value="veterinario">Veterinario (Acceso Clínico)</option>
+          <option value="admin">Administrador (Acceso Total)</option>
+          <option value="usuario">Usuario / Adoptante</option>
+        </select>
+      </div>
+
+      <hr class="border-slate-100">
+
+      <!-- Método de Acceso Dinámico -->
+      <div>
+        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Método de Acceso</label>
+        <select id="tipo-acceso" onchange="alternarMetodoAcceso()" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 transition cursor-pointer mb-3">
+          <option value="codigo">Código de Acceso (Personal / Temporal)</option>
+          <option value="correo">Correo Electrónico (Definitivo)</option>
+        </select>
+
+        <!-- Contenedor Código -->
+        <div id="caja-codigo">
+          <input type="text" id="input-codigo" name="codigo" maxlength="30" pattern="[a-zA-Z0-9\-_]+" title="Solo letras, números y guiones. Máx 30 caracteres." placeholder="Código (Ej. RES-001)" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 transition" required>
+        </div>
+
+        <!-- Contenedor Correo (Oculto por defecto) -->
+        <div id="caja-correo" class="hidden">
+          <input type="email" id="input-correo" name="correo" maxlength="30" pattern="[a-zA-Z0-9@\-_.]+" title="Formato de correo válido. Máx 30 caracteres." placeholder="Correo Electrónico" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 transition" disabled>
+        </div>
+      </div>
+
+      <!-- Contraseña -->
+      <div>
+        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Contraseña Inicial</label>
+        <div class="relative">
+          <input type="password" id="pass-nueva-cuenta" name="password" minlength="5" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 transition pr-10" placeholder="Escribe la clave">
+          <button type="button" onclick="togglePassword('pass-nueva-cuenta', 'eye-nueva-cuenta')" class="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-indigo-600 transition">
+            <i data-lucide="eye" id="eye-nueva-cuenta" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl shadow-md transition flex items-center justify-center gap-2 mt-2">
+        <i data-lucide="save" class="w-5 h-5"></i> Registrar Cuenta
+      </button>
+
       <script>
-      (function () {
-        const formulario = document.currentScript.closest('form');
-        const selector = formulario.querySelector('select[name="rol"]');
-        const codigo = formulario.querySelector('input[name="codigo"]');
-        const nota = formulario.querySelector('#nota-codigo-personal');
-        const tituloPermiso = formulario.querySelector('#permiso-titulo');
-        const descripcionPermiso = formulario.querySelector('#permiso-descripcion');
-        const permisos = {
-          admin: ['Administrador — Acceso al panel administrativo', 'Puede administrar personal, credenciales, solicitudes, tienda, donaciones, voluntariado y diseño web.'],
-          rescatista: ['Rescatista — Acceso operativo', 'Puede usar el área de rescates y alertas; no administra cuentas ni ajustes globales.'],
-          veterinario: ['Veterinario — Acceso clínico', 'Puede usar el área veterinaria de pacientes y citas; no administra cuentas ni ajustes globales.'],
-          usuario: ['Usuario — Acceso personal', 'Puede acceder a adopciones y funciones de usuario; no administra el sistema.']
-        };
-        function actualizar() {
-          const esUsuario = selector.value === 'usuario';
-          codigo.required = !esUsuario;
-          nota.textContent = esUsuario ? '(opcional para usuario)' : '(obligatorio para personal)';
-          const detalle = permisos[selector.value] || permisos.rescatista;
-          tituloPermiso.textContent = detalle[0];
-          descripcionPermiso.textContent = detalle[1];
-          if (esUsuario && !codigo.value.trim()) codigo.setCustomValidity('');
+        function alternarMetodoAcceso() {
+          const tipo = document.getElementById('tipo-acceso').value;
+          const cajaCodigo = document.getElementById('caja-codigo');
+          const inputCodigo = document.getElementById('input-codigo');
+          const cajaCorreo = document.getElementById('caja-correo');
+          const inputCorreo = document.getElementById('input-correo');
+
+          if (tipo === 'codigo') {
+            cajaCodigo.classList.remove('hidden');
+            inputCodigo.disabled = false;
+            inputCodigo.setAttribute('required', 'true');
+
+            cajaCorreo.classList.add('hidden');
+            inputCorreo.disabled = true;
+            inputCorreo.removeAttribute('required');
+            inputCorreo.value = '';
+          } else {
+            cajaCorreo.classList.remove('hidden');
+            inputCorreo.disabled = false;
+            inputCorreo.setAttribute('required', 'true');
+
+            cajaCodigo.classList.add('hidden');
+            inputCodigo.disabled = true;
+            inputCodigo.removeAttribute('required');
+            inputCodigo.value = '';
+          }
         }
-        selector.addEventListener('change', actualizar);
-        actualizar();
-      })();
       </script>
     </form>
     <div class="lg:col-span-2 space-y-5">

@@ -11,7 +11,7 @@ from flask import flash, redirect, request, url_for
 
 
 NOMBRE_RE = re.compile(r"^[^\W\d_]+(?:[ .'-][^\W\d_]+)*$", re.UNICODE)
-CODIGO_RE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_-]{2,19}$')
+CODIGO_RE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_-]{0,19}$')
 EMAIL_RE = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
 
 
@@ -116,7 +116,7 @@ def fecha_valida(valor, etiqueta, permitir_hora=False):
 def codigo(valor):
     valor = (valor or '').strip()
     if not CODIGO_RE.fullmatch(valor):
-        raise DatoInvalido('Código: solo letras, números, guion o guion bajo (3–20 caracteres).')
+        raise DatoInvalido('Código: usa entre 1 y 20 caracteres: números, letras o ambos; admite - y _.')
     return valor
 
 

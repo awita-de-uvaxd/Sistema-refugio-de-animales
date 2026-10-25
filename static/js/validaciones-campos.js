@@ -14,7 +14,7 @@
     edad: { max: 3, mensaje: 'La edad debe ser un número entero entre 0 y 120.' },
     entero: { max: 7, mensaje: 'Únicamente números enteros de 0 a 1000000.' },
     decimal: { max: 12, mensaje: 'Únicamente números positivos, con máximo dos decimales (ej.: 125.50).' },
-    codigo: { max: 20, mensaje: 'De 3 a 20 letras o números; también puedes usar - y _.' },
+    codigo: { max: 20, mensaje: 'De 1 a 20 caracteres: números, letras o ambos; también puedes usar - y _.' },
     nit: { max: 14, mensaje: 'Escribe un NIT (123456-7) o C/F.' },
     correo: { max: 100, mensaje: 'Introduce un correo electrónico válido.' },
     fecha: { max: 10, mensaje: 'Utiliza una fecha real: AAAA-MM-DD o DD/MM/AAAA.' }
@@ -88,7 +88,7 @@
       const max = ['temp','temperatura'].includes(campo) ? 60 : campo === 'peso' ? 10000 : 9999999.99;
       return /^\d+(?:\.\d{1,2})?$/.test(v) && Number(v) <= max;
     }
-    if (regla === 'codigo') return /^[A-Z0-9][A-Z0-9_-]{2,19}$/.test(v);
+    if (regla === 'codigo') return /^[A-Z0-9][A-Z0-9_-]{0,19}$/.test(v);
     if (regla === 'nit') return /^(?:[0-9]{1,12}-[0-9K]|C\/?F)$/i.test(v);
     if (regla === 'correo') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) && v.length <= 100;
     if (regla === 'fecha') {
