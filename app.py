@@ -807,7 +807,7 @@ def inyectar_especies():
 def respuesta_especies(mensaje, tipo='ok', cambio=None):
     """Responde dentro de un iframe oculto: la página se actualiza sin recargarse (no se pierde lo escrito)."""
     lista = [{'id': e.id, 'nombre': e.nombre} for e in Especie.query.order_by(Especie.nombre).all()]
-    return render_template('especies_respuesta.html', lista=lista, mensaje=mensaje, tipo=tipo, cambio=cambio)
+    return render_template('compartidos/especies_respuesta.html', lista=lista, mensaje=mensaje, tipo=tipo, cambio=cambio)
 
 def validar_nombre_especie(valor, excepto_id=None):
     """Devuelve (nombre_limpio, None) o (None, mensaje_de_error)."""
