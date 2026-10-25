@@ -13,6 +13,7 @@ import hmac
 
 app = Flask(__name__)
 @app.route('/js/<path:filename>')
+
 def serve_js(filename):
     return send_from_directory(
         os.path.join(app.root_path, 'js'),
@@ -386,7 +387,6 @@ def editar_apariencia():
     db.session.commit()
     flash(f"Apariencia actualizada para el grupo: {rol_destino.upper()}", "success")
     return redirect(url_for('admin'))
-
 
 @app.before_request
 def validar_sesion_de_cuenta():
@@ -765,9 +765,22 @@ def falsa_alarma(alerta_id):
 
 @app.route('/crear_rescate', methods=['POST'])
 def crear_rescate():
-    if 'usuario_id' not in session or session['rol'] != 'rescatista': return redirect(url_for('login'))
+    if 'usuario_id' not in session or session['rol'] != 'rescatista': 
+        return redirect(url_for('login'))
+    
     alerta_id = request.form.get('alerta_id')
     if alerta_id == '': alerta_id = None
+
+    # --- BLINDAJE CONTRA COLISIONES (Validación Optimista) ---
+    if alerta_id:
+        alerta = Alerta.query.get(alerta_id)
+        # Si la alerta ya no está pendiente, alguien más le dio clic primero
+        if not alerta or alerta.estado != "Pendiente":
+            flash("¡El caso fue tomado por otro compañero hace un momento!", "error")
+            return redirect(url_for('rescatista'))
+        
+        # Si ganamos la carrera, aseguramos el caso cambiándolo de estado inmediatamente
+        alerta.estado = "Atendida"
     
     nuevo_rescate = Rescate(
         direccion=request.form.get('direccion'), especie=request.form.get('especie'),
@@ -775,14 +788,15 @@ def crear_rescate():
         color=request.form.get('color'), descripcion=request.form.get('descripcion'),
         estado="Pendiente", rescatista_id=session['usuario_id'], alerta_id=alerta_id
     )
+
+    db.session.add(nuevo_rescate)
+    db.session.commit()
+
     if alerta_id:
         alerta = Alerta.query.get(alerta_id)
         if alerta: alerta.estado = "Atendida"
             
-    db.session.add(nuevo_rescate)
-    db.session.commit()
     return redirect(url_for('rescatista'))
-
 
 # ==========================================
 # CATALOGO DE ESPECIES (compartido: Rescatista y Veterinario)
@@ -861,7 +875,6 @@ def borrar_especie(especie_id):
     db.session.delete(esp)
     db.session.commit()
     return respuesta_especies(f"Especie '{nombre}' borrada. Los animales ya registrados conservan su especie.")
-
 
 @app.route('/crear_cita', methods=['POST'])
 def crear_cita():
