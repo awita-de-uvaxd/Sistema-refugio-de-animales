@@ -443,14 +443,22 @@ def login():
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
     if request.method == 'POST':
-        # ... (Tu código de guardar en BD se queda igualito)
         nombre = request.form.get('nombre')
         correo = request.form.get('correo')
         password = request.form.get('password')
+        
+        # --- BLINDAJE: Verificar si el correo ya existe ---
+        usuario_existente = Usuario.query.filter_by(correo=correo).first()
+        if usuario_existente:
+            flash('Este correo ya está registrado. Por favor, inicia sesión.', 'error')
+            return redirect(url_for('login'))
+        # ---------------------------------------------------
+
         password_encriptada = generate_password_hash(password)
         nuevo_usuario = Usuario(nombre=nombre, correo=correo, password=password_encriptada, rol='usuario')
         db.session.add(nuevo_usuario)
         db.session.commit()
+        
         flash('Registro exitoso. Ahora puedes iniciar sesión.', 'success')
         return redirect(url_for('login'))
         
@@ -740,6 +748,19 @@ def crear_empleado():
     if not correo and not codigo:
         flash("Debes ingresar un correo o un código de acceso.", "error")
         return redirect(url_for('admin'))
+
+    # --- BLINDAJE: Verificar duplicados antes de guardar ---
+    if codigo:
+        existente = Usuario.query.filter_by(codigo_empleado=codigo).first()
+        if existente:
+            flash(f"El código '{codigo}' ya está en uso. Elige uno distinto.", "error")
+            return redirect(url_for('admin'))
+            
+    if correo:
+        existente = Usuario.query.filter_by(correo=correo).first()
+        if existente:
+            flash(f"El correo '{correo}' ya está registrado en otra cuenta.", "error")
+            return redirect(url_for('admin'))
         
     password_encriptada = generate_password_hash(password)
     
