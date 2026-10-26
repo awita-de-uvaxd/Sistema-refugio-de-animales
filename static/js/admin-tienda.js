@@ -36,33 +36,133 @@
       if(chartInstance) actualizarChart();
   }
 
+  // Seguimiento de envíos: mantiene los cinco estados originales de Huellitas
+  // y agrega «En camino» sin alterar el flujo de pedidos para recoger en tienda.
+  const ETAPAS_ENVIO_DOMICILIO = [
+      { nombre: 'Recibido', orden: '1. Tomando' },
+      { nombre: 'Confirmado', orden: '2. Aceptado' },
+      { nombre: 'Preparando', orden: '3. Procesando' },
+      { nombre: 'Empacado', orden: '4. Empacando' },
+      { nombre: 'En camino', orden: '4. Empacando' },
+      { nombre: 'Entregado', orden: '5. Finalizar' }
+  ];
+
+  function escaparHtmlEnvio(valor) {
+      return String(valor == null ? '' : valor).replace(/[&<>"']/g, c => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[c]);
+  }
+
+  function pasoEnvioDomicilio(orden) {
+      // Un pedido finalizado anteriormente se muestra como entregado.
+      if (String(orden.estadoOrden || '').startsWith('5.')) return 6;
+      // «En camino» se guarda como etapa independiente del pedido legacy.
+      if (String(orden.estadoEnvio || '').startsWith('5.')) return 5;
+      const estado = String(orden.estadoOrden || '1. Tomando');
+      const indice = parseInt(estado.split('.')[0], 10);
+      return Number.isInteger(indice) ? Math.max(1, Math.min(4, indice)) : 1;
+  }
+
+  function barraProgresoEnvio(orden) {
+      const paso = pasoEnvioDomicilio(orden);
+      const porcentaje = Math.round((paso / ETAPAS_ENVIO_DOMICILIO.length) * 100);
+      const terminado = paso === ETAPAS_ENVIO_DOMICILIO.length;
+      const porVerificar = String(orden.estadoPago || '').includes('PENDIENTE DE VERIFICACIÓN');
+      const titulo = ETAPAS_ENVIO_DOMICILIO[paso - 1].nombre;
+      const color = terminado ? 'bg-emerald-600' : 'bg-indigo-600';
+      const etiqueta = terminado ? 'bg-emerald-50 text-emerald-700' :
+          porVerificar ? 'bg-amber-50 text-amber-700' : 'bg-indigo-50 text-indigo-700';
+      return `
+        <div class="min-w-[350px] space-y-2" aria-label="Seguimiento del envío ${escaparHtmlEnvio(orden.id)}">
+          <div class="flex items-center justify-between gap-2">
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold ${etiqueta}">
+              ${terminado ? '✓ ' : porVerificar ? '⏳ ' : '📦 '}${porVerificar ? 'Pago por verificar' : titulo}
+            </span>
+            <span class="text-[11px] font-bold text-slate-500">${porcentaje}%</span>
+          </div>
+          <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden" role="progressbar"
+            aria-label="Progreso del envío" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${porcentaje}">
+            <div class="h-full ${color} rounded-full transition-all duration-500" style="width:${porcentaje}%"></div>
+          </div>
+          <div class="grid grid-cols-6 gap-1" aria-label="Cambiar estado del envío">
+            ${ETAPAS_ENVIO_DOMICILIO.map((etapa, indice) => {
+                const numero = indice + 1;
+                const completada = numero < paso;
+                const actual = numero === paso;
+                const inhabilitada = terminado || (porVerificar && numero > 1);
+                const clase = actual ? 'bg-indigo-600 text-white ring-2 ring-indigo-200' :
+                    completada ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' :
+                    'bg-slate-100 text-slate-500 hover:bg-indigo-50';
+                return `<button type="button" data-envio-id="${escaparHtmlEnvio(orden.id)}" data-envio-paso="${numero}"
+                   title="${escaparHtmlEnvio(etapa.nombre)}" aria-label="Marcar envío como ${escaparHtmlEnvio(etapa.nombre)}"
+                   aria-current="${actual ? 'step' : 'false'}" ${inhabilitada ? 'disabled' : ''}
+                   class="rounded-lg px-1 py-2 text-center text-[9px] leading-tight font-semibold transition ${clase} disabled:opacity-60 disabled:cursor-not-allowed">
+                   <span class="block mb-1 text-[11px] font-black">${completada ? '✓' : numero}</span>${escaparHtmlEnvio(etapa.nombre)}
+                </button>`;
+            }).join('')}
+          </div>
+          <p class="text-[10px] text-slate-400">${terminado ? 'Envío entregado y finalizado.' :
+              porVerificar ? 'Confirma el pago para continuar con el envío.' : 'Selecciona una etapa para actualizar el seguimiento.'}</p>
+        </div>`;
+  }
+
+  function cambiarEstadoEnvioDomicilio(id, etapa) {
+      const orden = historialVentas.find(o => String(o.id) === String(id) && o.tipo === 'Domicilio');
+      if (!orden || !Number.isInteger(etapa) || etapa < 1 || etapa > 6) return;
+      if (pasoEnvioDomicilio(orden) === 6) return; // No retroceder un pedido entregado.
+      if (String(orden.estadoPago || '').includes('PENDIENTE DE VERIFICACIÓN') && etapa > 1) {
+          alert('Confirma el pago antes de avanzar con el envío.');
+          return;
+      }
+      if (etapa === 6 && !confirm(`¿Confirmas que el pedido ${orden.id} fue entregado al cliente?`)) return;
+      orden.estadoEnvio = `${etapa}. ${ETAPAS_ENVIO_DOMICILIO[etapa - 1].nombre}`;
+      orden.estadoOrden = ETAPAS_ENVIO_DOMICILIO[etapa - 1].orden;
+      // Respetar la regla de descuento existente; nunca descontar otra vez.
+      if (etapa === 6 && !orden.stockDescontado) {
+          if (Array.isArray(orden.itemsDetalle)) descontarStock(orden);
+          else console.warn('Pedido sin detalle de artículos; verificar inventario:', orden.id);
+      }
+      guardarDatos();
+      actualizarTodo();
+  }
+
+  // Delegación: funciona también al reconstruir las filas de la tabla.
+  document.addEventListener('click', function (event) {
+      const boton = event.target.closest('[data-envio-id][data-envio-paso]');
+      if (!boton || boton.disabled) return;
+      cambiarEstadoEnvioDomicilio(boton.dataset.envioId, Number(boton.dataset.envioPaso));
+  });
+
+  document.addEventListener('click', function (event) {
+      const boton = event.target.closest('[data-confirmar-pago-envio]');
+      if (boton && !boton.disabled) confirmarPago(boton.dataset.confirmarPagoEnvio);
+  });
+
   function renderizarPedidos() {
         const dom = historialVentas.filter(o => o.tipo === 'Domicilio');
         const tie = historialVentas.filter(o => o.tipo === 'Tienda');
 
-        // Tabla de Servicio a Domicilio
+        // Tabla de Servicio a Domicilio: progreso real basado en el estado guardado.
         const tbodyDom = document.getElementById('tbody-domicilio');
         if (tbodyDom) {
-            tbodyDom.innerHTML = dom.length === 0 ? `<tr><td colspan="5" class="p-4 text-center text-slate-400">No hay órdenes a domicilio activas</td></tr>` :
-            dom.map(o => `
-                <tr class="border-b">
-                    <td class="p-3 font-bold text-indigo-600">${o.id}</td>
-                    <td class="p-3">${o.clienteNombre}<br><span class="text-[10px] text-slate-400">${o.clienteTel || ''}</span></td>
-                    <td class="p-3">${o.metodoPago}<br><span class="font-bold ${o.estadoPago === 'PAGADO' ? 'text-emerald-600' : 'text-amber-600'}">${o.estadoPago}</span></td>
-                    <td class="p-3 font-bold">Q${o.total.toFixed(2)}</td>
-                    <td class="p-3">
-                        ${o.estadoPago.includes('PENDIENTE DE VERIFICACIÓN') ? `
-                            <button onclick="confirmarPago('${o.id}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold transition">✓ Confirmar Pago</button>
-                        ` : `
-                            <div class="flex flex-wrap gap-1">
-                                ${["1. Tomando", "2. Aceptado", "3. Procesando", "4. Empacando", "5. Finalizar"].map(st => `
-                                    <button onclick="cambiarFlujo('${o.id}', '${st}')" class="px-1.5 py-0.5 text-[9px] rounded ${o.estadoOrden === st ? 'bg-indigo-600 text-white font-bold' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">${st}</button>
-                                `).join('')}
-                            </div>
-                        `}
-                    </td>
-                </tr>
-            `).join('');
+            tbodyDom.innerHTML = dom.length === 0 ?
+                `<tr><td colspan="5" class="p-4 text-center text-slate-400">No hay órdenes a domicilio activas</td></tr>` :
+                dom.map(o => `
+                    <tr class="border-b align-top">
+                      <td class="p-3 font-bold text-indigo-600">${escaparHtmlEnvio(o.id)}</td>
+                      <td class="p-3">${escaparHtmlEnvio(o.clienteNombre)}<br><span class="text-[10px] text-slate-400">${escaparHtmlEnvio(o.clienteTel || '')}</span></td>
+                      <td class="p-3">${escaparHtmlEnvio(o.metodoPago || '')}<br>
+                        <span class="font-bold ${String(o.estadoPago || '').includes('PAGADO') ? 'text-emerald-600' : 'text-amber-600'}">${escaparHtmlEnvio(o.estadoPago || 'Sin confirmar')}</span>
+                      </td>
+                      <td class="p-3 font-bold">Q${Number(o.total || 0).toFixed(2)}</td>
+                      <td class="p-3 space-y-2">
+                        ${barraProgresoEnvio(o)}
+                        ${String(o.estadoPago || '').includes('PENDIENTE DE VERIFICACIÓN') ? `
+                          <button type="button" data-confirmar-pago-envio="${escaparHtmlEnvio(o.id)}" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold transition">✓ Confirmar Pago</button>
+                        ` : ''}
+                      </td>
+                    </tr>
+                `).join('');
         }
 
         // Tabla de Recoger en Tienda
@@ -110,7 +210,7 @@ async function marcarEntregadoRefugio(id) {
     try {
         const response = await fetch('/descontar_stock', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.HUELLITAS_ADMIN_CSRF || '' },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ items: o.itemsDetalle })
         });
 
@@ -383,7 +483,7 @@ function completarCobroRefugio() {
     try {
         const response = await fetch(`/editar_producto/${numId}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.HUELLITAS_ADMIN_CSRF || '' },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ visible: nuevoEstado ? 1 : 0 })
         });
 
@@ -405,8 +505,7 @@ function completarCobroRefugio() {
 
     try {
         const response = await fetch(`/eliminar_producto/${numId}`, {
-            method: 'POST',
-            headers: { 'X-CSRF-Token': window.HUELLITAS_ADMIN_CSRF || '' }
+            method: 'POST'
         });
 
         if (response.ok) {
@@ -586,6 +685,23 @@ window.addEventListener('storage', (e) => {
     }
 });
 
+function abrirModalEditar(id) {
+    const numId = parseInt(String(id).replace(/\D/g, ''));
+    const p = productos.find(x => parseInt(String(x.id).replace(/\D/g, '')) === numId);
+    if (!p) return;
+
+    document.getElementById('edit-p-id').value = numId;
+    document.getElementById('edit-p-nombre').value = p.nombre;
+    document.getElementById('edit-p-stock').value = p.stock;
+    document.getElementById('edit-p-precio').value = p.precio;
+
+    document.getElementById('modal-edit-prod').classList.remove('hidden');
+}
+
+function cerrarModalEditar() {
+    document.getElementById('modal-edit-prod').classList.add('hidden');
+}
+
 // 1. REBAJA Y CONSULTA DE INVENTARIO DESDE SQLITE
 async function actualizarSoloInventario() {
     try {
@@ -614,7 +730,7 @@ async function toggleVis(id) {
     try {
         const response = await fetch(`/editar_producto/${numId}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.HUELLITAS_ADMIN_CSRF || '' },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ visible: nuevoEstado ? 1 : 0 })
         });
 
@@ -630,253 +746,66 @@ async function toggleVis(id) {
     }
 }
 
-// 3. EDITAR PRODUCTO: comparte el diseño de Agregar Producto, incluidos imagen y descripción.
-let huellitasVistaPreviaEdicionUrl = null;
-function obtenerModalEdicionProducto() {
-    let modal = document.getElementById('modal-edit-prod');
-    if (!modal) {
-        // Copia de respaldo, por si se actualiza el JS antes que la plantilla HTML.
-        const contenedor = document.createElement('div');
-        contenedor.innerHTML = `<div id="modal-edit-prod" class="fixed inset-0 bg-slate-900/50 hidden z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="titulo-editar-producto">
-  <form id="form-edit-prod" enctype="multipart/form-data" class="bg-white rounded-3xl max-w-md w-full p-6 space-y-3 text-xs shadow-xl max-h-[92vh] overflow-y-auto">
-    <input type="hidden" id="edit-p-id">
-    <h3 id="titulo-editar-producto" class="font-black text-slate-800 border-b pb-2 text-sm">Editar Producto</h3>
+// 3. EDITAR STOCK Y PRECIO EN SQLITE
+function abrirModalEditar(id) {
+    const numId = parseInt(String(id).replace(/\D/g, ''));
+    const p = productos.find(x => parseInt(String(x.id).replace(/\D/g, '')) === numId);
+    if (!p) return;
 
-    <div>
-      <label for="edit-p-nombre" class="block font-bold text-slate-700 mb-1">Nombre *</label>
-      <input id="edit-p-nombre" name="nombre" type="text" data-validar="producto" minlength="2" maxlength="100" required placeholder="Ej. Alimento Adulto 5kg" class="w-full p-2 border rounded-xl">
-    </div>
+    document.getElementById('edit-p-id').value = numId;
+    document.getElementById('edit-p-nombre').value = p.nombre;
+    document.getElementById('edit-p-stock').value = p.stock;
+    document.getElementById('edit-p-precio').value = p.precio;
 
-    <div class="grid grid-cols-2 gap-2">
-      <div>
-        <label for="edit-p-categoria" class="block font-bold text-slate-700 mb-1">Categoría</label>
-        <select id="edit-p-categoria" name="categoria" class="w-full p-2 border rounded-xl bg-white">
-          <option value="Comida">Comida</option>
-          <option value="Medicina">Medicina</option>
-          <option value="Juguetes">Juguetes</option>
-          <option value="Accesorios">Accesorios</option>
-        </select>
-      </div>
-      <div>
-        <label for="edit-p-precio" class="block font-bold text-slate-700 mb-1">Precio (Q) *</label>
-        <input id="edit-p-precio" name="precio" type="text" inputmode="decimal" data-validar="decimal" pattern="[0-9]+([.][0-9]{1,2})?" maxlength="12" placeholder="0.00" required class="w-full p-2 border rounded-xl">
-      </div>
-    </div>
-
-    <div>
-      <label for="edit-p-stock" class="block font-bold text-slate-700 mb-1">Stock *</label>
-      <input id="edit-p-stock" name="stock" type="text" inputmode="numeric" data-validar="entero" pattern="[0-9]+" maxlength="7" placeholder="10" required class="w-full p-2 border rounded-xl">
-    </div>
-
-    <div>
-      <label for="edit-p-descripcion" class="block font-bold text-slate-700 mb-1">Descripción</label>
-      <textarea id="edit-p-descripcion" name="descripcion" maxlength="3000" placeholder="Descripción opcional..." rows="2" class="w-full p-2 border rounded-xl"></textarea>
-    </div>
-
-    <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
-      <label for="edit-p-foto" class="block font-bold text-slate-700">Imagen del Producto</label>
-      <div>
-        <label for="edit-p-foto" class="block text-[10px] text-slate-500 mb-1">Seleccionar desde tu equipo (JPG, PNG):</label>
-        <input id="edit-p-foto" type="file" name="foto" accept="image/jpeg,image/png" class="w-full text-[10px] text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[11px] file:font-bold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 cursor-pointer">
-      </div>
-      <p class="text-[10px] text-slate-500">Deja este campo vacío para conservar la imagen actual.</p>
-      <div id="edit-p-img-preview-box" class="hidden pt-1 text-center">
-        <span id="edit-p-img-preview-titulo" class="text-[10px] font-bold text-slate-400 block mb-1">Imagen actual:</span>
-        <img id="edit-p-img-preview" alt="Vista previa del producto" class="w-16 h-16 object-cover rounded-xl border mx-auto shadow-sm">
-      </div>
-    </div>
-
-    <p id="edit-p-error" role="alert" class="hidden text-red-600 text-xs font-semibold"></p>
-    <div class="flex gap-2 pt-2">
-      <button type="button" id="cerrar-edit-prod" class="w-1/2 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-bold">Cancelar</button>
-      <button id="btn-guardar-edicion" type="submit" class="w-1/2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition">Guardar cambios</button>
-    </div>
-  </form>
-</div>`;
-        modal = contenedor.firstElementChild;
-        if (!modal) throw new Error('No fue posible construir el formulario de edición.');
-        document.body.appendChild(modal);
-    }
-    if (modal.parentElement !== document.body) document.body.appendChild(modal);
-    if (!modal.dataset.huellitasConectado) {
-        modal.querySelector('#form-edit-prod').addEventListener('submit', guardarEdicionProd);
-        modal.querySelector('#cerrar-edit-prod').addEventListener('click', cerrarModalEditar);
-        modal.addEventListener('click', event => {
-            if (event.target === modal) cerrarModalEditar();
-        });
-        modal.querySelector('#edit-p-foto').addEventListener('change', mostrarVistaPreviaEditarProducto);
-        modal.dataset.huellitasConectado = '1';
-    }
-    return modal;
-}
-
-function limpiarVistaPreviaTemporalEditar() {
-    if (huellitasVistaPreviaEdicionUrl) {
-        URL.revokeObjectURL(huellitasVistaPreviaEdicionUrl);
-        huellitasVistaPreviaEdicionUrl = null;
-    }
-}
-function mostrarVistaPreviaEditarProducto(event) {
-    const imagen = document.getElementById('edit-p-img-preview');
-    const contenedor = document.getElementById('edit-p-img-preview-box');
-    const titulo = document.getElementById('edit-p-img-preview-titulo');
-    if (!imagen || !contenedor) return;
-    limpiarVistaPreviaTemporalEditar();
-    const archivo = event.target.files && event.target.files[0];
-    if (archivo) {
-        if (!['image/jpeg','image/png'].includes(archivo.type) || archivo.size > 5 * 1024 * 1024) {
-            event.target.value = '';
-            const error = document.getElementById('edit-p-error');
-            error.textContent = 'La imagen debe ser JPG o PNG y pesar como máximo 5 MB.';
-            error.classList.remove('hidden');
-            return;
-        }
-        huellitasVistaPreviaEdicionUrl = URL.createObjectURL(archivo);
-        imagen.src = huellitasVistaPreviaEdicionUrl;
-        titulo.textContent = 'Nueva imagen:';
-        contenedor.classList.remove('hidden');
-    } else {
-        const actual = document.getElementById('edit-p-id').dataset.fotoActual;
-        if (actual) {
-            imagen.src = '/static/uploads/' + encodeURIComponent(actual);
-            titulo.textContent = 'Imagen actual:';
-            contenedor.classList.remove('hidden');
-        } else {
-            imagen.removeAttribute('src');
-            contenedor.classList.add('hidden');
-        }
-    }
-}
-
-async function abrirModalEditar(id) {
-    const textoId = String(id).trim().replace(/^PROD-/i, '');
-    if (!/^[0-9]+$/.test(textoId)) {
-        alert('El código del producto no es válido.'); return;
-    }
-    const numId = Number(textoId);
-    if (!Number.isSafeInteger(numId) || numId <= 0) {
-        alert('El código del producto no es válido.'); return;
-    }
-    let p = productos.find(x => Number(String(x.id).replace(/^PROD-/i, '')) === numId);
-    try {
-        const respuesta = await fetch('/obtener_productos', {cache:'no-store', credentials:'same-origin'});
-        if (respuesta.ok) {
-            const datos = await respuesta.json();
-            if (datos.status === 'ok' && Array.isArray(datos.productos)) {
-                productos = datos.productos;
-                p = productos.find(x => Number(String(x.id).replace(/^PROD-/i, '')) === numId);
-            }
-        }
-    } catch (error) {
-        console.warn('Se usarán los datos de inventario cargados:', error);
-    }
-    if (!p) {
-        alert('No se encontró el producto. Verifica la conexión con Flask.'); return;
-    }
-    let modal;
-    try { modal = obtenerModalEdicionProducto(); }
-    catch (error) {
-        console.error('Error al abrir el editor:', error);
-        alert('No se pudo abrir el editor. Revisa la consola del navegador.'); return;
-    }
-    const campos = {
-        id: modal.querySelector('#edit-p-id'),
-        nombre: modal.querySelector('#edit-p-nombre'),
-        categoria: modal.querySelector('#edit-p-categoria'),
-        precio: modal.querySelector('#edit-p-precio'),
-        stock: modal.querySelector('#edit-p-stock'),
-        descripcion: modal.querySelector('#edit-p-descripcion'),
-        foto: modal.querySelector('#edit-p-foto')
-    };
-    if (Object.values(campos).some(x => !x)) {
-        alert('El formulario de edición está incompleto. Sustituye también tienda_formularios.html.');
-        return;
-    }
-    campos.id.value = numId;
-    campos.id.dataset.fotoActual = p.foto || '';
-    campos.nombre.value = p.nombre || '';
-    // Si proviene de una categoría antigua, se permite conservarla sin perder información.
-    const categoriaGuardada = p.categoria || 'Comida';
-    if (![...campos.categoria.options].some(op => op.value === categoriaGuardada)) {
-        const opcion = document.createElement('option');
-        opcion.value = categoriaGuardada;
-        opcion.textContent = categoriaGuardada;
-        campos.categoria.appendChild(opcion);
-    }
-    campos.categoria.value = categoriaGuardada;
-    campos.precio.value = Number(p.precio ?? 0).toFixed(2);
-    campos.stock.value = String(p.stock ?? 0);
-    campos.descripcion.value = p.descripcion || '';
-    campos.foto.value = '';
-    limpiarVistaPreviaTemporalEditar();
-    mostrarVistaPreviaEditarProducto({target: campos.foto});
-    const error = modal.querySelector('#edit-p-error');
-    error.textContent = '';
-    error.classList.add('hidden');
-    modal.querySelectorAll('input').forEach(input => input.setCustomValidity(''));
-    modal.classList.remove('hidden');
-    campos.nombre.focus();
+    document.getElementById('modal-edit-prod').classList.remove('hidden');
 }
 
 function cerrarModalEditar() {
-    const modal = document.getElementById('modal-edit-prod');
-    if (modal) modal.classList.add('hidden');
-    limpiarVistaPreviaTemporalEditar();
+    document.getElementById('modal-edit-prod').classList.add('hidden');
 }
-document.addEventListener('keydown', event => {
-    if (event.key === 'Escape') cerrarModalEditar();
-});
 
-async function guardarEdicionProd(event) {
-    event.preventDefault();
-    const modal = document.getElementById('modal-edit-prod');
-    const nombre = modal.querySelector('#edit-p-nombre').value.trim();
-    const categoria = modal.querySelector('#edit-p-categoria').value;
-    const precio = modal.querySelector('#edit-p-precio').value.trim();
-    const stock = modal.querySelector('#edit-p-stock').value.trim();
-    const descripcion = modal.querySelector('#edit-p-descripcion').value.trim();
-    const foto = modal.querySelector('#edit-p-foto').files[0];
-    const id = Number(modal.querySelector('#edit-p-id').value);
-    const error = modal.querySelector('#edit-p-error');
-    const boton = modal.querySelector('#btn-guardar-edicion');
-    const fallar = mensaje => { error.textContent = mensaje; error.classList.remove('hidden'); };
-    error.textContent = ''; error.classList.add('hidden');
-    if (!Number.isSafeInteger(id) || id <= 0) return fallar('ID de producto inválido.');
-    if (nombre.length < 2 || nombre.length > 100) return fallar('El nombre debe tener entre 2 y 100 caracteres.');
-    if (!/^[0-9]{1,7}$/.test(stock) || Number(stock) > 1000000) return fallar('Stock: introduce un número entero de 0 a 1000000.');
-    if (!/^[0-9]+(?:\.[0-9]{1,2})?$/.test(precio)) return fallar('Precio: introduce un valor con máximo 2 decimales.');
-    if (descripcion.length > 3000) return fallar('La descripción es demasiado larga.');
-    if (foto && (!['image/jpeg','image/png'].includes(foto.type) || foto.size > 5 * 1024 * 1024)) return fallar('La imagen debe ser JPG o PNG de máximo 5 MB.');
-    const datos = new FormData();
-    datos.append('nombre', nombre);
-    datos.append('categoria', categoria);
-    datos.append('precio', precio);
-    datos.append('stock', stock);
-    datos.append('descripcion', descripcion);
-    if (foto) datos.append('foto', foto);
-    datos.append('csrf_token', window.HUELLITAS_ADMIN_CSRF || '');
-    boton.disabled = true; boton.textContent = 'Guardando...';
-    try {
-        const response = await fetch(`/editar_producto/${id}`, {
-            method:'POST', credentials:'same-origin',
-            headers:{'X-CSRF-Token':window.HUELLITAS_ADMIN_CSRF || ''},
-            body: datos
-        });
-        const respuesta = await response.json().catch(() => ({}));
-        if (!response.ok || respuesta.status !== 'ok') {
-            fallar(respuesta.message || `No se pudo actualizar el producto (HTTP ${response.status}).`);
+async function guardarEdicionProd(e) {
+    e.preventDefault();
+    // No convertir datos vacíos o escritos con letras a cero silenciosamente.
+    const stockInput = document.getElementById('edit-p-stock');
+    const precioInput = document.getElementById('edit-p-precio');
+    for (const [campo, regla, etiqueta] of [[stockInput, 'entero', 'Stock'], [precioInput, 'decimal', 'Precio']]) {
+        if (!campo || !window.HuellitasValidacionAdmin?.correcto(campo, regla) || !campo.value.trim()) {
+            if (campo) {
+                campo.setCustomValidity(etiqueta + ': escribe un número válido.');
+                campo.reportValidity();
+                campo.focus();
+            }
             return;
         }
-        await actualizarSoloInventario();
-        cerrarModalEditar();
-        if (typeof mostrarNotificacionFlotante === 'function') {
+        campo.setCustomValidity('');
+    }
+    const id = document.getElementById('edit-p-id').value;
+    const nuevoStock = Number(stockInput.value);
+    const nuevoPrecio = Number(precioInput.value);
+
+    try {
+        const response = await fetch(`/editar_producto/${id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stock: nuevoStock, precio: nuevoPrecio })
+        });
+
+        if (response.ok) {
+            const p = productos.find(x => parseInt(String(x.id).replace(/\D/g, '')) === parseInt(id));
+            if (p) {
+                p.stock = nuevoStock;
+                p.precio = nuevoPrecio;
+                guardarDatos();
+            }
+            renderizarInventario();
+            cerrarModalEditar();
             mostrarNotificacionFlotante('Producto actualizado correctamente.', '✅');
+        } else {
+            mostrarNotificacionFlotante('Error al actualizar el producto.');
         }
-    } catch (e) {
-        console.error('Error guardando el producto:',e);
-        fallar('No se pudo conectar con Flask. Comprueba la conexión.');
-    } finally {
-        boton.disabled = false; boton.textContent = 'Guardar cambios';
+    } catch (err) {
+        console.error('Error de comunicación:', err);
     }
 }
 
@@ -888,8 +817,7 @@ async function eliminarProd(id) {
 
     try {
         const response = await fetch(`/eliminar_producto/${numId}`, {
-            method: 'POST',
-            headers: { 'X-CSRF-Token': window.HUELLITAS_ADMIN_CSRF || '' }
+            method: 'POST'
         });
 
         if (response.ok) {
@@ -1091,7 +1019,7 @@ async function procesarVentaDirectaPOS() {
     try {
         const response = await fetch('/venta_directa', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.HUELLITAS_ADMIN_CSRF || '' },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(ordenVenta)
         });
 
