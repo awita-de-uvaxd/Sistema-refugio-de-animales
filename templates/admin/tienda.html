@@ -12,9 +12,9 @@
 
       <nav class="flex overflow-x-auto bg-slate-100 p-1.5 rounded-2xl gap-1 text-xs font-semibold scroll-hide">
         <button onclick="switchShopSubTab('pedidos')" class="tab-btn-shop px-4 py-2.5 rounded-xl transition bg-white text-indigo-700 shadow-sm font-bold" data-subtab="pedidos"> Gestión de Pedidos</button>
-        <button onclick="switchShopSubTab('cobro')" class="tab-btn-shop px-4 py-2.5 rounded-xl transition text-slate-600 hover:bg-slate-200/60" data-subtab="cobro"> Cobro / Venta Refugio</button>
+
         <button onclick="switchShopSubTab('inventario')" class="tab-btn-shop px-4 py-2.5 rounded-xl transition text-slate-600 hover:bg-slate-200/60" data-subtab="inventario"> Inventario y Control</button>
-        <button onclick="switchShopSubTab('metricas')" class="tab-btn-shop px-4 py-2.5 rounded-xl transition text-slate-600 hover:bg-slate-200/60" data-subtab="metricas"> Métricas y Reportes</button>s
+        <button onclick="switchShopSubTab('metricas')" class="tab-btn-shop px-4 py-2.5 rounded-xl transition text-slate-600 hover:bg-slate-200/60" data-subtab="metricas"> Métricas y Reportes</button>
       </nav>
     </div>
 
@@ -42,74 +42,21 @@
         <div class="flex justify-between items-center border-b pb-2">
           <div>
             <h4 class="font-bold text-sm text-slate-800">Órdenes para Entrega en Tienda (Recoger en Refugio)</h4>
-            <p class="text-[11px] text-slate-500">Actualiza el progreso. Al presionar <strong>5. Finalizar</strong> pasa a estar disponible para cobro en <strong>Caja Refugio</strong>.</p>
+            <p class="text-[11px] text-slate-500">Actualiza el progreso de los pedidos para recoger en el refugio.</p>
           </div>
           <span class="text-xs bg-indigo-100 text-indigo-700 font-bold px-2.5 py-1 rounded-full">Recoger en Refugio</span>
         </div>
         <table class="w-full text-left text-xs">
           <thead class="bg-slate-100 uppercase font-bold text-slate-600">
-            <tr><th class="p-3">ID Pedido</th><th class="p-3">Cliente</th><th class="p-3">Progreso del Pedido</th><th class="p-3">Total</th><th class="p-3">Estatus Caja</th></tr>
+            <tr><th class="p-3">ID Pedido</th><th class="p-3">Cliente</th><th class="p-3">Progreso del Pedido</th><th class="p-3">Total</th><th class="p-3">Estado de Pago</th></tr>
           </thead>
           <tbody id="tbody-tienda"></tbody>
         </table>
       </div>
     </div>
 
-    <!-- SUB-PESTAÑA 2: COBRO / VENTA REFUGIO -->
-    <div id="shop-cobro" class="tab-content-shop hidden space-y-6 max-w-2xl mx-auto">
-      <div class="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
-        <div class="border-b pb-3 flex justify-between items-center">
-          <div>
-            <h3 class="font-black text-slate-800 text-base">Caja Refugio - Cobro de Pedidos Presenciales</h3>
-            <p class="text-xs text-slate-500">Solo muestra pedidos marcados como <strong>5. Finalizar</strong> pendientes de cobro.</p>
-          </div>
-          <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-full">Caja Registradora</span>
-        </div>
 
-        <div class="space-y-2">
-          <label class="block text-xs font-bold text-slate-700">Seleccionar Orden Finalizada:</label>
-          <select id="select-pos-order" onchange="cargarDetallePos()" class="w-full p-2.5 border rounded-xl text-xs bg-slate-50 font-bold outline-indigo-600"></select>
-        </div>
-
-        <div id="pos-details" class="hidden bg-slate-50 p-4 rounded-2xl border space-y-3 text-xs">
-          <div class="flex justify-between items-center border-b pb-2">
-            <div><p class="font-bold text-indigo-600 text-sm" id="pos-id">#PED-0000</p><p id="pos-cli" class="text-[11px] text-slate-500">Cliente: ---</p></div>
-            <span class="px-2 py-1 bg-amber-100 text-amber-800 font-bold text-[10px] rounded-full">Pendiente de Pago</span>
-          </div>
-
-          <ul id="pos-items" class="space-y-1 list-disc list-inside text-slate-600"></ul>
-
-          <div class="border-t pt-2 space-y-2">
-            <label class="block font-bold">Método de Pago Presencial:</label>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <label class="p-2 border rounded-xl bg-white flex items-center gap-1 cursor-pointer"><input type="radio" name="pos-method" value="Efectivo" checked onchange="toggleCuponPos()"><span class="font-semibold text-xs"> Efectivo</span></label>
-              <label class="p-2 border rounded-xl bg-white flex items-center gap-1 cursor-pointer"><input type="radio" name="pos-method" value="Tarjeta POS" onchange="toggleCuponPos()"><span class="font-semibold text-xs"> Tarjeta</span></label>
-              <label class="p-2 border rounded-xl bg-white flex items-center gap-1 cursor-pointer"><input type="radio" name="pos-method" value="Transferencia" onchange="toggleCuponPos()"><span class="font-semibold text-xs"> Transf.</span></label>
-              <label class="p-2 border rounded-xl bg-white flex items-center gap-1 cursor-pointer"><input type="radio" name="pos-method" value="Cupón Refugio" onchange="toggleCuponPos()"><span class="font-semibold text-xs"> Cupón</span></label>
-            </div>
-          </div>
-
-          <div id="pos-cupon-box" class="hidden space-y-2 bg-amber-50 p-3 rounded-xl border border-amber-200">
-            <div class="flex gap-2">
-              <input type="text" id="pos-cupon-code" placeholder="Ej: REFUGIO10" class="w-full p-2 border rounded-xl text-xs uppercase bg-white">
-              <button type="button" onclick="aplicarCuponPos()" class="px-3 py-1.5 bg-amber-600 text-white font-bold text-xs rounded-xl">Aplicar</button>
-            </div>
-            <p id="pos-cupon-msg" class="text-[10px] font-bold text-emerald-700"></p>
-          </div>
-
-          <div class="border-t pt-3 flex justify-between items-center text-sm font-black">
-            <span>Total a Cobrar:</span>
-            <span id="pos-total" class="text-indigo-600 text-base">Q0.00</span>
-          </div>
-
-          <button onclick="completarCobroRefugio()" class="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700 transition">
-            ✓ Procesar Pago, Finalizar Cancelación y Emitir Factura
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- SUB-PESTAÑA 3: INVENTARIO Y CONTROL -->
+    <!-- SUB-PESTAÑA 2: INVENTARIO Y CONTROL -->
     <div id="shop-inventario" class="tab-content-shop hidden space-y-4">
       <div id="vencimiento-alerts" class="space-y-2"></div>
       <div class="bg-white rounded-2xl border p-4 space-y-3 shadow-sm">
@@ -151,7 +98,7 @@
       </div>
     </div>
 
-    <!-- SUB-PESTAÑA 4: MÉTRICAS Y REPORTES -->
+    <!-- SUB-PESTAÑA 3: MÉTRICAS Y REPORTES -->
     <div id="shop-metricas" class="tab-content-shop hidden space-y-6">
       <!-- TARJETAS DE MÉTRICAS / KPI -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
