@@ -38,6 +38,8 @@
 
 {% include 'admin/perfil.html' %}
 
+<!-- Validaciones exclusivas de Administración; no afectan otros perfiles. -->
+<script defer src="{{ url_for('static', filename='js/admin-validaciones.js') }}"></script>
 <script src="{{ url_for('static', filename='js/admin-navegacion.js') }}"></script>
 <script src="{{ url_for('static', filename='js/admin-tienda.js') }}"></script>
 <script>

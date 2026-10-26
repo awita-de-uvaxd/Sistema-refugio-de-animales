@@ -156,6 +156,39 @@ class ProgramaVoluntariado(db.Model):
     descripcion = db.Column(db.Text, nullable=False)
     fotos = db.Column(db.Text, nullable=True)
 
+# Textos iniciales: nunca reemplazan descripciones ya guardadas por el administrador.
+PROGRAMAS_VOLUNTARIADO_BASE = {
+    'Coexistencia': 'Ven a pasar un rato agradable con nuestros animales. Ayúdalos a socializar, dales cariño y acompáñalos. ¡Ideal para relajarte y dar amor sin llevarlos a casa!',
+    'Hogar Temporal': 'Abre las puertas de tu casa temporalmente (3 a 7 días). Dale a un perrito o gatito la oportunidad de dormir en un hogar calientito mientras le encontramos su familia definitiva.',
+    'Apoyo Operativo': 'Únete al equipo del refugio. Ayúdanos a bañar, alimentar, pasear y mantener limpias las áreas. Trabajo físico, pero con la mejor recompensa del mundo.',
+}
+
+
+def asegurar_programas_voluntariado():
+    """Agrega únicamente programas base ausentes; respeta textos y fotografías previos."""
+    existentes = {p.tipo for p in ProgramaVoluntariado.query.all()}
+    faltantes = [
+        ProgramaVoluntariado(tipo=tipo, descripcion=descripcion)
+        for tipo, descripcion in PROGRAMAS_VOLUNTARIADO_BASE.items()
+        if tipo not in existentes
+    ]
+    if faltantes:
+        db.session.add_all(faltantes)
+        db.session.commit()
+
+
+def asegurar_informacion_donacion():
+    """Conserva la información personalizada; solo inicializa cuando está vacía."""
+    if InfoDonacion.query.first() is None:
+        db.session.add(InfoDonacion(
+            titulo='Apoya la Causa',
+            subtitulo='Aceptamos donaciones monetarias o insumos físicos (alimentos, cobijas, juguetes).',
+            info_bancaria='Banco Nacional: Cuenta Monetaria #000-123456-7',
+            nombre_de='A Nombre De: Asociación Huellitas de Amor',
+            sede_fisica='Sede Recepción Comida: Calle Principal 12-45 Zona 10',
+        ))
+        db.session.commit()
+
 class SolicitudVoluntariado(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     fecha = db.Column(db.DateTime, default=datetime.utcnow)
@@ -418,14 +451,7 @@ def login():
         correo_o_codigo = request.form.get('credencial')
         password = request.form.get('password')
         usuario = Usuario.query.filter((Usuario.correo == correo_o_codigo) | (Usuario.codigo_empleado == correo_o_codigo)).first()
-        
         if usuario and usuario.activo and check_password_hash(usuario.password, password):
-            
-            # --- BLINDAJE: Si ya tiene correo, el código temporal queda inhabilitado ---
-            if correo_o_codigo == usuario.codigo_empleado and usuario.correo:
-                flash('Por seguridad, el acceso con código fue desactivado. Inicia sesión con tu correo electrónico.', 'error')
-                return redirect(url_for('login'))
-            
             session.clear()
             session['usuario_id'] = usuario.id
             session['sesion_version'] = usuario.sesion_version or 0
@@ -443,22 +469,14 @@ def login():
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
     if request.method == 'POST':
+        # ... (Tu código de guardar en BD se queda igualito)
         nombre = request.form.get('nombre')
         correo = request.form.get('correo')
         password = request.form.get('password')
-        
-        # --- BLINDAJE: Verificar si el correo ya existe ---
-        usuario_existente = Usuario.query.filter_by(correo=correo).first()
-        if usuario_existente:
-            flash('Este correo ya está registrado. Por favor, inicia sesión.', 'error')
-            return redirect(url_for('login'))
-        # ---------------------------------------------------
-
         password_encriptada = generate_password_hash(password)
         nuevo_usuario = Usuario(nombre=nombre, correo=correo, password=password_encriptada, rol='usuario')
         db.session.add(nuevo_usuario)
         db.session.commit()
-        
         flash('Registro exitoso. Ahora puedes iniciar sesión.', 'success')
         return redirect(url_for('login'))
         
@@ -496,7 +514,9 @@ def usuario():
     
     cv_actual = PerfilAdopcion.query.filter_by(usuario_id=session['usuario_id']).first()
     disponibles = Paciente.query.filter_by(disponible_adopcion="Listo para Adopción").all()
-    programas_db = ProgramaVoluntariado.query.all()
+    asegurar_programas_voluntariado()
+    asegurar_informacion_donacion()
+    programas_db = ProgramaVoluntariado.query.order_by(ProgramaVoluntariado.id).all()
     info_don = InfoDonacion.query.first()
     user_data = Usuario.query.get(session['usuario_id'])
     productos_db = ProductoShop.query.filter_by(visible=True).all()
@@ -519,7 +539,9 @@ def admin():
         Paciente.solicitudes_recibidas.any(estado='En Revisión') | 
         Paciente.reclamos_recibidos.any(estado='En Revisión')
     ).all()
-    programas_db = ProgramaVoluntariado.query.all()
+    asegurar_programas_voluntariado()
+    asegurar_informacion_donacion()
+    programas_db = ProgramaVoluntariado.query.order_by(ProgramaVoluntariado.id).all()
     solicitudes_vol = SolicitudVoluntariado.query.filter_by(estado='Pendiente').all()
     info_don = InfoDonacion.query.first()
     productos_db = ProductoShop.query.all()
@@ -604,34 +626,40 @@ def enviar_voluntariado():
 
 @app.route('/editar_programa', methods=['POST'])
 def editar_programa():
-    if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
-    
-    prog_id = request.form.get('programa_id')
-    programa = ProgramaVoluntariado.query.get(prog_id)
-    
-    if programa:
-        programa.descripcion = request.form.get('descripcion')
-        
-        # Procesar fotos nuevas y sumarlas a las existentes
-        nombres_fotos = []
-        if 'fotos_nuevas' in request.files:
-            for archivo in request.files.getlist('fotos_nuevas'):
-                if archivo.filename != '':
-                    nom_arch = secure_filename(archivo.filename)
-                    archivo.save(os.path.join(app.config['UPLOAD_FOLDER'], nom_arch))
-                    nombres_fotos.append(nom_arch)
-        
-        if nombres_fotos:
-            nuevas_fotos_str = ",".join(nombres_fotos)
-            if programa.fotos:
-                programa.fotos = f"{programa.fotos},{nuevas_fotos_str}"
-            else:
-                programa.fotos = nuevas_fotos_str
-                
-        db.session.commit()
-        flash("Sección de voluntariado actualizada con éxito.", "success")
-        
-    return redirect(url_for('admin'))
+    if 'usuario_id' not in session or session.get('rol') != 'admin':
+        return redirect(url_for('login'))
+    validar_csrf_cuentas()
+
+    # Ambos editores (Voluntariado y Donaciones) utilizan la misma tabla SQLite.
+    volver = 'donaciones' if request.form.get('volver') == 'donaciones' else 'voluntariado'
+    redireccion = url_for('admin') + '#' + volver
+    programa_id = request.form.get('programa_id', type=int)
+    programa = db.session.get(ProgramaVoluntariado, programa_id) if programa_id else None
+    if programa is None:
+        flash('No se encontró el programa de voluntariado. Actualiza la página.', 'error')
+        return redirect(redireccion)
+
+    descripcion = (request.form.get('descripcion') or '').strip()
+    if not descripcion or len(descripcion) > 5000:
+        flash('Escribe una descripción válida de entre 1 y 5000 caracteres.', 'error')
+        return redirect(redireccion)
+
+    programa.descripcion = descripcion
+
+    # El editor de Voluntariado puede seguir agregando fotografías existentes.
+    nuevas_fotos = []
+    for archivo in request.files.getlist('fotos_nuevas'):
+        if archivo and archivo.filename:
+            filename = secure_filename(archivo.filename)
+            if filename:
+                archivo.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                nuevas_fotos.append(filename)
+    if nuevas_fotos:
+        programa.fotos = ','.join(filter(None, [programa.fotos, ','.join(nuevas_fotos)]))
+
+    db.session.commit()
+    flash(f'Texto de «{programa.tipo}» actualizado. Ya está disponible en Voluntariado.', 'success')
+    return redirect(redireccion)
 
 @app.route('/procesar_voluntariado/<int:sol_id>/<accion>', methods=['POST'])
 def procesar_voluntariado(sol_id, accion):
@@ -702,7 +730,7 @@ def editar_donacion():
         info.sede_fisica = request.form.get('sede_fisica')
         db.session.commit()
         flash("Información de donaciones actualizada con éxito.", "success")
-    return redirect(url_for('admin'))
+    return redirect(url_for('admin') + '#donaciones')
 
 @app.route('/registrar_donacion', methods=['POST'])
 def registrar_donacion():
@@ -736,111 +764,8 @@ def vincular_mascota():
     
 @app.route('/crear_empleado', methods=['POST'])
 def crear_empleado():
-    if 'usuario_id' not in session or session['rol'] != 'admin': 
-        return redirect(url_for('login'))
-        
-    nombre = request.form.get('nombre')
-    correo = request.form.get('correo') or None
-    codigo = request.form.get('codigo') or None
-    password = request.form.get('password')
-    rol = request.form.get('rol')
-    
-    if not correo and not codigo:
-        flash("Debes ingresar un correo o un código de acceso.", "error")
-        return redirect(url_for('admin'))
-
-    # --- BLINDAJE: Verificar duplicados antes de guardar ---
-    if codigo:
-        existente = Usuario.query.filter_by(codigo_empleado=codigo).first()
-        if existente:
-            flash(f"El código '{codigo}' ya está en uso. Elige uno distinto.", "error")
-            return redirect(url_for('admin'))
-            
-    if correo:
-        existente = Usuario.query.filter_by(correo=correo).first()
-        if existente:
-            flash(f"El correo '{correo}' ya está registrado en otra cuenta.", "error")
-            return redirect(url_for('admin'))
-        
-    password_encriptada = generate_password_hash(password)
-    
-    nuevo_empleado = Usuario(
-        nombre=nombre, 
-        correo=correo, 
-        codigo_empleado=codigo, 
-        password=password_encriptada, 
-        rol=rol
-    )
-    
-    db.session.add(nuevo_empleado)
-    db.session.commit()
-    
-    auditoria = AuditoriaCuenta(
-        administrador_id=session['usuario_id'],
-        administrador_nombre=session['nombre'],
-        objetivo_id=nuevo_empleado.id,
-        objetivo_nombre=nombre,
-        accion="ALTA_" + rol.upper()
-    )
-    db.session.add(auditoria)
-    db.session.commit()
-    
-    flash(f"Cuenta de {rol.capitalize()} creada exitosamente.", "success")
-    return redirect(url_for('admin'))
-
-@app.route('/admin/baja/<int:user_id>', methods=['POST'])
-def baja_cuenta(user_id):
-    if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
-    usuario = Usuario.query.get(user_id)
-    if usuario:
-        usuario.activo = False
-        db.session.commit()
-        flash(f"Cuenta de {usuario.nombre} dada de baja.", "success")
-    return redirect(url_for('admin'))
-
-@app.route('/admin/reactivar/<int:user_id>', methods=['POST'])
-def reactivar_cuenta(user_id):
-    if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
-    usuario = Usuario.query.get(user_id)
-    if usuario:
-        usuario.activo = True
-        db.session.commit()
-        flash(f"Cuenta de {usuario.nombre} reactivada.", "success")
-    return redirect(url_for('admin'))
-
-@app.route('/admin/cambiar_rol/<int:user_id>', methods=['POST'])
-def cambiar_rol(user_id):
-    if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
-    usuario = Usuario.query.get(user_id)
-    if usuario:
-        usuario.rol = request.form.get('rol')
-        db.session.commit()
-        flash(f"Rol actualizado para {usuario.nombre}.", "success")
-    return redirect(url_for('admin'))
-
-@app.route('/admin/restablecer_clave/<int:user_id>', methods=['POST'])
-def restablecer_clave(user_id):
-    if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
-    usuario = Usuario.query.get(user_id)
-    if usuario:
-        nueva_clave = request.form.get('nueva_password')
-        if nueva_clave:
-            usuario.password = generate_password_hash(nueva_clave)
-            db.session.commit()
-            flash(f"Contraseña actualizada para {usuario.nombre}.", "success")
-        else:
-            flash("Debes escribir una contraseña nueva.", "error")
-    return redirect(url_for('admin'))
-
-@app.route('/admin/actualizar_correo/<int:user_id>', methods=['POST'])
-def actualizar_correo(user_id):
-    if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
-    usuario = Usuario.query.get(user_id)
-    if usuario:
-        usuario.correo = request.form.get('correo')
-        db.session.commit()
-        flash(f"Correo actualizado para {usuario.nombre}.", "success")
-    return redirect(url_for('admin'))
+    from modulos.cuentas import crear_empleado_seguro
+    return crear_empleado_seguro(db, Usuario, AuditoriaCuenta)
 
 @app.route('/crear_alerta', methods=['POST'])
 def crear_alerta():
@@ -939,7 +864,7 @@ def inyectar_especies():
 def respuesta_especies(mensaje, tipo='ok', cambio=None):
     """Responde dentro de un iframe oculto: la página se actualiza sin recargarse (no se pierde lo escrito)."""
     lista = [{'id': e.id, 'nombre': e.nombre} for e in Especie.query.order_by(Especie.nombre).all()]
-    return render_template('compartidos/especies_respuesta.html', lista=lista, mensaje=mensaje, tipo=tipo, cambio=cambio)
+    return render_template('especies_respuesta.html', lista=lista, mensaje=mensaje, tipo=tipo, cambio=cambio)
 
 def validar_nombre_especie(valor, excepto_id=None):
     """Devuelve (nombre_limpio, None) o (None, mensaje_de_error)."""
@@ -1434,11 +1359,24 @@ def editar_mascota(paciente_id):
         
     return redirect(url_for('usuario'))
 
+# Registra cuentas.reactivar, cuentas.baja, cuentas.cambiar_rol,
+# cuentas.restablecer_clave y cuentas.actualizar_correo.
+from modulos.cuentas import registrar_cuentas, asegurar_columnas_existentes
+registrar_cuentas(app, db, Usuario, AuditoriaCuenta)
 
+# Validación adicional exclusiva de las rutas de administración.
+from modulos.validaciones_admin import registrar_validaciones_admin
+registrar_validaciones_admin(app)
+# CSRF: mismo token para plantillas antiguas y las rutas nuevas.
+from modulos.cuentas import token_csrf
+app.jinja_env.globals['csrf_token'] = token_csrf
+app.jinja_env.globals['csrf_gestion'] = token_csrf
 
 if __name__ == '__main__':    
     with app.app_context():
         db.create_all()
+        # Cambios no destructivos en SQLite: conservar perfiles existentes.
+        asegurar_columnas_existentes(db)
         
         # Catálogo de especies: solo la primera vez (Perro, Gato y las que ya existían en pacientes/rescates)
         if not Especie.query.first():
@@ -1453,25 +1391,13 @@ if __name__ == '__main__':
         if not Usuario.query.filter_by(rol='admin').first():
             db.session.add(Usuario(nombre="Administrador Principal", correo="admin@huellitas.com", codigo_empleado="ADMIN-001", telefono="555-0000", password=generate_password_hash("123"), rol="admin"))
 
-        # NUEVO: Crear los 3 programas base si no existen
-        if not ProgramaVoluntariado.query.first():
-            db.session.add(ProgramaVoluntariado(tipo='Coexistencia', descripcion='Ven a pasar un rato agradable con nuestros animales. Ayúdalos a socializar, dales cariño y acompáñalos. ¡Ideal para relajarte y dar amor sin llevarlos a casa!'))
-            db.session.add(ProgramaVoluntariado(tipo='Hogar Temporal', descripcion='Abre las puertas de tu casa temporalmente (3 a 7 días). Dale a un perrito o gatito la oportunidad de dormir en un hogar calientito mientras le encontramos su familia definitiva.'))
-            db.session.add(ProgramaVoluntariado(tipo='Apoyo Operativo', descripcion='Únete al equipo del refugio. Ayúdanos a bañar, alimentar, pasear y mantener limpias las áreas. Trabajo físico, pero con la mejor recompensa del mundo.'))
-
-        # NUEVO: Crear información de donación por defecto
-        if not InfoDonacion.query.first():
-            db.session.add(InfoDonacion(
-                titulo="Apoya la Causa",
-                subtitulo="Aceptamos donaciones monetarias o insumos físicos (alimentos, cobijas, juguetes).",
-                info_bancaria="Banco Nacional: Cuenta Monetaria #000-123456-7",
-                nombre_de="A Nombre De: Asociación Huellitas de Amor",
-                sede_fisica="Sede Recepción Comida: Calle Principal 12-45 Zona 10"
-            ))
+        # Inicialización idempotente. No se sobrescriben ediciones existentes.
+        asegurar_programas_voluntariado()
+        asegurar_informacion_donacion()
 
         # NUEVO: Crear la configuración Global por defecto
         if not ConfigSitio.query.filter_by(rol_destino='global').first():
             db.session.add(ConfigSitio(rol_destino='global', titulo="Huellitas de Amor", eslogan="v5.0 - Entorno Python", color_fondo="#1e1b4b", logo_size=45))
 
-            db.session.commit()
+        db.session.commit()
     app.run(host='0.0.0.0' , port=5000, debug = True)

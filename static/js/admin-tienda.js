@@ -666,9 +666,23 @@ function cerrarModalEditar() {
 
 async function guardarEdicionProd(e) {
     e.preventDefault();
+    // No convertir datos vacíos o escritos con letras a cero silenciosamente.
+    const stockInput = document.getElementById('edit-p-stock');
+    const precioInput = document.getElementById('edit-p-precio');
+    for (const [campo, regla, etiqueta] of [[stockInput, 'entero', 'Stock'], [precioInput, 'decimal', 'Precio']]) {
+        if (!campo || !window.HuellitasValidacionAdmin?.correcto(campo, regla) || !campo.value.trim()) {
+            if (campo) {
+                campo.setCustomValidity(etiqueta + ': escribe un número válido.');
+                campo.reportValidity();
+                campo.focus();
+            }
+            return;
+        }
+        campo.setCustomValidity('');
+    }
     const id = document.getElementById('edit-p-id').value;
-    const nuevoStock = parseInt(document.getElementById('edit-p-stock').value) || 0;
-    const nuevoPrecio = parseFloat(document.getElementById('edit-p-precio').value) || 0;
+    const nuevoStock = Number(stockInput.value);
+    const nuevoPrecio = Number(precioInput.value);
 
     try {
         const response = await fetch(`/editar_producto/${id}`, {

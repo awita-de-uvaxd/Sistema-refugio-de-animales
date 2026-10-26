@@ -3,58 +3,80 @@
     <div class="min-w-0"><p class="font-bold text-slate-800 break-words">{{ cuenta.nombre }}</p>
       <p class="text-xs text-slate-500">{{ cuenta.rol|capitalize }} · ID {{ cuenta.id }}{% if cuenta.codigo_empleado %} · {{ cuenta.codigo_empleado }}{% endif %}</p>
       <p class="text-xs break-all mt-1"><span class="font-semibold">Correo:</span> {{ cuenta.correo or 'Sin correo asignado' }}</p>
-      <p class="text-xs break-all mt-1"><span class="font-semibold">Teléfono:</span> {{ cuenta.telefono or 'Sin teléfono asignado' }}</p>
     </div>
     {% if cuenta.activo %}<span class="bg-emerald-100 text-emerald-700 rounded-lg px-2 py-1 text-[10px] font-bold">Activo</span>
     {% else %}<span class="bg-rose-100 text-rose-700 rounded-lg px-2 py-1 text-[10px] font-bold">Baja</span>{% endif %}
   </div>
-  
-  <div class="flex flex-wrap gap-2 text-xs mt-2">
-    <button type="button" class="px-3 py-2 rounded-lg bg-indigo-100 text-indigo-800 font-bold hover:bg-indigo-200 transition" onclick="document.getElementById('clave-{{ cuenta.id }}').classList.toggle('hidden')">Cambiar clave</button>
-    <button type="button" class="px-3 py-2 rounded-lg bg-slate-200 text-slate-700 font-bold hover:bg-slate-300 transition" onclick="document.getElementById('email-{{ cuenta.id }}').classList.toggle('hidden')">Editar correo</button>
+  <div class="flex flex-wrap gap-2 text-xs">
+    <button type="button" class="px-3 py-2 rounded-lg bg-indigo-100 text-indigo-800 font-bold" onclick="document.getElementById('clave-{{ cuenta.id }}').classList.toggle('hidden')">Restablecer clave</button>
+    <button type="button" class="px-3 py-2 rounded-lg bg-slate-200 text-slate-700 font-bold" onclick="document.getElementById('email-{{ cuenta.id }}').classList.toggle('hidden')">Modificar correo</button>
     {% if cuenta.rol != 'usuario' and cuenta.id != session.get('usuario_id') and cuenta.activo %}
-      <button type="button" class="px-3 py-2 rounded-lg bg-slate-200 text-slate-700 font-bold hover:bg-slate-300 transition" onclick="document.getElementById('rol-{{ cuenta.id }}').classList.toggle('hidden')">Cambiar rol</button>
+      <button type="button" class="px-3 py-2 rounded-lg bg-slate-200 text-slate-700 font-bold" onclick="document.getElementById('rol-{{ cuenta.id }}').classList.toggle('hidden')">Cambiar rol</button>
     {% endif %}
     {% if cuenta.activo and cuenta.id != session.get('usuario_id') %}
-      <form action="{{ url_for('baja_cuenta', user_id=cuenta.id) }}" method="POST" onsubmit="return confirm('¿Dar de baja a {{ cuenta.nombre|e }}? Perderá el acceso al sistema.')">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="px-3 py-2 rounded-lg bg-red-100 text-red-700 font-bold hover:bg-red-200 transition">{{ 'Desactivar usuario' if cuenta.rol == 'usuario' else 'Desactivar empleado' }}</button>
+      <form action="{{ url_for('cuentas.baja', user_id=cuenta.id) }}" method="POST" onsubmit="return confirm('¿Dar de baja la cuenta de {{ cuenta.nombre|e }}? Se revocará el acceso.')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="px-3 py-2 rounded-lg bg-red-100 text-red-700 font-bold">{{ 'Desactivar usuario' if cuenta.rol == 'usuario' else 'Eliminar empleado' }}</button>
       </form>
     {% elif not cuenta.activo %}
-      <form action="{{ url_for('reactivar_cuenta', user_id=cuenta.id) }}" method="POST">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="px-3 py-2 rounded-lg bg-emerald-100 text-emerald-700 font-bold hover:bg-emerald-200 transition">Reactivar Acceso</button>
+      <form action="{{ url_for('cuentas.reactivar', user_id=cuenta.id) }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="px-3 py-2 rounded-lg bg-emerald-100 text-emerald-700 font-bold">Reactivar</button>
       </form>
     {% endif %}
   </div>
-
-  <!-- Formulario: Cambiar Rol -->
   {% if cuenta.rol != 'usuario' and cuenta.id != session.get('usuario_id') and cuenta.activo %}
-  <form id="rol-{{ cuenta.id }}" class="hidden bg-white border border-slate-200 p-4 rounded-xl space-y-3 shadow-sm mt-3" method="POST" action="{{ url_for('cambiar_rol', user_id=cuenta.id) }}">
+  <form id="rol-{{ cuenta.id }}" class="hidden bg-white border p-3 rounded-lg space-y-2" method="POST" action="{{ url_for('cuentas.cambiar_rol', user_id=cuenta.id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Nuevo Rol Asignado</label>
-    <select name="rol" class="w-full p-2.5 border rounded-lg text-sm outline-none focus:border-indigo-500 bg-slate-50" required>
-      {% for opcion in ['rescatista','veterinario','admin'] %}
-        <option value="{{ opcion }}" {% if cuenta.rol == opcion %}selected{% endif %}>{{ opcion|capitalize }}</option>
-      {% endfor %}
+    <label class="text-xs block font-bold">Nuevo rol</label>
+    <select name="rol" class="w-full p-2 border rounded-lg text-xs" required>
+      {% for opcion in ['rescatista','veterinario','admin'] %}<option value="{{ opcion }}" {% if cuenta.rol == opcion %}selected{% endif %}>{{ opcion|capitalize }}</option>{% endfor %}
     </select>
-    <button class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold w-full py-2.5 rounded-lg transition">Guardar nuevo rol</button>
+    <button class="bg-indigo-700 text-white text-xs font-bold w-full p-2 rounded-lg">Guardar nuevo rol</button>
   </form>
   {% endif %}
-
-  <!-- Formulario: Restablecer Clave -->
-  <form id="clave-{{ cuenta.id }}" class="hidden bg-white border border-slate-200 p-4 rounded-xl space-y-3 shadow-sm mt-3" method="POST" action="{{ url_for('restablecer_clave', user_id=cuenta.id) }}">
+  <form id="clave-{{ cuenta.id }}" class="hidden rounded-xl bg-white border p-3 space-y-2" method="POST" action="{{ url_for('cuentas.restablecer_clave', user_id=cuenta.id) }}" data-confirmar-clave-auditoria="{{ 'si' if cuenta.rol != 'usuario' else 'no' }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label class="text-xs font-bold text-slate-500 uppercase tracking-wide block">Asignar Nueva Contraseña</label>
-    <input type="text" name="nueva_password" minlength="5" placeholder="Escribe la nueva contraseña" required class="w-full p-2.5 border rounded-lg text-sm outline-none focus:border-indigo-500 bg-slate-50">
-    <button class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-bold text-white text-xs transition">Confirmar cambio de clave</button>
+    <label for="nueva-password-{{ cuenta.id }}" class="text-xs font-bold block">Nueva contraseña (opcional, mínimo 8 caracteres)</label>
+    <div class="flex items-center gap-2">
+      <input id="nueva-password-{{ cuenta.id }}" type="password" name="nueva_password" minlength="8" maxlength="128" autocomplete="new-password" placeholder="Vacío = generar contraseña aleatoria" class="w-full min-w-0 p-2 border rounded-lg text-xs">
+      <button type="button" class="shrink-0 flex items-center justify-center w-11 h-11 border border-slate-200 rounded-lg bg-white text-slate-700 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400" aria-label="Mostrar contraseña" aria-pressed="false" onclick="const campo=this.previousElementSibling;const mostrar=campo.type==='password';campo.type=mostrar?'text':'password';this.setAttribute('aria-pressed',String(mostrar));this.setAttribute('aria-label',mostrar?'Ocultar contraseña':'Mostrar contraseña');this.setAttribute('title',mostrar?'Ocultar contraseña':'Mostrar contraseña')"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+    </div>
+    {% if cuenta.rol != 'usuario' %}
+      <label for="confirmar-nueva-password-{{ cuenta.id }}" class="text-xs font-bold block">Confirmar nueva contraseña</label>
+      <div class="flex items-center gap-2">
+        <input id="confirmar-nueva-password-{{ cuenta.id }}" type="password" name="confirmar_nueva_password" minlength="8" maxlength="128" autocomplete="new-password" placeholder="Repite la contraseña" class="w-full min-w-0 p-2 border rounded-lg text-xs">
+        <button type="button" class="shrink-0 flex items-center justify-center w-11 h-11 border border-slate-200 rounded-lg bg-white text-slate-700 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400" aria-label="Mostrar contraseña" aria-pressed="false" onclick="const campo=this.previousElementSibling;const mostrar=campo.type==='password';campo.type=mostrar?'text':'password';this.setAttribute('aria-pressed',String(mostrar));this.setAttribute('aria-label',mostrar?'Ocultar contraseña':'Mostrar contraseña');this.setAttribute('title',mostrar?'Ocultar contraseña':'Mostrar contraseña')"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+      </div>
+      <p class="text-[11px] text-red-600 hidden" data-error-confirmacion>Las contraseñas no coinciden.</p>
+    {% endif %}
+    <p class="text-[11px] text-slate-500">Si dejas ambos campos vacíos, el sistema generará una contraseña segura y la mostrará una sola vez.</p>
+    <button class="w-full p-2 bg-indigo-700 rounded-lg font-bold text-white text-xs">Confirmar restablecimiento</button>
+  </form>
+  <form id="email-{{ cuenta.id }}" class="hidden rounded-xl bg-white border p-3 space-y-2" method="POST" action="{{ url_for('cuentas.actualizar_correo', user_id=cuenta.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="text-xs font-bold block">Correo de acceso</label>
+    <input type="email" name="correo" autocomplete="email" maxlength="100" value="{{ cuenta.correo or '' }}" required class="w-full p-2 border rounded-lg text-xs">
+    <button class="w-full p-2 bg-indigo-700 rounded-lg font-bold text-white text-xs">Guardar correo</button>
   </form>
 
-  <!-- Formulario: Actualizar Correo -->
-  <form id="email-{{ cuenta.id }}" class="hidden bg-white border border-slate-200 p-4 rounded-xl space-y-3 shadow-sm mt-3" method="POST" action="{{ url_for('actualizar_correo', user_id=cuenta.id) }}">
+{% if cuenta.rol == 'usuario' and cuenta.id != session.get('usuario_id') %}
+<section class="mt-4 border-2 border-red-200 bg-red-50 rounded-xl p-3">
+  <h4 class="text-sm font-bold text-red-800">Eliminar definitivamente del sistema</h4>
+  <p class="text-xs text-red-800 mt-2">Esta acción es irreversible: elimina la cuenta, solicitudes de adopción, reclamos, voluntariados, pedidos y perfil. Las mascotas no se eliminan; se desvinculan de esta cuenta. No elimina copias de seguridad.</p>
+  <form method="POST" action="{{ url_for('cuentas.eliminar_definitivamente', user_id=cuenta.id) }}" class="space-y-3 mt-3" onsubmit="return confirm('¿Confirmas la eliminación DEFINITIVA de esta cuenta y de sus datos asociados? No se podrá reactivar.');">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label class="text-xs font-bold text-slate-500 uppercase tracking-wide block">Nuevo Correo Electrónico</label>
-    <input type="email" name="correo" value="{{ cuenta.correo or '' }}" required class="w-full p-2.5 border rounded-lg text-sm outline-none focus:border-indigo-500 bg-slate-50">
-    <button class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-bold text-white text-xs transition">Guardar nuevo correo</button>
+    <div>
+      <label for="confirmar-eliminar-{{ cuenta.id }}" class="block text-xs font-bold text-red-900">Escribe ELIMINAR</label>
+      <input id="confirmar-eliminar-{{ cuenta.id }}" name="confirmacion" type="text" required pattern="ELIMINAR" autocomplete="off" placeholder="ELIMINAR" class="w-full p-2 rounded-lg border border-red-300" title="Escribe ELIMINAR en mayúsculas">
+    </div>
+    <div>
+      <label for="clave-admin-eliminar-{{ cuenta.id }}" class="block text-xs font-bold text-red-900">Confirma tu contraseña de administrador</label>
+      <div class="flex gap-2">
+        <input id="clave-admin-eliminar-{{ cuenta.id }}" name="password_admin" type="password" required autocomplete="current-password" class="flex-1 min-w-0 p-2 rounded-lg border border-red-300">
+        <button type="button" aria-label="Mostrar contraseña" onclick="const entrada=this.previousElementSibling; const ver=entrada.type==='password'; entrada.type=ver?'text':'password'; this.setAttribute('aria-pressed', String(ver));" class="border border-red-300 rounded-lg px-3 bg-white" title="Ver contraseña">👁</button>
+      </div>
+    </div>
+    <button type="submit" class="bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg w-full p-2">Eliminar cuenta definitivamente</button>
   </form>
+</section>
+{% endif %}
 </article>
