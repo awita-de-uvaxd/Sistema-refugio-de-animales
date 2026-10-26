@@ -110,7 +110,7 @@ async function marcarEntregadoRefugio(id) {
     try {
         const response = await fetch('/descontar_stock', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.HUELLITAS_ADMIN_CSRF || '' },
             body: JSON.stringify({ items: o.itemsDetalle })
         });
 
@@ -383,7 +383,7 @@ function completarCobroRefugio() {
     try {
         const response = await fetch(`/editar_producto/${numId}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.HUELLITAS_ADMIN_CSRF || '' },
             body: JSON.stringify({ visible: nuevoEstado ? 1 : 0 })
         });
 
@@ -405,7 +405,8 @@ function completarCobroRefugio() {
 
     try {
         const response = await fetch(`/eliminar_producto/${numId}`, {
-            method: 'POST'
+            method: 'POST',
+            headers: { 'X-CSRF-Token': window.HUELLITAS_ADMIN_CSRF || '' }
         });
 
         if (response.ok) {
@@ -630,7 +631,7 @@ async function toggleVis(id) {
     try {
         const response = await fetch(`/editar_producto/${numId}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.HUELLITAS_ADMIN_CSRF || '' },
             body: JSON.stringify({ visible: nuevoEstado ? 1 : 0 })
         });
 
@@ -687,7 +688,7 @@ async function guardarEdicionProd(e) {
     try {
         const response = await fetch(`/editar_producto/${id}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.HUELLITAS_ADMIN_CSRF || '' },
             body: JSON.stringify({ stock: nuevoStock, precio: nuevoPrecio })
         });
 
@@ -717,7 +718,8 @@ async function eliminarProd(id) {
 
     try {
         const response = await fetch(`/eliminar_producto/${numId}`, {
-            method: 'POST'
+            method: 'POST',
+            headers: { 'X-CSRF-Token': window.HUELLITAS_ADMIN_CSRF || '' }
         });
 
         if (response.ok) {
@@ -919,7 +921,7 @@ async function procesarVentaDirectaPOS() {
     try {
         const response = await fetch('/venta_directa', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.HUELLITAS_ADMIN_CSRF || '' },
             body: JSON.stringify(ordenVenta)
         });
 

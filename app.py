@@ -21,7 +21,28 @@ def serve_js(filename):
     )
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///huellitas.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.secret_key = 'huellitas_secreto_2026'
+def _obtener_clave_sesion():
+    """Clave estable y no pública para proteger las cookies de sesión."""
+    clave_entorno = os.environ.get('HUELLITAS_SECRET_KEY', '').strip()
+    if clave_entorno:
+        return clave_entorno
+    from pathlib import Path
+    ruta = Path(app.instance_path) / '.clave_sesion'
+    ruta.parent.mkdir(parents=True, exist_ok=True)
+    if ruta.is_file():
+        clave = ruta.read_text(encoding='utf-8').strip()
+        if len(clave) >= 32:
+            return clave
+    clave = secrets.token_urlsafe(48)
+    # Exclusivo de la instancia; no se almacena en el código fuente.
+    fd = os.open(str(ruta), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, 'w', encoding='utf-8') as archivo:
+        archivo.write(clave)
+    return clave
+
+app.secret_key = _obtener_clave_sesion()
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax' 
 
 # ==========================================
 # CSRF - SOLUCIÓN SIMPLE, SIN MÓDULOS EXTERNOS
@@ -43,7 +64,8 @@ def validar_csrf_cuentas():
     """Comprueba el CSRF antes de crear cuentas desde el panel."""
     esperado = session.get('_csrf_cuentas', '')
     recibido = (request.form.get('csrf_token', '')
-                or request.form.get('_csrf_gestion', ''))
+                or request.form.get('_csrf_gestion', '')
+                or request.headers.get('X-CSRF-Token', ''))
     if not esperado or not recibido or not hmac.compare_digest(esperado, recibido):
         abort(400, description='Token de seguridad inválido. Actualiza la página e inténtalo de nuevo.')
 
@@ -381,6 +403,7 @@ def inject_config():
 @app.route('/editar_apariencia', methods=['POST'])
 def editar_apariencia():
     if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
+    validar_csrf_cuentas()
     
     rol_destino = request.form.get('rol_destino', 'global')
     
@@ -664,6 +687,9 @@ def editar_programa():
 @app.route('/procesar_voluntariado/<int:sol_id>/<accion>', methods=['POST'])
 def procesar_voluntariado(sol_id, accion):
     if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
+    validar_csrf_cuentas()
+    if accion not in ('aceptar', 'rechazar'):
+        abort(400, description='Acción no reconocida.')
     
     solicitud = SolicitudVoluntariado.query.get(sol_id)
     if solicitud:
@@ -680,10 +706,16 @@ def procesar_voluntariado(sol_id, accion):
 @app.route('/procesar_adopcion/<int:solicitud_id>/<accion>', methods=['POST'])
 def procesar_adopcion(solicitud_id, accion):
     if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
+    validar_csrf_cuentas()
+    if accion not in ('aceptar', 'rechazar'):
+        abort(400, description='Acción no reconocida.')
     solicitud = SolicitudAdopcion.query.get(solicitud_id)
     if solicitud:
         if accion == 'aceptar':
-            paciente = Paciente.query.get(solicitud.paciente_id)
+            paciente = db.session.get(Paciente, solicitud.paciente_id)
+            if paciente is None:
+                flash('La mascota de esta solicitud ya no existe. No se modificó la adopción.', 'error')
+                return redirect(url_for('admin') + '#adopciones')
             paciente.disponible_adopcion = "Adoptado"
             paciente.dueno_id = solicitud.usuario_id # Se transfiere el perro a "Mis Mascotas"
             solicitud.estado = "Aprobada"
@@ -701,10 +733,16 @@ def procesar_adopcion(solicitud_id, accion):
 @app.route('/procesar_reclamo/<int:reclamo_id>/<accion>', methods=['POST'])
 def procesar_reclamo(reclamo_id, accion):
     if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
+    validar_csrf_cuentas()
+    if accion not in ('aceptar', 'rechazar'):
+        abort(400, description='Acción no reconocida.')
     reclamo = ReclamoPropiedad.query.get(reclamo_id)
     if reclamo:
         if accion == 'aceptar':
-            paciente = Paciente.query.get(reclamo.paciente_id)
+            paciente = db.session.get(Paciente, reclamo.paciente_id)
+            if paciente is None:
+                flash('La mascota reclamada ya no existe. No se modificó el reclamo.', 'error')
+                return redirect(url_for('admin') + '#adopciones')
             paciente.disponible_adopcion = "Reclamado Oficialmente"
             paciente.dueno_id = reclamo.usuario_id
             reclamo.estado = "Aprobado"
@@ -721,6 +759,7 @@ def procesar_reclamo(reclamo_id, accion):
 @app.route('/editar_donacion', methods=['POST'])
 def editar_donacion():
     if 'usuario_id' not in session or session['rol'] != 'admin': return redirect(url_for('login'))
+    validar_csrf_cuentas()
     info = InfoDonacion.query.first()
     if info:
         info.titulo = request.form.get('titulo')
@@ -1202,6 +1241,7 @@ def crear_reclamo(paciente_id):
 def crear_producto():
     if 'usuario_id' not in session or session['rol'] != 'admin': 
         return redirect(url_for('login'))
+    validar_csrf_cuentas()
     
     nombre = request.form.get('nombre')
     categoria = request.form.get('categoria')
@@ -1236,7 +1276,9 @@ def crear_producto():
 
 @app.route('/obtener_productos', methods=['GET'])
 def obtener_productos():
-    """Devuelve la lista actualizada de productos desde SQLite"""
+    """Devuelve el inventario al panel, únicamente a administradores."""
+    if session.get('rol') != 'admin' or 'usuario_id' not in session:
+        return jsonify(status='error', message='No autorizado'), 403
     productos = ProductoShop.query.all()
     lista = []
     for p in productos:
@@ -1255,92 +1297,120 @@ def obtener_productos():
 
 @app.route('/editar_producto/<int:id>', methods=['POST'])
 def editar_producto(id):
-    """Actualiza la visibilidad, precio o stock en SQLite"""
-    if 'usuario_id' not in session or session.get('rol') != 'admin':
-        return jsonify({'status': 'error', 'message': 'No autorizado'}), 403
-    
-    p = ProductoShop.query.get(id)
-    if not p:
-        return jsonify({'status': 'error', 'message': 'Producto no encontrado'}), 404
+    """Edita un producto sin aceptar valores inválidos ni peticiones sin sesión."""
+    if session.get('rol') != 'admin' or 'usuario_id' not in session:
+        return jsonify(status='error', message='No autorizado'), 403
+    validar_csrf_cuentas()
+    p = db.session.get(ProductoShop, id)
+    if p is None:
+        return jsonify(status='error', message='Producto no encontrado'), 404
 
-    data = request.get_json(silent=True) or request.form
-    
+    data = request.get_json(silent=True)
+    if data is None:
+        data = request.form
+    # La validación de tipos, rango y nombre se hace en modulos.validaciones_admin.
     if 'visible' in data:
-        vis_val = data.get('visible')
-        p.visible = True if str(vis_val).lower() in ['1', 'true', 'yes'] else False
+        p.visible = str(data.get('visible')).lower() in ('1', 'true', 'yes')
     if 'stock' in data:
         p.stock = int(data.get('stock'))
     if 'precio' in data:
         p.precio = float(data.get('precio'))
     if 'nombre' in data and data.get('nombre'):
-        p.nombre = data.get('nombre')
-
+        p.nombre = data.get('nombre').strip()
     db.session.commit()
-    return jsonify({'status': 'ok', 'message': 'Producto actualizado exitosamente'})
+    return jsonify(status='ok', message='Producto actualizado exitosamente')
 
 
 @app.route('/eliminar_producto/<int:id>', methods=['POST'])
 def eliminar_producto(id):
-    """Elimina permanentemente un producto de SQLite"""
-    if 'usuario_id' not in session or session.get('rol') != 'admin':
-        return jsonify({'status': 'error', 'message': 'No autorizado'}), 403
-    
-    p = ProductoShop.query.get(id)
-    if not p:
-        return jsonify({'status': 'error', 'message': 'Producto no encontrado'}), 404
+    """Evita que un producto con pedidos registrados provoque un error SQL."""
+    if session.get('rol') != 'admin' or 'usuario_id' not in session:
+        return jsonify(status='error', message='No autorizado'), 403
+    validar_csrf_cuentas()
+    p = db.session.get(ProductoShop, id)
+    if p is None:
+        return jsonify(status='error', message='Producto no encontrado'), 404
+    if Pedido.query.filter_by(producto_id=id).first() is not None:
+        return jsonify(status='error', message='Este producto tiene pedidos relacionados y no se puede borrar sin perder su historial. Puedes ocultarlo de la tienda.'), 409
+    from sqlalchemy.exc import IntegrityError
+    try:
+        db.session.delete(p)
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify(status='error', message='No se puede borrar el producto porque tiene registros asociados.'), 409
+    return jsonify(status='ok', message='Producto eliminado correctamente')
 
-    db.session.delete(p)
-    db.session.commit()
-    return jsonify({'status': 'ok', 'message': 'Producto eliminado correctamente'})
+
+def _descontar_items_validados(items):
+    """Valida todas las líneas ANTES de modificar existencias; agrega repetidos."""
+    import re as _re
+    cantidades = {}
+    if not isinstance(items, list) or not 1 <= len(items) <= 200:
+        return 'La operación debe incluir entre 1 y 200 artículos.'
+    for item in items:
+        if not isinstance(item, dict):
+            return 'El artículo no tiene un formato válido.'
+        identificador = str(item.get('id') or item.get('numId') or '')
+        match = _re.fullmatch(r'(?:PROD-)?([0-9]{1,12})', identificador, flags=_re.IGNORECASE)
+        if match is None:
+            return 'Código de producto no válido.'
+        cantidad = item.get('cantidad', 1)
+        if isinstance(cantidad, bool) or not _re.fullmatch(r'[0-9]{1,7}', str(cantidad)):
+            return 'La cantidad debe ser un número entero positivo.'
+        cantidad = int(cantidad)
+        if not 1 <= cantidad <= 1_000_000:
+            return 'La cantidad debe estar entre 1 y 1,000,000.'
+        producto_id = int(match.group(1))
+        cantidades[producto_id] = cantidades.get(producto_id, 0) + cantidad
+    # Consultar primero cada producto; NO aplicar ningún cambio ante error.
+    productos = {}
+    for producto_id, cantidad in cantidades.items():
+        producto = db.session.get(ProductoShop, producto_id)
+        if producto is None:
+            return f'El producto #{producto_id} ya no existe.'
+        if producto.stock < cantidad:
+            return f'Stock insuficiente para "{producto.nombre}". Disponible: {producto.stock}.'
+        productos[producto_id] = producto
+    for producto_id, cantidad in cantidades.items():
+        productos[producto_id].stock -= cantidad
+    return None
+
 
 @app.route('/venta_directa', methods=['POST'])
 def venta_directa():
-    """Procesa una venta presencial en caja y descuenta el inventario en SQLite"""
-    if 'usuario_id' not in session or session.get('rol') != 'admin':
-        return jsonify({'status': 'error', 'message': 'No autorizado'}), 403
-
-    data = request.get_json(silent=True) or {}
-    
-    # Acepta tanto 'items' como 'itemsDetalle' para evitar desajustes
+    """Venta presencial: sin cantidades negativas ni ventas parciales."""
+    if session.get('rol') != 'admin' or 'usuario_id' not in session:
+        return jsonify(status='error', message='No autorizado'), 403
+    validar_csrf_cuentas()
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify(status='error', message='Formato de venta inválido.'), 400
     items = data.get('items') or data.get('itemsDetalle') or []
-
-    if not items:
-        return jsonify({'status': 'error', 'message': 'El carrito de venta está vacío'}), 400
-
-    # Descontar el stock en la base de datos
-    for item in items:
-        raw_id = str(item.get('id', '') or item.get('numId', ''))
-        digits = ''.join(filter(str.isdigit, raw_id))
-        if digits:
-            num_id = int(digits)
-            p = ProductoShop.query.get(num_id)
-            if p:
-                cant = int(item.get('cantidad', 1))
-                if p.stock < cant:
-                    return jsonify({'status': 'error', 'message': f'Stock insuficiente para "{p.nombre}". Disponible: {p.stock}'}), 400
-                p.stock = max(0, p.stock - cant)
-
+    error = _descontar_items_validados(items)
+    if error:
+        db.session.rollback()
+        return jsonify(status='error', message=error), 400
     db.session.commit()
-    return jsonify({'status': 'ok', 'message': 'Venta presencial procesada e inventario actualizado'})
+    return jsonify(status='ok', message='Venta presencial procesada e inventario actualizado')
+
 
 @app.route('/descontar_stock', methods=['POST'])
 def descontar_stock():
-    data = request.get_json(silent=True) or {}
-    items = data.get('items', [])
-    
-    for item in items:
-        raw_id = str(item.get('id', ''))
-        # Extrae el ID numérico del producto (ej: PROD-3 -> 3)
-        digits = ''.join(filter(str.isdigit, raw_id))
-        if digits:
-            num_id = int(digits)
-            p = ProductoShop.query.get(num_id)
-            if p:
-                cant = int(item.get('cantidad', 1))
-                p.stock = max(0, p.stock - cant)
-                
+    """Entrega en tienda: solo admin, con verificación completa de existencias."""
+    if session.get('rol') != 'admin' or 'usuario_id' not in session:
+        return jsonify(status='error', message='No autorizado'), 403
+    validar_csrf_cuentas()
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify(status='error', message='Formato de inventario inválido.'), 400
+    error = _descontar_items_validados(data.get('items', []))
+    if error:
+        db.session.rollback()
+        return jsonify(status='error', message=error), 400
     db.session.commit()
-    return jsonify({'status': 'ok', 'message': 'Stock rebajado correctamente'})
+    return jsonify(status='ok', message='Stock rebajado correctamente')
+
 
 @app.route('/editar_mascota/<int:paciente_id>', methods=['POST'])
 def editar_mascota(paciente_id):
@@ -1400,4 +1470,4 @@ if __name__ == '__main__':
             db.session.add(ConfigSitio(rol_destino='global', titulo="Huellitas de Amor", eslogan="v5.0 - Entorno Python", color_fondo="#1e1b4b", logo_size=45))
 
         db.session.commit()
-    app.run(host='0.0.0.0' , port=5000, debug = True)
+    app.run(host='0.0.0.0', port=5000, debug=False)

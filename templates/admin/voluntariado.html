@@ -117,9 +117,11 @@
                 <!-- Botones de Acción (Aceptar / Rechazar) -->
                 <div class="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-slate-200">
                   <form action="{{ url_for('procesar_voluntariado', sol_id=sol.id, accion='rechazar') }}" method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 rounded-xl transition">Rechazar</button>
                   </form>
                   <form action="{{ url_for('procesar_voluntariado', sol_id=sol.id, accion='aceptar') }}" method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-md transition">Aprobar Voluntario</button>
                   </form>
                 </div>

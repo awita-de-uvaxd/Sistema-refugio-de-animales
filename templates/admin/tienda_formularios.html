@@ -2,6 +2,7 @@
 <!-- MODAL NUEVO PRODUCTO CONECTADO A BASE DE DATOS -->
 <div id="modal-prod" class="fixed inset-0 bg-slate-900/50 hidden z-50 flex items-center justify-center p-4">
   <form action="{{ url_for('crear_producto') }}" method="POST" enctype="multipart/form-data" class="bg-white rounded-3xl max-w-md w-full p-6 space-y-3 text-xs shadow-xl">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <h3 class="font-black text-slate-800 border-b pb-2 text-sm">Agregar Producto</h3>
     
     <div>

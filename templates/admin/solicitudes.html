@@ -40,9 +40,11 @@
                                  <!-- Opciones de Aceptar/Rechazar (Ocultas inicialmente) -->
                                  <div id="acciones_adop_{{ adop.id }}" class="hidden items-center gap-1.5">
                                      <form action="{{ url_for('procesar_adopcion', solicitud_id=adop.id, accion='rechazar') }}" method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                          <button type="submit" class="bg-red-100 hover:bg-red-200 text-red-700 p-2 rounded-lg transition" title="Rechazar Solicitud"><i data-lucide="x" class="w-4 h-4"></i></button>
                                      </form>
                                      <form action="{{ url_for('procesar_adopcion', solicitud_id=adop.id, accion='aceptar') }}" method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                          <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white p-2 rounded-lg transition shadow-sm" title="Aprobar y Entregar Mascota"><i data-lucide="check" class="w-4 h-4"></i></button>
                                      </form>
                                  </div>
@@ -167,9 +169,11 @@
                                  <!-- Opciones (Ocultas) -->
                                  <div id="acciones_rec_{{ rec.id }}" class="hidden items-center gap-1.5">
                                      <form action="{{ url_for('procesar_reclamo', reclamo_id=rec.id, accion='rechazar') }}" method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                          <button type="submit" class="bg-red-100 hover:bg-red-200 text-red-700 p-2 rounded-lg transition" title="Rechazar Reclamo"><i data-lucide="x" class="w-4 h-4"></i></button>
                                      </form>
                                      <form action="{{ url_for('procesar_reclamo', reclamo_id=rec.id, accion='aceptar') }}" method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                          <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white p-2 rounded-lg transition shadow-sm" title="Devolver Mascota al Dueño"><i data-lucide="check" class="w-4 h-4"></i></button>
                                      </form>
                                  </div>

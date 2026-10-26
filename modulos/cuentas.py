@@ -346,7 +346,10 @@ def registrar_cuentas(app, db, Usuario, AuditoriaCuenta):
 
         # Únicamente archivos locales que ya no aparecen referenciados en BD;
         # nunca borrar fotos predeterminadas ni archivos compartidos.
-        _borrar_adjuntos_no_referenciados(db, current_app, fotos_candidatas)
+        try:
+            _borrar_adjuntos_no_referenciados(db, current_app, fotos_candidatas)
+        except Exception:
+            current_app.logger.exception('La cuenta se eliminó, pero no se pudieron limpiar algunos archivos.')
         flash('Cuenta de usuario y registros personales vinculados eliminados definitivamente. Las mascotas y sus historiales se conservaron sin propietario asignado.', 'success')
         return redirect(url_for('admin') + '#usuarios')
 

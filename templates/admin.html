@@ -41,6 +41,7 @@
 <!-- Validaciones exclusivas de Administración; no afectan otros perfiles. -->
 <script defer src="{{ url_for('static', filename='js/admin-validaciones.js') }}"></script>
 <script src="{{ url_for('static', filename='js/admin-navegacion.js') }}"></script>
+<script>window.HUELLITAS_ADMIN_CSRF = {{ csrf_token()|tojson }};</script>
 <script src="{{ url_for('static', filename='js/admin-tienda.js') }}"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {

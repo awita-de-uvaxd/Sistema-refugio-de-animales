@@ -16,7 +16,7 @@ ADMIN_FORM_ROUTES = frozenset({
     'crear_empleado', 'crear_producto', 'editar_apariencia',
     'editar_donacion', 'editar_programa',
 })
-ADMIN_JSON_ROUTES = frozenset({'editar_producto', 'venta_directa'})
+ADMIN_JSON_ROUTES = frozenset({'editar_producto', 'venta_directa', 'descontar_stock'})
 
 
 def texto_corto(valor, etiqueta, limite=100, obligatorio=False):
@@ -93,8 +93,8 @@ def validar_formulario_admin(endpoint, data):
             decimal_positivo(data.get('precio'), 'Precio')
         if 'visible' in data and str(data.get('visible')).lower() not in {'1', '0', 'true', 'false', 'yes', 'no'}:
             raise DatoInvalido('Visibilidad: valor no válido.')
-    elif endpoint == 'venta_directa':
-        items = data.get('items') or data.get('itemsDetalle') or []
+    elif endpoint in {'venta_directa', 'descontar_stock'}:
+        items = data.get('items') or (data.get('itemsDetalle') if endpoint == 'venta_directa' else None) or []
         if not isinstance(items, list) or not items:
             raise DatoInvalido('La venta debe contener uno o más productos.')
         if len(items) > 200:

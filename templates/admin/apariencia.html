@@ -9,6 +9,7 @@
         </div>
 
         <form action="{{ url_for('editar_apariencia') }}" method="POST" enctype="multipart/form-data" class="space-y-8">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           
           <!-- SELECCIÓN DE ROL DESTINO -->
           <div class="bg-indigo-50 border-l-4 border-indigo-600 p-5 rounded-r-xl">
