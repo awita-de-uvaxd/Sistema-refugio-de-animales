@@ -1315,9 +1315,42 @@ def editar_producto(id):
         p.stock = int(data.get('stock'))
     if 'precio' in data:
         p.precio = float(data.get('precio'))
-    if 'nombre' in data and data.get('nombre'):
+    if 'nombre' in data:
         p.nombre = data.get('nombre').strip()
-    db.session.commit()
+    if 'categoria' in data:
+        p.categoria = data.get('categoria')
+    if 'descripcion' in data:
+        p.descripcion = data.get('descripcion', '').strip()
+
+    # Las fotografías son opcionales. Si no se elige otra, se conserva la actual.
+    archivo = request.files.get('foto')
+    imagen_guardada = None
+    if archivo and archivo.filename:
+        from uuid import uuid4
+        extension = os.path.splitext(secure_filename(archivo.filename))[1].lower()
+        if extension not in {'.jpg', '.jpeg', '.png'}:
+            return jsonify(status='error', message='La imagen debe ser JPG o PNG.'), 400
+        # Verificar firma real y tamaño: no confiar solo en la extensión.
+        contenido = archivo.stream.read(5 * 1024 * 1024 + 1)
+        es_jpeg = extension in {'.jpg', '.jpeg'} and contenido.startswith(bytes.fromhex('ffd8ff'))
+        es_png = extension == '.png' and contenido.startswith(bytes.fromhex('89504e470d0a1a0a'))
+        if len(contenido) > 5 * 1024 * 1024 or not (es_jpeg or es_png):
+            return jsonify(status='error', message='La imagen debe ser JPG o PNG válido de máximo 5 MB.'), 400
+        nombre_foto = 'producto_' + uuid4().hex + extension
+        destino = os.path.join(app.config['UPLOAD_FOLDER'], nombre_foto)
+        with open(destino, 'wb') as salida:
+            salida.write(contenido)
+        imagen_guardada = destino
+        p.foto = nombre_foto
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        if imagen_guardada and os.path.exists(imagen_guardada):
+            os.remove(imagen_guardada)
+        app.logger.exception('Error al guardar cambios de producto')
+        return jsonify(status='error', message='No se pudieron guardar los cambios.'), 500
     return jsonify(status='ok', message='Producto actualizado exitosamente')
 
 

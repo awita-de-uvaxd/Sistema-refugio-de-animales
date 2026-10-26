@@ -85,12 +85,16 @@ def validar_formulario_admin(endpoint, data):
         entero(data.get('programa_id'), 'ID del programa', 1, 1_000_000)
         texto_corto(data.get('descripcion'), 'Descripción del programa', 5000, obligatorio=True)
     elif endpoint == 'editar_producto':
-        if 'nombre' in data and data.get('nombre'):
+        if 'nombre' in data:
             nombre_producto_o_mascota(data.get('nombre'))
         if 'stock' in data:
             entero(data.get('stock'), 'Stock', 0, 1_000_000)
         if 'precio' in data:
             decimal_positivo(data.get('precio'), 'Precio')
+        if 'categoria' in data and data.get('categoria') not in {'Comida', 'Medicina', 'Juguetes', 'Accesorios'}:
+            raise DatoInvalido('Categoría de producto no válida.')
+        if 'descripcion' in data:
+            texto_corto(data.get('descripcion'), 'Descripción', 3000)
         if 'visible' in data and str(data.get('visible')).lower() not in {'1', '0', 'true', 'false', 'yes', 'no'}:
             raise DatoInvalido('Visibilidad: valor no válido.')
     elif endpoint in {'venta_directa', 'descontar_stock'}:
