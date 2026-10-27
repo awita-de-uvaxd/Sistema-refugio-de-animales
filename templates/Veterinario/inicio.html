@@ -23,7 +23,7 @@
                   <p class="text-xs text-slate-600 mt-1">{{ c.motivo }}</p>
                 </div>
                 <!-- Pasa el estado de adopción actual para mantenerlo y la foto si la tiene -->
-                <button onclick="prepararConsulta('Seguimiento', null, '{{ c.paciente_obj.especie }}', '{{ c.paciente_obj.sexo }}', '{{ c.paciente_id }}', '{{ c.paciente_obj.nombre }}', '{{ c.id }}', '{{ c.paciente_obj.disponible_adopcion }}', '{{ c.paciente_obj.foto }}')" class="bg-amber-100 text-amber-700 hover:bg-amber-200 px-4 py-2 text-xs font-bold rounded-lg transition">Atender</button>
+                <form method="POST" action="{{ url_for('tomar_cita', cita_id=c.id) }}"><button type="submit" class="bg-amber-100 text-amber-700 hover:bg-amber-200 px-4 py-2 text-xs font-bold rounded-lg transition">Atender</button></form>
               </div>
             {% endfor %}
           {% else %}
@@ -45,7 +45,7 @@
                 </div>
                 <div class="px-4 py-2">
                   <p class="text-xs text-slate-600 line-clamp-1 mb-4">{{ r.descripcion }}</p>
-                  <button onclick="prepararConsulta('Rescate', '{{ r.id }}', '{{ r.especie }}', '{{ r.sexo }}', null, null, null, 'En Observación')" class="bg-indigo-600 text-white px-3 py-2.5 text-xs font-bold rounded-lg w-full hover:bg-indigo-700 transition shadow">Generar Expediente Clínico</button>
+                  <form method="POST" action="{{ url_for('tomar_rescate', rescate_id=r.id) }}"><button type="submit" class="bg-indigo-600 text-white px-3 py-2.5 text-xs font-bold rounded-lg w-full hover:bg-indigo-700 transition shadow">Generar Expediente Clínico</button></form>
                 </div>
               </div>
             {% endfor %}

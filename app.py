@@ -505,31 +505,95 @@ def registro():
         
     return render_template('login/inicio.html', modo='registro')
 
+
+# ==========================================
+# TOMAR CASO: el primero usuario que lo toma, se queda con él; los demás reciben un mensaje de er
+# ==========================================
+MSG_TOMADO = "Este caso ya fue tomado por otro compañero."
+
+def mia(uid):
+    """Estado que queda guardado cuando alguien toma un caso: 'Tomada:<id del usuario>'."""
+    return f"Tomada:{uid}"
+
+def reclamar(modelo, registro_id, uid):
+    """Intenta tomar el registro. Es atómico: el UPDATE solo cambia la fila si TODAVÍA está 'Pendiente',
+    así que si dos personas pulsan a la vez, solo una obtiene rowcount == 1.
+    Devuelve True si el caso es mío (lo acabo de tomar o ya lo había tomado yo)."""
+    try:
+        registro_id = int(registro_id)
+    except (TypeError, ValueError):
+        return False
+    tomado = modelo.query.filter_by(id=registro_id, estado='Pendiente').update(
+        {'estado': mia(uid)}, synchronize_session=False)
+    db.session.commit()
+    if tomado == 1:
+        return True
+    return modelo.query.filter_by(id=registro_id, estado=mia(uid)).count() == 1
+
+@app.route('/tomar_alerta/<int:alerta_id>', methods=['POST'])
+def tomar_alerta(alerta_id):
+    if 'usuario_id' not in session or session['rol'] != 'rescatista': return redirect(url_for('login'))
+    if reclamar(Alerta, alerta_id, session['usuario_id']):
+        return redirect(url_for('rescatista', caso=alerta_id))
+    flash(MSG_TOMADO, 'tomado')
+    return redirect(url_for('rescatista'))
+
+@app.route('/tomar_rescate/<int:rescate_id>', methods=['POST'])
+def tomar_rescate(rescate_id):
+    if 'usuario_id' not in session or session['rol'] != 'veterinario': return redirect(url_for('login'))
+    if reclamar(Rescate, rescate_id, session['usuario_id']):
+        return redirect(url_for('veterinario', rescate=rescate_id))
+    flash(MSG_TOMADO, 'tomado')
+    return redirect(url_for('veterinario'))
+
+@app.route('/tomar_cita/<int:cita_id>', methods=['POST'])
+def tomar_cita(cita_id):
+    if 'usuario_id' not in session or session['rol'] != 'veterinario': return redirect(url_for('login'))
+    if reclamar(Cita, cita_id, session['usuario_id']):
+        return redirect(url_for('veterinario', cita=cita_id))
+    flash(MSG_TOMADO, 'tomado')
+    return redirect(url_for('veterinario'))
+
+
+
 # ==========================================
 # 3. RUTAS DE VISUALIZACIÓN
 # ==========================================
-
 @app.route('/rescatista')
 def rescatista(): 
     if 'usuario_id' not in session or session['rol'] != 'rescatista': return redirect(url_for('login'))
     
-    rescates_db = Rescate.query.filter_by(rescatista_id=session['usuario_id']).all()
-    alertas_db = Alerta.query.filter_by(estado='Pendiente').order_by(Alerta.id.desc()).all()
-    user_data = Usuario.query.get(session['usuario_id']) # Inyección de datos
-    
-    return render_template('rescatista.html', mis_rescates=rescates_db, alertas=alertas_db, usuario_data=user_data)
+    uid = session['usuario_id']
+    rescates_db = Rescate.query.filter_by(rescatista_id=uid).all()
+    # Pendientes + las que YO ya tomé (por si cerré la página antes de crear la ficha)
+    alertas_db = Alerta.query.filter(Alerta.estado.in_(['Pendiente', mia(uid)])).order_by(Alerta.id.desc()).all()
+    user_data = Usuario.query.get(uid) # Inyección de datos
+
+    # Si vengo de "Tomar Caso", abre el formulario con esa alerta (solo si de verdad es mía)
+    caso_tomado = Alerta.query.get(request.args.get('caso', type=int)) if request.args.get('caso') else None
+    if caso_tomado and caso_tomado.estado != mia(uid): caso_tomado = None
+
+    return render_template('rescatista.html', mis_rescates=rescates_db, alertas=alertas_db, usuario_data=user_data, caso_tomado=caso_tomado)
 
 @app.route('/veterinario')
 def veterinario(): 
     if 'usuario_id' not in session or session['rol'] != 'veterinario': return redirect(url_for('login'))
     
-    rescates_pendientes = Rescate.query.filter_by(estado='Pendiente').all()
+    uid = session['usuario_id']
+    visibles = ['Pendiente', mia(uid)]   # pendientes + los que YO ya tomé
+    rescates_pendientes = Rescate.query.filter(Rescate.estado.in_(visibles)).all()
     todos_pacientes = Paciente.query.all()
-    citas_pendientes = Cita.query.filter_by(estado='Pendiente').order_by(Cita.fecha.asc()).all()
+    citas_pendientes = Cita.query.filter(Cita.estado.in_(visibles)).order_by(Cita.fecha.asc()).all()
     hoy = datetime.utcnow().strftime('%Y-%m-%d')
-    user_data = Usuario.query.get(session['usuario_id']) # Inyección de datos
-    
-    return render_template('veterinario.html', rescates=rescates_pendientes, pacientes=todos_pacientes, citas=citas_pendientes, hoy=hoy, usuario_data=user_data)
+    user_data = Usuario.query.get(uid) # Inyección de datos
+
+    # Si vengo de "Atender"/"Generar Expediente", abre la consulta (solo si de verdad es mío)
+    rescate_tomado = Rescate.query.get(request.args.get('rescate', type=int)) if request.args.get('rescate') else None
+    if rescate_tomado and rescate_tomado.estado != mia(uid): rescate_tomado = None
+    cita_tomada = Cita.query.get(request.args.get('cita', type=int)) if request.args.get('cita') else None
+    if cita_tomada and cita_tomada.estado != mia(uid): cita_tomada = None
+
+    return render_template('veterinario.html', rescates=rescates_pendientes, pacientes=todos_pacientes, citas=citas_pendientes, hoy=hoy, usuario_data=user_data, rescate_tomado=rescate_tomado, cita_tomada=cita_tomada)
 
 @app.route('/usuario')
 def usuario(): 
@@ -840,7 +904,9 @@ def crear_alerta():
 def falsa_alarma(alerta_id):
     if 'usuario_id' not in session or session['rol'] != 'rescatista': return redirect(url_for('login'))
     alerta = Alerta.query.get(alerta_id)
-    if alerta:
+    if alerta and alerta.estado not in ('Pendiente', mia(session['usuario_id'])):
+        flash(MSG_TOMADO, 'tomado')   # otro compañero ya la tomó
+    elif alerta:
         db.session.delete(alerta)
         db.session.commit()
     return redirect(url_for('rescatista'))
@@ -853,16 +919,12 @@ def crear_rescate():
     alerta_id = request.form.get('alerta_id')
     if alerta_id == '': alerta_id = None
 
-    # --- BLINDAJE CONTRA COLISIONES (Validación Optimista) ---
+    # --- BLINDAJE CONTRA COLISIONES: la alerta debe ser mía (o seguir pendiente) ---
     if alerta_id:
-        alerta = Alerta.query.get(alerta_id)
-        # Si la alerta ya no está pendiente, alguien más le dio clic primero
-        if not alerta or alerta.estado != "Pendiente":
-            flash("¡El caso fue tomado por otro compañero hace un momento!", "error")
+        if not reclamar(Alerta, alerta_id, session['usuario_id']):
+            flash(MSG_TOMADO, 'tomado')
             return redirect(url_for('rescatista'))
-        
-        # Si ganamos la carrera, aseguramos el caso cambiándolo de estado inmediatamente
-        alerta.estado = "Atendida"
+        Alerta.query.filter_by(id=alerta_id).update({'estado': 'Atendida'}, synchronize_session=False)
     
     nuevo_rescate = Rescate(
         direccion=request.form.get('direccion'), especie=request.form.get('especie'),
@@ -873,11 +935,6 @@ def crear_rescate():
 
     db.session.add(nuevo_rescate)
     db.session.commit()
-
-    if alerta_id:
-        alerta = Alerta.query.get(alerta_id)
-        if alerta: alerta.estado = "Atendida"
-            
     return redirect(url_for('rescatista'))
 
 # ==========================================
@@ -1020,7 +1077,16 @@ def crear_consulta():
     
     paciente_id = request.form.get('paciente_existente_id')
     rescate_id = request.form.get('rescate_id') or None
-    
+    cita_id = request.form.get('cita_id') or None
+
+    # El rescate / la cita debe ser mía (o seguir pendiente); si otro veterinario la tomó, no se guarda nada
+    if rescate_id and not reclamar(Rescate, rescate_id, session['usuario_id']):
+        flash(MSG_TOMADO, 'tomado')
+        return redirect(url_for('veterinario'))
+    if cita_id and not reclamar(Cita, cita_id, session['usuario_id']):
+        flash(MSG_TOMADO, 'tomado')
+        return redirect(url_for('veterinario'))
+
     # La especie de un animal NUEVO debe estar en la lista de especies
     especie_oficial = None
     if not paciente_id:
@@ -1115,7 +1181,6 @@ def crear_consulta():
     if rescate_id:
         rescate = Rescate.query.get(rescate_id)
         if rescate: rescate.estado = "Atendido"
-    cita_id = request.form.get('cita_id')
     if cita_id:
         cita = Cita.query.get(cita_id)
         if cita: cita.estado = "Atendida"

@@ -4,7 +4,7 @@
     {% with mensajes = get_flashed_messages(with_categories=true) %}
     {% if mensajes %}
       <div class="mb-4 space-y-2">
-        {% for categoria, mensaje in mensajes %}
+        {% for categoria, mensaje in mensajes if categoria != 'tomado' %}
           <div class="flex items-center gap-3 px-5 py-4 rounded-xl shadow-sm border font-semibold text-sm
             {% if categoria == 'error' %}bg-amber-50 border-amber-200 text-amber-800{% else %}bg-emerald-50 border-emerald-200 text-emerald-800{% endif %}">
             <i data-lucide="{% if categoria == 'error' %}alert-triangle{% else %}check-circle{% endif %}" class="w-5 h-5 flex-shrink-0"></i>
@@ -40,5 +40,30 @@
   };
 </script>
 <script src="{{ url_for('serve_js', filename='veterinario.js') }}" defer></script>
+{% if rescate_tomado %}
+<div id="caso-tomado" hidden
+     data-tipo="Rescate"
+     data-rescate-id="{{ rescate_tomado.id }}"
+     data-especie="{{ rescate_tomado.especie }}"
+     data-sexo="{{ rescate_tomado.sexo }}"></div>
+{% elif cita_tomada %}
+<div id="caso-tomado" hidden
+     data-tipo="Seguimiento"
+     data-cita-id="{{ cita_tomada.id }}"
+     data-paciente-id="{{ cita_tomada.paciente_id }}"
+     data-nombre="{{ cita_tomada.paciente_obj.nombre }}"
+     data-especie="{{ cita_tomada.paciente_obj.especie }}"
+     data-sexo="{{ cita_tomada.paciente_obj.sexo }}"
+     data-adopcion="{{ cita_tomada.paciente_obj.disponible_adopcion }}"
+     data-foto="{{ cita_tomada.paciente_obj.foto }}"></div>
+{% endif %}
+<script>
+    // Vengo de pulsar "Tomar Caso" y el caso es mío: abre el formulario ya llenado
+  document.addEventListener('DOMContentLoaded', function () {
+    var caso = document.getElementById('caso-tomado');
+    if (caso) prepararCaso(caso.dataset.id, caso.dataset.direccion);
+  });
+</script>
 {% endblock %}
 {% include 'compartidos/_gestor_especies.html' %}
+{% include 'compartidos/aviso_caso_tomado.html' %}

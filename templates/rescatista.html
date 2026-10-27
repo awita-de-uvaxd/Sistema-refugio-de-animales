@@ -48,9 +48,9 @@
                 </div>
                 
                 <div class='grid grid-cols-2 gap-4'>
-                  <button onclick='prepararCaso(\`{{ a.id }}\`, \`{{ a.direccion }}\`)' class='bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition'>Tomar Caso (Crear Ficha)</button>
-                  <a href='/falsa_alarma/{{ a.id }}' class='bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl transition flex justify-center items-center'>Marcar como Falsa Alarma</a>
-                </div>
+                <form method='POST' action='/tomar_alerta/{{ a.id }}' class='h-full'><button type='submit' class='w-full h-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition'>Tomar Caso (Crear Ficha)</button></form>
+                <a href='/falsa_alarma/{{ a.id }}' class='bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl transition flex justify-center items-center'>Marcar como Falsa Alarma</a>
+              </div>
               `); lucide.createIcons();" class="w-full bg-white border border-red-300 hover:bg-red-50 text-red-600 font-bold py-3 rounded-xl transition shadow-sm text-center mt-2">
                 Ver Fotografías y Detalle
               </button>
@@ -104,7 +104,7 @@
               <div class="w-full">
                 <div class="flex justify-between font-bold mb-1">
                   <span class="text-indigo-900">Ficha #{{ r.id }}</span>
-                  <span class="text-xs bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full">{{ r.estado }}</span>
+                  <span class="text-xs bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full">{{ r.estado.split(':')[0] }}</span>
                 </div>
                 <p class="text-xs text-slate-600"><strong>{{ r.especie }}</strong> - {{ r.sexo }} | Gravedad: {{ r.gravedad }}</p>
                 <p class="text-xs text-slate-600 mt-1"><strong>Lugar:</strong> {{ r.direccion }}</p>
@@ -131,16 +131,27 @@
       {% include 'compartidos/perfil_compartido.html' %}
   </div>
 
+{% if caso_tomado %}
+<div id="caso-tomado" data-id="{{ caso_tomado.id }}" data-direccion="{{ caso_tomado.direccion }}" hidden></div>
+{% endif %}
+
 <script>
   function prepararCaso(alertaId, direccion) {
     closeModal(); // Cierra la ventana emergente
     switchTab('rescatista', 'nuevo'); // Cambia a la pestaña de Nuevo Rescate
-    
+
     // Inyecta el ID invisible y la dirección en el formulario
     document.getElementById('form-alerta-id').value = alertaId;
     document.getElementById('form-direccion').value = direccion;
   }
-  
+
+  // Vengo de pulsar "Tomar Caso" y el caso es mío: abre el formulario ya llenado
+  document.addEventListener('DOMContentLoaded', function () {
+    var caso = document.getElementById('caso-tomado');
+    if (caso) prepararCaso(caso.dataset.id, caso.dataset.direccion);
+  });
+</script>
 </script>
 {% endblock %}
 {% include 'compartidos/_gestor_especies.html' %}
+{% include 'compartidos/aviso_caso_tomado.html' %}

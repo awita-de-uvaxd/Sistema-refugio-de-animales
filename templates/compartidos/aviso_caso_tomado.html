@@ -1,0 +1,25 @@
+{# Ventana de aviso "el caso ya fue tomado". Se activa cuando la ruta hace flash(mensaje, 'tomado').
+   Incluir UNA sola vez por página (Rescatista y Veterinario). #}
+{% set avisos_tomado = get_flashed_messages(category_filter=['tomado']) %}
+{% if avisos_tomado %}
+<div id="aviso-caso-tomado" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-4">
+  <div role="alertdialog" aria-modal="true" aria-labelledby="aviso-titulo"
+       class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-8 text-center border-t-4 border-amber-500">
+    <div class="mx-auto mb-4 w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 text-3xl font-black">!</div>
+    <h3 id="aviso-titulo" class="text-xl font-black text-slate-800 mb-2">Caso ya tomado</h3>
+    <p class="text-sm text-slate-600 mb-6">{{ avisos_tomado[0] }}</p>
+    <button type="button" id="aviso-aceptar" onclick="cerrarAvisoTomado()"
+            class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl transition">Aceptar</button>
+  </div>
+</div>
+<script>
+  function cerrarAvisoTomado() {
+    var v = document.getElementById('aviso-caso-tomado');
+    if (v) v.remove();
+    document.removeEventListener('keydown', teclaAvisoTomado);
+  }
+  function teclaAvisoTomado(e) { if (e.key === 'Escape' || e.key === 'Enter') cerrarAvisoTomado(); }
+  document.addEventListener('keydown', teclaAvisoTomado);
+  document.getElementById('aviso-aceptar').focus();
+</script>
+{% endif %}
