@@ -3,9 +3,100 @@
   <p class="text-sm text-slate-500 mb-5">Consulta correos, actualiza los datos de acceso y restablece contraseñas. Las contraseñas anteriores no se pueden consultar.</p>
   <div class="space-y-3">
     {% for cuenta in cuentas_clientes %}
-      {% include 'admin/_ficha_cuenta.html' %}
+      <div data-ficha-usuario>
+        {% include 'admin/_ficha_cuenta.html' %}
+      </div>
     {% else %}
       <p class="bg-slate-50 p-5 text-sm text-slate-500">No hay usuarios registrados.</p>
     {% endfor %}
   </div>
 </div>
+
+<script>
+(function () {
+  'use strict';
+
+  function configurarEliminacionDesplegable() {
+    const contenedor = document.getElementById('admin-usuarios');
+    if (!contenedor) return;
+
+    // Se conservan los formularios, campos, acciones, tokens CSRF y confirmaciones.
+    const palabrasEliminar = /(eliminar|borrar|delete|remove|suprimir)/i;
+
+    function esAccionEliminar(elemento) {
+      const datos = [
+        elemento.getAttribute('action'),
+        elemento.getAttribute('formaction'),
+        elemento.getAttribute('href'),
+        elemento.getAttribute('name'),
+        elemento.getAttribute('value'),
+        elemento.getAttribute('id'),
+        elemento.getAttribute('aria-label'),
+        elemento.getAttribute('title'),
+        elemento.getAttribute('onclick'),
+        elemento.getAttribute('data-action'),
+        elemento.textContent
+      ].filter(Boolean).join(' ');
+      return palabrasEliminar.test(datos);
+    }
+
+    function convertirEnDesplegable(elemento) {
+      if (!elemento || elemento.closest('details[data-desplegable-eliminar]')) return;
+
+      const desplegable = document.createElement('details');
+      desplegable.setAttribute('data-desplegable-eliminar', '');
+      desplegable.className = 'mt-3 rounded-xl border border-red-200 bg-red-50/50';
+
+      const cabecera = document.createElement('summary');
+      cabecera.className = 'flex cursor-pointer select-none items-center justify-between gap-3 px-4 py-3 font-semibold text-red-700';
+      cabecera.innerHTML = '<span>Eliminar usuario</span><span class="text-xs font-normal text-red-600">Mostrar / ocultar</span>';
+
+      const contenido = document.createElement('div');
+      contenido.className = 'border-t border-red-200 px-4 py-4';
+
+      elemento.parentNode.insertBefore(desplegable, elemento);
+      desplegable.appendChild(cabecera);
+      desplegable.appendChild(contenido);
+      contenido.appendChild(elemento);
+      // <details> inicia cerrado: la eliminación solo se muestra al desplegar.
+    }
+
+    contenedor.querySelectorAll('[data-ficha-usuario]').forEach(function (ficha) {
+      ficha.querySelectorAll('form').forEach(function (formulario) {
+        const controles = Array.from(formulario.querySelectorAll('button, input[type="submit"], input[type="button"]'));
+        const controlesEliminar = controles.filter(esAccionEliminar);
+        const otrosEnvios = controles.filter(function (control) {
+          return control.type === 'submit' && !esAccionEliminar(control);
+        });
+        const nombreFormulario = [
+          formulario.getAttribute('action'),
+          formulario.getAttribute('id'),
+          formulario.getAttribute('name'),
+          formulario.getAttribute('data-action')
+        ].filter(Boolean).join(' ');
+
+        if (palabrasEliminar.test(nombreFormulario) || (controlesEliminar.length > 0 && otrosEnvios.length === 0)) {
+          // Formulario dedicado a eliminar: se oculta la sección completa.
+          convertirEnDesplegable(formulario);
+        } else {
+          // Formulario compartido: solo se ocultan los botones de eliminación.
+          controlesEliminar.forEach(convertirEnDesplegable);
+        }
+      });
+
+      // Admite asimismo enlaces o botones de eliminación fuera de formularios.
+      ficha.querySelectorAll('a, button, input[type="submit"], input[type="button"]').forEach(function (control) {
+        if (!control.closest('form') && esAccionEliminar(control)) {
+          convertirEnDesplegable(control);
+        }
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', configurarEliminacionDesplegable);
+  } else {
+    configurarEliminacionDesplegable();
+  }
+})();
+</script>
