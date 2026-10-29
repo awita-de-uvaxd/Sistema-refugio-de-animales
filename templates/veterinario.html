@@ -58,10 +58,16 @@
      data-foto="{{ cita_tomada.paciente_obj.foto }}"></div>
 {% endif %}
 <script>
-    // Vengo de pulsar "Tomar Caso" y el caso es mío: abre el formulario ya llenado
+  // Vengo de pulsar "Generar Expediente" / "Atender" y el caso es mío: abre la consulta ya llenada
   document.addEventListener('DOMContentLoaded', function () {
     var caso = document.getElementById('caso-tomado');
-    if (caso) prepararCaso(caso.dataset.id, caso.dataset.direccion);
+    if (!caso) return;
+    var d = caso.dataset;
+    if (d.tipo === 'Rescate') {
+      prepararConsulta('Rescate', d.rescateId, d.especie, d.sexo);
+    } else if (d.tipo === 'Seguimiento') {
+      prepararConsulta('Seguimiento', null, d.especie, d.sexo, d.pacienteId, d.nombre, d.citaId, d.adopcion, d.foto);
+    }
   });
 </script>
 {% endblock %}
