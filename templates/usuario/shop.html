@@ -221,7 +221,7 @@
                         📄 Descargar Orden de Compra
                     </button>
                     <button id="btn-dl-factura" disabled onclick="descargarDocumentoCliente('FACTURA')" class="px-4 py-2 bg-emerald-600 text-white font-bold text-xs rounded-xl disabled:bg-slate-300 disabled:cursor-not-allowed hover:bg-emerald-700 transition">
-                        🧾 Descargar Factura Oficial
+                        🧾 Descargar comprobante de compra
                     </button>
                 </div>
             </div>
@@ -261,14 +261,14 @@
           <!-- Campo Dirección: solo visible si es Servicio a Domicilio -->
           <div id="box-direccion">
               <input type="text" id="recibe-direccion" maxlength="100" oninput="this.value = this.value.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-]/g, '').slice(0, 100);" placeholder="Dirección exacta *" class="w-full p-2 border rounded-xl">
-                ```<ElicitationsGroup></ElicitationsGroup>
+                
           </div>
 
           <label class="block font-bold text-slate-700 pt-2">Método de Pago *</label>
           <div class="grid grid-cols-2 gap-2">
               <label class="flex items-center gap-2 p-2 border rounded-xl cursor-pointer bg-white">
                   <input type="radio" name="metodo-pago" value="tarjeta" checked onchange="toggleFormaPago()">
-                  <span class="font-semibold">Tarjeta</span>
+                  <span class="font-semibold">Tarjeta (por coordinar)</span>
               </label>
               <label class="flex items-center gap-2 p-2 border rounded-xl cursor-pointer bg-white">
                   <input type="radio" name="metodo-pago" value="deposito" onchange="toggleFormaPago()">
@@ -276,19 +276,11 @@
               </label>
           </div>
 
-          <!-- Formulario Tarjeta -->
-          <div id="form-tarjeta" class="space-y-2 pt-1 bg-purple-50 p-3 rounded-xl border border-purple-200">
-              <input type="text" id="card-holder" placeholder="Nombre en tarjeta *" class="w-full p-2 border bg-white rounded-xl text-xs">
-              <input type="text" id="card-number" maxlength="16" oninput="this.value = this.value.replace(/\D/g, '').slice(0, 16);" placeholder="Número de tarjeta (16 dígitos) *" class="w-full p-2 border bg-white rounded-xl text-xs">
-              <div class="grid grid-cols-2 gap-2">
-                  <input type="text" id="card-exp" maxlength="5" oninput="this.value = this.value.replace(/\D/g, '').slice(0, 4).replace(/^(\d{2})(\d{1,2})$/, '$1/$2');" placeholder="MM/AA *" class="p-2 border bg-white rounded-xl text-xs">
-                  <input type="password" id="card-cvv" maxlength="3" oninput="this.value = this.value.replace(/\D/g, '').slice(0, 3);" placeholder="CVV *" class="p-2 border bg-white rounded-xl text-xs">
-              </div>
-          </div>
-
+          <!-- Sin pasarela de pagos real: nunca solicitar número de tarjeta ni CVV. -->
+          <div id="form-tarjeta" class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900"><strong>Tarjeta por coordinar:</strong> el sitio no procesa pagos con tarjeta. El pedido queda pendiente hasta que el refugio confirme el cobro. Nunca escribas los datos de tu tarjeta.</div>
           <!-- Formulario Transferencia -->
           <div id="info-deposito" class="hidden space-y-2 pt-1 bg-purple-50 p-3 rounded-xl text-xs text-purple-900 border border-purple-200">
-              <label class="block font-bold">Cuenta Banco Refugio:</label>
+              <label class="block font-bold">Cuentas demostrativas: NO transferir dinero real</label>
               <select id="deposito-banco" class="w-full p-2 border rounded-xl bg-white text-xs font-semibold">
                   <option value="Banco Industrial (012-345678-9)">Banco Industrial - Cta: 012-345678-9</option>
                   <option value="BAC Credomatic (901-234567-8)">BAC Credomatic - Cta: 901-234567-8</option>
@@ -303,7 +295,7 @@
         <!-- OPCIÓN FACTURA / NIT -->
         <div class="border-t pt-3 space-y-2 text-xs">
             <label class="flex items-center justify-between p-2.5 border rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition">
-                <span class="font-bold text-slate-700">¿Deseas factura con NIT?</span>
+                <span class="font-bold text-slate-700">¿Deseas incluir NIT en el comprobante?</span>
                 <input type="checkbox" id="requiere-factura" class="w-4 h-4 accent-indigo-600 rounded cursor-pointer" onchange="toggleNitCampo()">
             </label>
             
@@ -321,8 +313,8 @@
 
         <!-- BOTÓN DE PROCESAR ORDEN -->
         <div class="sticky bottom-0 bg-white pt-3 border-t mt-3">
-            <button onclick="procesarOrden()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2">
-                <i data-lucide="check-circle" class="w-4 h-4"></i> Confirmar Orden y Procesar Compra
+            <button id="btn-confirmar-shop" onclick="procesarOrden()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+                <i data-lucide="check-circle" class="w-4 h-4"></i> Enviar pedido para confirmación
             </button>
         </div>
     </div>

@@ -22,7 +22,6 @@
   <!-- ======================================================= -->
   <!-- INYECCIÓN DE MÓDULOS (Pestañas)                         -->
   <!-- ======================================================= -->
-  {% include 'usuario/scripts.html' %}
   {% include 'usuario/adoptar.html' %}
   {% include 'usuario/alertas.html' %}
   {% include 'usuario/cv.html' %}
@@ -38,6 +37,7 @@
 
 </div>
 
+<script>window.HUELLITAS_SHOP_CSRF = {{ csrf_token()|tojson }};</script>
 <!-- INYECCIÓN DEL JAVASCRIPT MODULARIZADO -->
 {% include 'usuario/scripts.html' %}
 

@@ -71,7 +71,7 @@ def validar_csrf_cuentas():
 
 
 # NUEVO: Configuración para guardar imágenes    
-app.config['UPLOAD_FOLDER'] = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'uploads')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True) # Crea la carpeta automáticamente si no existe
 
 db = SQLAlchemy(app)
@@ -382,6 +382,33 @@ class Pedido(db.Model):
     estado = db.Column(db.String(20), default="Pagado")
     producto_id = db.Column(db.Integer, db.ForeignKey('producto_shop.id'), nullable=False)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+
+
+class VentaTienda(db.Model):
+    id=db.Column(db.Integer,primary_key=True)
+    fecha=db.Column(db.DateTime,default=datetime.utcnow,nullable=False)
+    usuario_id=db.Column(db.Integer,db.ForeignKey('usuario.id'),nullable=False)
+    cliente_nombre=db.Column(db.String(100),nullable=False)
+    cliente_tel=db.Column(db.String(16),default='')
+    cliente_dir=db.Column(db.String(180),default='')
+    nit=db.Column(db.String(20),default='Consumidor Final')
+    referencia=db.Column(db.String(50),default='')
+    tipo=db.Column(db.String(15),nullable=False)
+    metodo_pago=db.Column(db.String(40),nullable=False)
+    subtotal=db.Column(db.Float,nullable=False)
+    envio=db.Column(db.Float,nullable=False)
+    total=db.Column(db.Float,nullable=False)
+    items_json=db.Column(db.Text,nullable=False)
+    estado_pago=db.Column(db.String(80),nullable=False)
+    estado_orden=db.Column(db.String(30),nullable=False)
+    estado_envio=db.Column(db.String(30),nullable=False)
+    stock_descontado=db.Column(db.Boolean,default=True,nullable=False)
+    entregado=db.Column(db.Boolean,default=False,nullable=False)
+    cancelado=db.Column(db.Boolean,default=False,nullable=False)
+    es_pos=db.Column(db.Boolean,default=False,nullable=False)
+
+from modulos.tienda import registrar_tienda
+registrar_tienda(app,db,ProductoShop,Usuario,VentaTienda)
 
 # ==========================================
 # 2. RUTAS DE AUTENTICACIÓN
@@ -1314,13 +1341,20 @@ def crear_producto():
     stock = int(request.form.get('stock', 0))
     descripcion = request.form.get('descripcion', '')
     
+    # Foto segura: extensión, firma y tamaño. Nombre único para no sobrescribir.
     nombre_foto = None
-    if 'foto' in request.files:
-        archivo = request.files['foto']
-        if archivo.filename != '':
-            nombre_foto = secure_filename(archivo.filename)
-            archivo.save(os.path.join(app.config['UPLOAD_FOLDER'], nombre_foto))
-            
+    archivo = request.files.get('foto')
+    if archivo and archivo.filename:
+        from uuid import uuid4
+        extension = os.path.splitext(secure_filename(archivo.filename))[1].lower()
+        contenido = archivo.stream.read(5 * 1024 * 1024 + 1)
+        firma_valida = (extension in {'.jpg', '.jpeg'} and contenido.startswith(bytes.fromhex('ffd8ff'))) or (extension == '.png' and contenido.startswith(bytes.fromhex('89504e470d0a1a0a')))
+        if len(contenido) > 5 * 1024 * 1024 or not firma_valida:
+            flash('Imagen inválida: acepta JPG o PNG de hasta 5 MB.', 'error')
+            return redirect(url_for('admin') + '#shop')
+        nombre_foto = 'producto_' + uuid4().hex + extension
+        with open(os.path.join(app.config['UPLOAD_FOLDER'], nombre_foto), 'wb') as salida:
+            salida.write(contenido)
     nuevo_prod = ProductoShop(
         nombre=nombre,
         categoria=categoria,
@@ -1333,7 +1367,7 @@ def crear_producto():
     db.session.add(nuevo_prod)
     db.session.commit()
     flash("Producto creado e ingresado a la tienda con éxito.", "success")
-    return redirect(url_for('admin'))
+    return redirect(url_for('admin') + '#shop')
 
 # ==========================================
 # RUTAS DE CONTROL DE INVENTARIO Y TIENDA
@@ -1428,6 +1462,9 @@ def eliminar_producto(id):
     p = db.session.get(ProductoShop, id)
     if p is None:
         return jsonify(status='error', message='Producto no encontrado'), 404
+    for venta in VentaTienda.query.with_entities(VentaTienda.items_json):
+        if any(x.get('id') == id for x in json.loads(venta.items_json or '[]')):
+            return jsonify(status='error',message='El producto tiene ventas registradas. Ocúltalo para preservar el historial.'),409
     if Pedido.query.filter_by(producto_id=id).first() is not None:
         return jsonify(status='error', message='Este producto tiene pedidos relacionados y no se puede borrar sin perder su historial. Puedes ocultarlo de la tienda.'), 409
     from sqlalchemy.exc import IntegrityError

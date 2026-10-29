@@ -1,28 +1,22 @@
 <script>
     /* --- FUNCIONES Y LÓGICA DEL SHOP (SIN DATOS DE EJEMPLO) --- */
-    const productosIniciales = [];
-
-    let productos = JSON.parse(localStorage.getItem('huellitas_productos')) || productosIniciales;
-    let historialVentas = JSON.parse(localStorage.getItem('huellitas_historial')) || [];
-    let carrito = [];
-    let ordenActivaSeguimiento = null;
-
-    // Sincronización en tiempo real
-    window.addEventListener('storage', (e) => {
-        if(e.key === 'huellitas_productos' || e.key === 'huellitas_historial') {
-            productos = JSON.parse(localStorage.getItem('huellitas_productos')) || [];
-            historialVentas = JSON.parse(localStorage.getItem('huellitas_historial')) || [];
-            renderizarCatalogo(productos);
-            
-            if(ordenActivaSeguimiento) {
-                const act = historialVentas.find(o => o.id === ordenActivaSeguimiento.id);
-                if(act) {
-                    ordenActivaSeguimiento = act;
-                    actualizarBarraProgresivaCliente(act);
-                }
-            }
-        }
-    });
+    // Catálogo y pedidos obtenidos directamente de SQLite (cada cliente ve solo los suyos).
+    let productos = [], historialVentas = [], carrito = [], ordenActivaSeguimiento = null, enviandoShop = false;
+    const escShop = v => String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    async function sincronizarShop() {
+        try {
+            const [a,b] = await Promise.all([fetch('/api/tienda/productos'),fetch('/api/tienda/pedidos')]);
+            if(!a.ok||!b.ok)throw Error('No fue posible leer la tienda.');
+            productos=(await a.json()).productos||[];
+            historialVentas=(await b.json()).pedidos||[];
+            document.querySelectorAll('#catalogo-grid button[data-id]').forEach(btn=>{
+                const p=productos.find(x=>String(x.id)===btn.dataset.id);
+                btn.disabled=!p||!p.visible||p.stock<1;
+                if(p){btn.dataset.precio=p.precio;btn.dataset.stock=p.stock;}
+            });
+        } catch(e){console.error(e);}
+    }
+    document.addEventListener('DOMContentLoaded',sincronizarShop);
 
     function toggleSeguimientoModal() {
         const modal = document.getElementById('modal-seguimiento');
@@ -264,7 +258,7 @@ function prepararAgregarCarrito(btn) {
 
         const pagoElem = document.querySelector('input[name="metodo-pago"]:checked');
         const m = pagoElem ? pagoElem.value : 'tarjeta';
-        const met = m === 'tarjeta' ? 'Tarjeta en Línea' : 'Transferencia';
+        const met = m === 'tarjeta' ? 'Tarjeta por coordinar' : 'Transferencia';
 
         if (m === 'deposito') {
             const montoIngresado = parseFloat(document.getElementById('deposito-monto')?.value || 0);
@@ -309,49 +303,51 @@ function prepararAgregarCarrito(btn) {
             total: totalEsperado,
             tipo: dev === 'domicilio' ? 'Domicilio' : 'Tienda',
             metodoPago: met,
+            referenciaPago: m === 'deposito' ? document.getElementById('deposito-ref')?.value.trim() : '',
             estadoPago: estP,
             estadoOrden: '1. Tomando',
             stockDescontado: false,
             entregado: false
         };
 
-        historialVentas.unshift(orden);
-        localStorage.setItem('huellitas_historial', JSON.stringify(historialVentas));
-
-        ordenActivaSeguimiento = orden;
-
-        carrito = [];
-        actualizarCarritoUI();
-        if (typeof limpiarFormularioCarrito === 'function') limpiarFormularioCarrito();
-
-        const modalCarrito = document.getElementById('modal-carrito');
-        if (modalCarrito) modalCarrito.classList.add('hidden');
-
-        actualizarBarraProgresivaCliente(orden);
-        const modalSeguimiento = document.getElementById('modal-seguimiento');
-        if (modalSeguimiento) modalSeguimiento.classList.remove('hidden');
-
-        mostrarNotificacionFlotante(`¡Orden ${orden.id} creada exitosamente!`);
+        if (enviandoShop) return;
+        enviandoShop = true;
+        const boton = document.getElementById('btn-confirmar-shop');
+        if(boton) boton.disabled=true;
+        try {
+            const response=await fetch('/api/tienda/pedidos',{
+                method:'POST',credentials:'same-origin',
+                headers:{'Content-Type':'application/json','X-CSRF-Token':window.HUELLITAS_SHOP_CSRF||''},
+                body:JSON.stringify(orden)
+            });
+            const data=await response.json().catch(()=>({}));
+            if(!response.ok||data.status!=='ok')throw Error(data.message||'No se pudo registrar el pedido.');
+            const nueva=data.pedido;
+            historialVentas.unshift(nueva);
+            ordenActivaSeguimiento=nueva;
+            carrito=[];
+            actualizarCarritoUI();
+            if(typeof limpiarFormularioCarrito==='function')limpiarFormularioCarrito();
+            document.getElementById('modal-carrito')?.classList.add('hidden');
+            actualizarBarraProgresivaCliente(nueva);
+            document.getElementById('modal-seguimiento')?.classList.remove('hidden');
+            await sincronizarShop();
+            mostrarNotificacionFlotante(`Pedido ${nueva.id} registrado. Espera la verificación del refugio.`);
+        }catch(e){mostrarNotificacionFlotante(e.message);}finally{enviandoShop=false;if(boton)boton.disabled=false;}
     }
 
-    function buscarOrdenCliente() {
-        const input = document.getElementById('input-search-order');
-        if (!input) return;
-        const q = input.value.trim().toUpperCase();
-        const o = historialVentas.find(x => x.id === q);
-        if (o) { 
-            ordenActivaSeguimiento = o; 
-            actualizarBarraProgresivaCliente(o); 
-        } else {
-            mostrarNotificacionFlotante('Orden no encontrada. Revisa el código ingresado.');
-        }
+    async function buscarOrdenCliente(){
+        const q=(document.getElementById('input-search-order')?.value||'').trim().toUpperCase();
+        const m=/^PED-0*([1-9][0-9]*)$/.exec(q);
+        if(!m){mostrarNotificacionFlotante('Ingresa un folio correcto: PED-000001');return;}
+        try{const r=await fetch(`/api/tienda/pedidos/${Number(m[1])}`);if(!r.ok)throw Error('Orden no encontrada o no te pertenece.');const d=await r.json();ordenActivaSeguimiento=d.pedido;actualizarBarraProgresivaCliente(d.pedido);}catch(e){mostrarNotificacionFlotante(e.message);}
     }
 
     function actualizarBarraProgresivaCliente(orden) {
         const code = document.getElementById('tracking-code');
         const msg = document.getElementById('order-status-msg');
         if(code) code.innerText = `Código: ${orden.id}`;
-        if(msg) msg.innerHTML = `Orden <strong>${orden.id}</strong> (${orden.tipo}) - Estado: <strong class="text-purple-primary">${orden.estadoOrden}</strong> | Pago: <strong>${orden.estadoPago}</strong>`;
+        if(msg) msg.innerHTML = `Orden <strong>${escShop(orden.id)}</strong> (${escShop(orden.tipo)}) - Estado: <strong class="text-purple-primary">${escShop(orden.cancelado?'Cancelado':orden.estadoOrden)}</strong> | Pago: <strong>${escShop(orden.estadoPago)}</strong>`;
         
         const steps = ["1. Tomando", "2. Aceptado", "3. Procesando", "4. Empacando", "5. Finalizar"];
         const idx = steps.findIndex(s => orden.estadoOrden.includes(s.split('.')[0]));
@@ -414,17 +410,17 @@ function prepararAgregarCarrito(btn) {
             }
             if (clientBox) {
                 clientBox.innerHTML = `
-                    <p style="margin:2px 0;"><strong>Cliente:</strong> ${clienteNombre}</p>
-                    <p style="margin:2px 0;"><strong>NIT:</strong> ${nitCliente}</p>
-                    <p style="margin:2px 0;"><strong>Dirección:</strong> ${direccionTexto}</p>
-                    <p style="margin:2px 0;"><strong>Teléfono:</strong> ${clienteTel}</p>
-                    <p style="margin:2px 0;"><strong>Estado de Cuenta:</strong> <span style="color:#B45309; font-weight:bold;">Cuenta Pendiente por Pagar</span></p>
+                    <p style="margin:2px 0;"><strong>Cliente:</strong> ${escShop(clienteNombre)}</p>
+                    <p style="margin:2px 0;"><strong>NIT:</strong> ${escShop(nitCliente)}</p>
+                    <p style="margin:2px 0;"><strong>Dirección:</strong> ${escShop(direccionTexto)}</p>
+                    <p style="margin:2px 0;"><strong>Teléfono:</strong> ${escShop(clienteTel)}</p>
+                    <p style="margin:2px 0;"><strong>Estado de Cuenta:</strong> <span style="color:#B45309; font-weight:bold;">Pago pendiente de verificación</span></p>
                 `;
             }
         } else {
-            if (titleEl) titleEl.innerText = "FACTURA OFICIAL DE COMPRA";
+            if (titleEl) titleEl.innerText = "COMPROBANTE DE COMPRA";
             if (statusBadge) {
-                statusBadge.innerText = "PAGADO / CANCELADO";
+                statusBadge.innerText = "PAGO VERIFICADO";
                 statusBadge.style.backgroundColor = "#D1FAE5";
                 statusBadge.style.color = "#065F46";
                 statusBadge.style.border = "1px solid #6EE7B7";
@@ -432,11 +428,11 @@ function prepararAgregarCarrito(btn) {
             const metodoPago = o.metodoPago || 'Presencial (Tarjeta POS)';
             if (clientBox) {
                 clientBox.innerHTML = `
-                    <p style="margin:2px 0;"><strong>Cliente:</strong> ${clienteNombre}</p>
-                    <p style="margin:2px 0;"><strong>NIT:</strong> ${nitCliente}</p>
-                    <p style="margin:2px 0;"><strong>Dirección:</strong> ${direccionTexto}</p>
-                    <p style="margin:2px 0;"><strong>Teléfono:</strong> ${clienteTel}</p>
-                    <p style="margin:2px 0;"><strong>Estado de Cuenta:</strong> <span style="color:#047857; font-weight:bold;">Cuenta Pagada y Cancelada (${metodoPago})</span></p>
+                    <p style="margin:2px 0;"><strong>Cliente:</strong> ${escShop(clienteNombre)}</p>
+                    <p style="margin:2px 0;"><strong>NIT:</strong> ${escShop(nitCliente)}</p>
+                    <p style="margin:2px 0;"><strong>Dirección:</strong> ${escShop(direccionTexto)}</p>
+                    <p style="margin:2px 0;"><strong>Teléfono:</strong> ${escShop(clienteTel)}</p>
+                    <p style="margin:2px 0;"><strong>Estado de Cuenta:</strong> <span style="color:#047857; font-weight:bold;">Pago confirmado (${metodoPago})</span></p>
                 `;
             }
         }
@@ -450,7 +446,7 @@ function prepararAgregarCarrito(btn) {
                 return `
                     <tr style="border-bottom: 1px solid #f1f5f9;">
                         <td style="padding: 12px 8px; font-weight: 600; color: #64748b;">${i.id || 'PROD'}</td>
-                        <td style="padding: 12px 8px; font-weight: 700; color: #0f172a;">${i.nombre}</td>
+                        <td style="padding: 12px 8px; font-weight: 700; color: #0f172a;">${escShop(i.nombre)}</td>
                         <td style="padding: 12px 8px; text-align: center; font-weight: 600;">${cant}</td>
                         <td style="padding: 12px 8px; text-align: right; color: #475569;">Q${precio.toFixed(2)}</td>
                         <td style="padding: 12px 8px; text-align: right; font-weight: 700; color: #0f172a;">Q${sub.toFixed(2)}</td>
@@ -522,18 +518,18 @@ function prepararAgregarCarrito(btn) {
         if (modal) modal.classList.toggle('hidden');
     }
 
-    function abrirModalMisOrdenes() {
+    async function abrirModalMisOrdenes() {
         const lista = document.getElementById('lista-mis-ordenes');
         if (!lista) return;
 
-        const historial = JSON.parse(localStorage.getItem('huellitas_historial')) || [];
-        const aceptadas = historial.filter(o => o.estadoOrden && !o.estadoOrden.startsWith('1.'));
+        await sincronizarShop();
+        const aceptadas = historialVentas;
 
         if (aceptadas.length === 0) {
             lista.innerHTML = `
                 <div class="p-6 text-center bg-slate-50 border border-slate-200 rounded-2xl">
-                    <p class="text-xs text-slate-400 font-bold">No tienes órdenes aceptadas aún.</p>
-                    <p class="text-[10px] text-slate-400 mt-1">Tus compras aparecerán aquí en cuanto el refugio las apruebe.</p>
+                    <p class="text-xs text-slate-400 font-bold">Todavía no hay órdenes registradas.</p>
+                    <p class="text-[10px] text-slate-400 mt-1">Los pedidos que realices aparecerán aquí.</p>
                 </div>
             `;
         } else {
@@ -541,7 +537,7 @@ function prepararAgregarCarrito(btn) {
                 <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-2 hover:border-emerald-300 transition">
                     <div class="flex justify-between items-center">
                         <span class="text-[11px] font-extrabold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full">
-                            ✓ ${o.estadoOrden.replace(/^\d+\.\s*/, '')}
+                            ✓ ${escShop(o.cancelado?'Cancelado':o.estadoOrden.replace(/^\d+\.\s*/, ''))}
                         </span>
                         <span class="text-[10px] text-slate-400 font-medium">${o.fecha || 'Reciente'}</span>
                     </div>

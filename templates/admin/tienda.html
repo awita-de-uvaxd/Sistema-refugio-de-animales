@@ -1,155 +1,30 @@
-  <!-- Pestaña Principal 3: TIENDA / SHOP (Contenedor Maestro de la Tienda) -->
-  <div id="admin-shop" class="tab-content-main hidden bg-white p-6 rounded-xl shadow-sm space-y-6">
-    
-    <!-- SUB-NAVEGACIÓN INTERNA DE LA TIENDA -->
-    <div class="border-b pb-4">
-      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-        <div>
-          <h2 class="text-2xl font-black text-indigo-900">Módulo de Tienda y Comercio</h2>
-          <p class="text-xs text-slate-500">Administración general de productos, ventas, inventario y métricas.</p>
-        </div>
-      </div>
-
-      <nav class="flex overflow-x-auto bg-slate-100 p-1.5 rounded-2xl gap-1 text-xs font-semibold scroll-hide">
-        <button onclick="switchShopSubTab('pedidos')" class="tab-btn-shop px-4 py-2.5 rounded-xl transition bg-white text-indigo-700 shadow-sm font-bold" data-subtab="pedidos"> Gestión de Pedidos</button>
-
-        <button onclick="switchShopSubTab('inventario')" class="tab-btn-shop px-4 py-2.5 rounded-xl transition text-slate-600 hover:bg-slate-200/60" data-subtab="inventario"> Inventario y Control</button>
-        <button onclick="switchShopSubTab('metricas')" class="tab-btn-shop px-4 py-2.5 rounded-xl transition text-slate-600 hover:bg-slate-200/60" data-subtab="metricas"> Métricas y Reportes</button>
-      </nav>
-    </div>
-
-    <!-- SUB-PESTAÑA 1: GESTIÓN DE PEDIDOS -->
-    <div id="shop-pedidos" class="tab-content-shop space-y-8">
-      <!-- SERVICIO A DOMICILIO -->
-      <div class="bg-white rounded-2xl border border-slate-200 p-4 overflow-x-auto space-y-3 shadow-sm">
-        <div class="flex justify-between items-center border-b pb-2">
-          <div>
-            <h4 class="font-bold text-sm text-slate-800">Órdenes con Servicio a Domicilio</h4>
-            <p class="text-[11px] text-slate-500">Valida los pagos y actualiza las etapas del envío. La barra muestra el progreso de cada pedido.</p>
-          </div>
-          <span class="text-xs bg-blue-100 text-blue-700 font-bold px-2.5 py-1 rounded-full">Exclusivo Domicilio</span>
-        </div>
-        <table class="w-full text-left text-xs">
-          <thead class="bg-slate-100 uppercase font-bold text-slate-600">
-            <tr><th class="p-3">ID Pedido</th><th class="p-3">Cliente</th><th class="p-3">Detalle Pago</th><th class="p-3">Monto</th><th class="p-3">Seguimiento del envío</th></tr>
-          </thead>
-          <tbody id="tbody-domicilio"></tbody>
-        </table>
-      </div>
-
-      <!-- ENTREGA EN TIENDA -->
-      <div class="bg-white rounded-2xl border border-slate-200 p-4 overflow-x-auto space-y-3 shadow-sm">
-        <div class="flex justify-between items-center border-b pb-2">
-          <div>
-            <h4 class="font-bold text-sm text-slate-800">Órdenes para Entrega en Tienda (Recoger en Refugio)</h4>
-            <p class="text-[11px] text-slate-500">Actualiza el progreso de los pedidos para recoger en el refugio.</p>
-          </div>
-          <span class="text-xs bg-indigo-100 text-indigo-700 font-bold px-2.5 py-1 rounded-full">Recoger en Refugio</span>
-        </div>
-        <table class="w-full text-left text-xs">
-          <thead class="bg-slate-100 uppercase font-bold text-slate-600">
-            <tr><th class="p-3">ID Pedido</th><th class="p-3">Cliente</th><th class="p-3">Progreso del Pedido</th><th class="p-3">Total</th><th class="p-3">Estado de Pago</th></tr>
-          </thead>
-          <tbody id="tbody-tienda"></tbody>
-        </table>
-      </div>
-    </div>
-
-
-    <!-- SUB-PESTAÑA 2: INVENTARIO Y CONTROL -->
-    <div id="shop-inventario" class="tab-content-shop hidden space-y-4">
-      <div id="vencimiento-alerts" class="space-y-2"></div>
-      <div class="bg-white rounded-2xl border p-4 space-y-3 shadow-sm">
-        <div class="flex flex-col sm:flex-row justify-between items-center gap-3">
-          <input type="text" id="inv-search" oninput="renderizarInventario()" placeholder="Buscar producto..." class="px-3 py-2 border rounded-xl text-xs w-full sm:w-64 bg-slate-50">
-          <button onclick="toggleModalProd()" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-sm hover:bg-indigo-700 transition">+ Agregar Producto</button>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs">
-            <thead class="bg-slate-100 uppercase font-bold text-slate-600">
-              <tr><th class="p-3">ID</th><th class="p-3">Producto</th><th class="p-3">Categoría</th><th class="p-3">Stock</th><th class="p-3">Precio</th><th class="p-3">Visibilidad</th><th class="p-3 text-right">Opciones</th></tr>
-            </thead>
-            <tbody id="tbody-inventario">
-              {% if productos %}
-                {% for p in productos %}
-                <tr class="border-b hover:bg-slate-50">
-                    <td class="p-3 font-bold">PROD-{{ p.id }}</td>
-                    <td class="p-3 flex items-center gap-3">
-                        {% if p.foto %}
-                        <img src="{{ url_for('static', filename='uploads/' ~ p.foto) }}" class="w-10 h-10 object-cover rounded-xl border border-slate-200 shadow-sm">
-                        {% else %}
-                        <img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=300" class="w-10 h-10 object-cover rounded-xl border border-slate-200 shadow-sm">
-                        {% endif %}
-                        <span class="font-bold text-slate-800">{{ p.nombre }}</span>
-                    </td>
-                    <td class="p-3">{{ p.categoria }}</td>
-                    <td class="p-3 font-bold {% if p.stock <= 5 %}text-red-600 font-extrabold{% endif %}">{{ p.stock }}</td>
-                    <td class="p-3 font-semibold">Q{{ "%.2f"|format(p.precio) }}</td>
-                    <td class="p-3"><span class="text-xs font-bold">{% if p.visible %}👁 Visible{% else %}Oculto{% endif %}</span></td>
-                    <td class="p-3 text-right">#{{ p.id }}</td>
-                </tr>
-                {% endfor %}
-              {% else %}
-                <tr><td colspan="7" class="p-4 text-center text-slate-400">No hay productos registrados en la base de datos</td></tr>
-              {% endif %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- SUB-PESTAÑA 3: MÉTRICAS Y REPORTES -->
-    <div id="shop-metricas" class="tab-content-shop hidden space-y-6">
-      <!-- TARJETAS DE MÉTRICAS / KPI -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="bg-white p-4 rounded-2xl border shadow-sm border-indigo-100">
-          <p class="text-xs font-bold text-slate-400">Ventas Totales Realizadas</p>
-          <h2 id="kpi-total-ventas" class="text-2xl font-black text-indigo-600 mt-1">Q0.00</h2>
-          <p class="text-[10px] text-emerald-600 font-bold mt-1">✓ Facturación acumulada</p>
-        </div>
-        <div class="bg-white p-4 rounded-2xl border shadow-sm border-blue-100">
-          <p class="text-xs font-bold text-slate-400">Total de Pedidos Completados</p>
-          <h2 id="kpi-total-pedidos" class="text-2xl font-black text-blue-600 mt-1">0</h2>
-          <p class="text-[10px] text-slate-500 mt-1">Transacciones procesadas</p>
-        </div>
-        <div class="bg-white p-4 rounded-2xl border shadow-sm border-amber-100">
-          <p class="text-xs font-bold text-slate-400">Producto Estrella</p>
-          <h2 id="kpi-prod-estrella" class="text-lg font-black text-amber-600 mt-1 truncate">---</h2>
-          <p class="text-[10px] text-slate-500 mt-1">Más unidades vendidas</p>
-        </div>
-      </div>
-
-      <!-- GRÁFICO DE VENTAS -->
-      <div class="bg-white p-5 rounded-2xl border space-y-3 shadow-sm">
-        <h4 class="font-bold text-sm text-slate-800">Gráfico de Ventas por Producto</h4>
-        <div class="h-64"><canvas id="chartVentas"></canvas></div>
-      </div>
-
-      <!-- HISTORIAL DETALLADO DE TRANSACCIONES -->
-      <div class="bg-white rounded-2xl border p-5 space-y-3 shadow-sm overflow-x-auto">
-        <div class="flex justify-between items-center border-b pb-2">
-          <div>
-            <h4 class="font-bold text-sm text-slate-800">Historial General de Ventas y Transacciones</h4>
-            <p class="text-[11px] text-slate-500">Registro histórico de compras realizadas en la plataforma y en refugio.</p>
-          </div>
-          <span class="text-xs bg-slate-100 font-bold text-slate-600 px-3 py-1 rounded-full">Reporte Oficial</span>
-        </div>
-        <table class="w-full text-left text-xs">
-          <thead class="bg-slate-100 uppercase font-bold text-slate-600">
-            <tr>
-              <th class="p-3">ID Pedido</th>
-              <th class="p-3">Cliente</th>
-              <th class="p-3">Tipo / Canal</th>
-              <th class="p-3">Productos Adquiridos</th>
-              <th class="p-3">Método de Pago</th>
-              <th class="p-3">Monto Total</th>
-              <th class="p-3">Estado</th>
-            </tr>
-          </thead>
-          <tbody id="tbody-historial-metricas"></tbody>
-        </table>
-      </div>
-    </div>
-
-  </div>
-</div>
+<section id="admin-shop" class="tab-content-main hidden space-y-5">
+ <div class="rounded-3xl bg-gradient-to-r from-slate-950 to-indigo-800 p-7 text-white shadow-xl">
+  <div class="flex flex-wrap items-center justify-between gap-4"><div><p class="text-[10px] font-black uppercase tracking-[.25em] text-indigo-200">HUELLITAS · PANEL COMERCIAL</p><h2 class="mt-2 text-3xl font-black">Gestión de tienda</h2><p class="mt-1 text-sm text-indigo-100">Productos, ventas, envíos y reportes.</p></div><button id="shop-refresh" class="rounded-xl border border-white/30 bg-white/10 px-4 py-3 text-xs font-bold hover:bg-white/20">↻ Actualizar</button></div>
+ </div>
+ <div id="shop-alerta" role="status" aria-live="polite" class="hidden rounded-xl border p-3 text-xs font-bold"></div>
+ <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+  <div class="rounded-2xl border bg-white p-5 shadow-sm"><p class="text-xs font-bold text-slate-500">Ingresos confirmados</p><p id="shop-kpi-ingresos" class="mt-3 text-2xl font-black text-emerald-700">Q0.00</p></div>
+  <div class="rounded-2xl border bg-white p-5 shadow-sm"><p class="text-xs font-bold text-slate-500">Pedidos pendientes</p><p id="shop-kpi-pendientes" class="mt-3 text-2xl font-black text-indigo-700">0</p></div>
+  <div class="rounded-2xl border bg-white p-5 shadow-sm"><p class="text-xs font-bold text-slate-500">Productos publicados</p><p id="shop-kpi-productos" class="mt-3 text-2xl font-black text-slate-900">0</p></div>
+  <div class="rounded-2xl border bg-white p-5 shadow-sm"><p class="text-xs font-bold text-slate-500">Stock bajo (≤5)</p><p id="shop-kpi-bajo" class="mt-3 text-2xl font-black text-amber-600">0</p></div>
+ </div>
+ <nav class="flex gap-2 overflow-x-auto rounded-2xl border bg-white p-2 shadow-sm scroll-hide" aria-label="Secciones de tienda">
+  <button data-subtab="pedidos" onclick="switchShopSubTab('pedidos')" class="tab-btn-shop shrink-0 rounded-xl bg-indigo-600 px-4 py-3 text-xs font-black text-white">📦 Pedidos</button>
+  <button data-subtab="inventario" onclick="switchShopSubTab('inventario')" class="tab-btn-shop shrink-0 rounded-xl px-4 py-3 text-xs font-black text-slate-600">🗃️ Inventario</button>
+  <button data-subtab="cobro" onclick="switchShopSubTab('cobro')" class="tab-btn-shop shrink-0 rounded-xl px-4 py-3 text-xs font-black text-slate-600">💳 Caja presencial</button>
+  <button data-subtab="metricas" onclick="switchShopSubTab('metricas')" class="tab-btn-shop shrink-0 rounded-xl px-4 py-3 text-xs font-black text-slate-600">📊 Reportes</button>
+ </nav>
+ <div id="shop-pedidos" class="tab-content-shop rounded-2xl border bg-white p-5 shadow-sm">
+  <div class="flex flex-wrap justify-between gap-3"><div><h3 class="text-lg font-black">Pedidos y seguimiento</h3><p class="text-xs text-slate-500">Confirma los pagos y avanza una etapa por vez, hasta la entrega.</p></div><span id="shop-cantidad-pedidos" class="text-xs font-bold text-indigo-700"></span></div>
+  <div class="my-4 grid gap-3 sm:grid-cols-3"><input id="shop-buscar-pedido" placeholder="Buscar folio, cliente o teléfono" class="rounded-xl border bg-slate-50 p-3 text-xs sm:col-span-2"><select id="shop-filtro-pedido" class="rounded-xl border bg-slate-50 p-3 text-xs"><option value="todos">Todos</option><option value="pendientes">Por atender</option><option value="domicilio">Domicilio</option><option value="tienda">Retiro</option><option value="finalizados">Finalizados</option><option value="cancelados">Cancelados</option></select></div>
+  <div class="overflow-x-auto"><table class="min-w-[860px] w-full text-left text-xs"><thead class="bg-slate-50 text-slate-500 uppercase"><tr><th class="p-3">Folio / cliente</th><th class="p-3">Tipo</th><th class="p-3">Pago</th><th class="p-3">Total</th><th class="p-3">Etapa</th><th class="p-3 text-right">Acciones</th></tr></thead><tbody id="tbody-pedidos-admin"></tbody></table></div>
+ </div>
+ <div id="shop-inventario" class="tab-content-shop hidden space-y-3"><div id="shop-stock-aviso" class="hidden rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"></div><div class="rounded-2xl border bg-white p-5 shadow-sm">
+  <div class="flex flex-wrap justify-between gap-3"><div><h3 class="text-lg font-black">Catálogo e inventario</h3><p class="text-xs text-slate-500">Administra nombre, fotos, precio, stock y publicación.</p></div><button onclick="toggleModalProd(true)" class="rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-black text-white">+ Nuevo producto</button></div>
+  <div class="my-4 grid gap-3 sm:grid-cols-3"><input id="inv-search" placeholder="Buscar producto o PROD-…" class="rounded-xl border bg-slate-50 p-3 text-xs sm:col-span-2"><select id="inv-filtro" class="rounded-xl border bg-slate-50 p-3 text-xs"><option value="todos">Todos</option><option value="bajo">Stock bajo</option><option value="agotados">Agotados</option><option value="ocultos">Ocultos</option></select></div>
+  <div class="overflow-x-auto"><table class="min-w-[750px] w-full text-left text-xs"><thead class="bg-slate-50 uppercase text-slate-500"><tr><th class="p-3">Producto</th><th class="p-3">Categoría</th><th class="p-3">Precio</th><th class="p-3">Existencias</th><th class="p-3">Estado</th><th class="p-3 text-right">Acciones</th></tr></thead><tbody id="tbody-inventario"></tbody></table></div>
+ </div></div>
+ <div id="shop-cobro" class="tab-content-shop hidden"><div class="grid gap-4 lg:grid-cols-[1fr_340px]"><div class="rounded-2xl border bg-white p-5 shadow-sm"><h3 class="text-lg font-black">Punto de venta presencial</h3><p class="text-xs text-slate-500">Venta inmediata en el refugio, con cobro e inventario registrados.</p><input id="pos-search" placeholder="Buscar producto…" class="my-4 w-full rounded-xl border p-3 text-xs"><div id="pos-productos-grid" class="grid gap-3 sm:grid-cols-2"></div></div><div class="self-start rounded-2xl border bg-white p-5 shadow-sm"><h3 class="text-lg font-black">Detalle de venta</h3><div id="pos-carrito" class="my-4 max-h-52 space-y-2 overflow-auto"></div><div class="space-y-3"><input id="pos-cliente-nombre" placeholder="Nombre del comprador *" maxlength="100" class="w-full rounded-xl border p-3 text-xs"><input id="pos-cliente-tel" placeholder="Teléfono (opcional)" maxlength="16" class="w-full rounded-xl border p-3 text-xs"><input id="pos-cliente-nit" placeholder="NIT (opcional)" maxlength="20" class="w-full rounded-xl border p-3 text-xs"><select id="pos-metodo-pago" class="w-full rounded-xl border p-3 text-xs"><option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option></select><div class="flex justify-between border-t pt-3 font-black"><span>Total</span><strong id="pos-total" class="text-indigo-700">Q0.00</strong></div><button id="pos-cobrar" class="w-full rounded-xl bg-emerald-600 p-3 text-xs font-black text-white disabled:opacity-50">✓ Registrar cobro</button><p class="text-[10px] text-slate-400">El comprobante no sustituye una factura FEL de SAT.</p></div></div></div></div>
+ <div id="shop-metricas" class="tab-content-shop hidden space-y-4"><div class="grid gap-4 lg:grid-cols-2"><div class="rounded-2xl border bg-white p-5 shadow-sm"><h3 class="font-black">Productos más vendidos</h3><p class="mb-4 text-xs text-slate-500">Por unidades, en pedidos pagados</p><div id="shop-top" class="space-y-3"></div></div><div class="rounded-2xl border bg-white p-5 shadow-sm"><h3 class="font-black">Resumen comercial</h3><div id="shop-resumen" class="mt-4 space-y-3 text-sm"></div></div></div><div class="rounded-2xl border bg-white p-5 shadow-sm"><div class="flex flex-wrap justify-between gap-3"><h3 class="font-black">Historial de ventas</h3><button id="shop-csv" class="rounded-xl border border-indigo-200 bg-indigo-50 p-2 text-xs font-black text-indigo-700">↓ Exportar CSV</button></div><div class="mt-4 overflow-x-auto"><table class="w-full min-w-[680px] text-left text-xs"><thead class="bg-slate-50 uppercase text-slate-500"><tr><th class="p-3">Folio</th><th class="p-3">Fecha</th><th class="p-3">Cliente</th><th class="p-3">Canal</th><th class="p-3">Monto</th><th class="p-3">Pago</th></tr></thead><tbody id="tbody-historial-metricas"></tbody></table></div></div></div>
+</section>

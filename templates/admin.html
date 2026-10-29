@@ -2,7 +2,6 @@
 {% block content %}
 <div class="w-full">
   <!-- Librerías de Gráficos y PDF -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <!-- Pestañas Principales de Navegación -->
@@ -42,7 +41,7 @@
 <script defer src="{{ url_for('static', filename='js/admin-validaciones.js') }}"></script>
 <script src="{{ url_for('static', filename='js/admin-navegacion.js') }}"></script>
 <script>window.HUELLITAS_ADMIN_CSRF = {{ csrf_token()|tojson }};</script>
-<script src="{{ url_for('static', filename='js/admin-tienda.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin-tienda.js', v='20261027-fix404') }}"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     const tab = (location.hash || '').replace('#','');
