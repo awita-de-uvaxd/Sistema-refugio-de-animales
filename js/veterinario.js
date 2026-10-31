@@ -239,6 +239,18 @@
   // --- BLOQUEO DEL BOTÓN "GUARDAR EXPEDIENTE" HASTA QUE TODO ESTÉ COMPLETO Y CORRECTO ---
   const CAMPOS_AUXILIARES = ['input-sintoma', 'input-vacuna', 'input-personalizado-dias'];
 
+  // Revisa UN campo con data-regla. Devuelve el texto del error o '' si está bien.
+  // (Esta función se llamaba pero no existía: daba "revisarCampo is not defined" en cada tecla.)
+  function revisarCampo(campo) {
+    const valor = (campo.value || '').trim();
+    if (campo.hasAttribute('data-requerido') && !valor) return 'obligatorio';
+    const max = parseInt(campo.dataset.max, 10);
+    if (max && valor.length > max) return 'máximo ' + max + ' caracteres';
+    // Texto clínico: solo letras, números, espacios y los signos - y :
+    if (campo.dataset.regla === 'clinico' && valor && !/^[\p{L}\p{N} \-:]+$/u.test(valor)) return 'caracteres no permitidos';
+    return '';
+  }
+
   // Devuelve la lista de lo que falta o está mal (vacía = se puede guardar)
   function camposFaltantes() {
     const faltan = [];
@@ -262,23 +274,23 @@
 
 
 
-  // --- BLOQUEO Y AUTO-GUARDADO DEL FORMULARIO ---
+  // --- PASA SÍNTOMAS Y VACUNAS A LOS CAMPOS OCULTOS QUE LEE FLASK ---
+  // Antes de enviar se llama a esta función. Si no se llama, "sintomas_ocultos" y
+  // "vacunas_ocultas" viajan vacíos y nada de eso llega a la base de datos.
+  // Devuelve false si lo que quedó escrito sin añadir no es válido (ya mostró el aviso).
   function prepararEnvio() {
-    const s = document.getElementById('input-sintoma').value.trim();
-    if (s && !sintomas.includes(s)) sintomas.push(s);
-    
-    const v = document.getElementById('input-vacuna').value.trim();
-    if (v) {
-        let freq = document.getElementById('select-frecuencia').value;
-        if (freq === 'Personalizado') {
-            const dias = document.getElementById('input-personalizado-dias').value;
-            freq = 'Cada ' + (dias || 0) + ' días';
-        }
-        vacunas.push({ nombre: v, frecuencia: freq, fecha: fechaHoy });
+    // Lo que quedó escrito pero sin pulsar "Añadir" / "+" también se incluye
+    // (addVacuna aplica las mismas validaciones: máximo 2, caracteres, días)
+    const pendienteVacuna = document.getElementById('input-vacuna').value.trim();
+    if (pendienteVacuna) {
+      addVacuna();
+      if (document.getElementById('input-vacuna').value.trim()) return false;
     }
+    addSintoma();
 
     document.getElementById('sintomas-hidden').value = sintomas.join(', ');
     document.getElementById('vacunas-hidden').value = JSON.stringify(vacunas);
+    return true;
   }
 
   // --- RESTRICCIONES Y VALIDACIONES EN TIEMPO REAL ---
@@ -373,7 +385,9 @@ function validarYEnviarConsulta() {
     return false;
   } else {
     if (divResumen) divResumen.classList.add('hidden');
-    // Envía el formulario si todo está correcto
+    // Envía el formulario si todo está correcto.
+    // Primero se llenan los campos ocultos de síntomas y vacunas (si no, no se guardan).
+    if (!prepararEnvio()) return false;
     const tipo = document.getElementById('form-tipo-ingreso').value;
     const isNew = document.getElementById('form-paciente-id').value === '';
     const codeGenerado = document.getElementById('hidden-codigo-acceso').value;

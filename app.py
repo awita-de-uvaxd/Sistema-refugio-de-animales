@@ -1204,9 +1204,19 @@ def crear_consulta():
     # 5. Vacunas
     vacunas_json = request.form.get('vacunas_ocultas')
     if vacunas_json:
-        lista_vacunas = json.loads(vacunas_json)
-        for v in lista_vacunas:
-            db.session.add(Vacuna(nombre=v['nombre'], frecuencia=v['frecuencia'], paciente_id=paciente_id, consulta_id=nueva_consulta.id))
+        try:
+            lista_vacunas = json.loads(vacunas_json)
+        except ValueError:
+            lista_vacunas = []
+        if not isinstance(lista_vacunas, list): lista_vacunas = []
+        vistas = set()
+        for v in lista_vacunas[:2]:   # máximo 2 vacunas por consulta
+            if not isinstance(v, dict): continue
+            nombre_vac = ' '.join(str(v.get('nombre') or '').split())[:40]
+            frecuencia_vac = str(v.get('frecuencia') or '').strip()[:50]
+            if not nombre_vac or not frecuencia_vac or nombre_vac.lower() in vistas: continue
+            vistas.add(nombre_vac.lower())
+            db.session.add(Vacuna(nombre=nombre_vac, frecuencia=frecuencia_vac, paciente_id=paciente_id, consulta_id=nueva_consulta.id))
 
     if rescate_id:
         rescate = Rescate.query.get(rescate_id)
