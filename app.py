@@ -1,26 +1,33 @@
-import os
-from flask import send_from_directory
-from flask import Flask, render_template, request, redirect, url_for, session, flash, abort
-from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
+#importacion de librerias para el servidor, base de datos y la pagina web
+import os #esta la usamos para hablar con el sistema operativo, es por decirlo asi para tener acceso para crear o buscar entre carpetas, es como tener un permiso 
+from flask import send_from_directory #es una liberia que unicamente lleva a la pantalla de usuario los datos necesarios, como el logo
+from flask import Flask, render_template, request, redirect, url_for, session, flash, abort #son para el apartado de usuario, desde pintar en pantalla todo lo relacionado a la informacion del empleado a mantener la sesion abierta
+from flask_sqlalchemy import SQLAlchemy #es el traductor de aqlalchemy de python y lo para a sql de base de datos 
+from werkzeug.security import generate_password_hash, check_password_hash #es para las contraseñas
 from werkzeug.utils import secure_filename
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta #librerias para saber la fecha del dia 
 import json
-import re
+import re #es para evitar caracteres en entradas de texto 
 import calendar
-import secrets
+import secrets #se usa para crear palabras aleatorias y es la seguridad d elos formularios 
 import hmac
+from flask import jsonify 
 
+# Es lo que hace que la pagina arranque pidiendo los archivos json locales 
 app = Flask(__name__)
-@app.route('/js/<path:filename>')
 
+@app.route('/js/<path:filename>')
 def serve_js(filename):
+    # Sirve archivos JavaScript desde la carpeta 'js' en la raíz de la aplicación.
     return send_from_directory(
         os.path.join(app.root_path, 'js'),
         filename
     )
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///huellitas.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///huellitas.db' #es el nombre de la base de datos
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False #esto no lo usamos pero es necesario apagarlo 
+
+#le decimos al sistema que si no hay una clave de sesion en el entorno, que cree una nueva y la guarde en un archivo local llamado .clave_sesion
 def _obtener_clave_sesion():
     """Clave estable y no pública para proteger las cookies de sesión."""
     clave_entorno = os.environ.get('HUELLITAS_SECRET_KEY', '').strip()
@@ -34,19 +41,21 @@ def _obtener_clave_sesion():
         if len(clave) >= 32:
             return clave
     clave = secrets.token_urlsafe(48)
-    # Exclusivo de la instancia; no se almacena en el código fuente.
+    # Asegura que el archivo sea solo legible por el propietario 
+    #si no hay llave, creamos una nueva clave de 48 caracteres y la garudarmos en el archivo
     fd = os.open(str(ruta), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, 'w', encoding='utf-8') as archivo:
         archivo.write(clave)
     return clave
 
-app.secret_key = _obtener_clave_sesion()
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax' 
+app.secret_key = _obtener_clave_sesion() 
+app.config['SESSION_COOKIE_HTTPONLY'] = True   #escudo 1: evita que un virus de javascript lea la cookie de sesión y la robe
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  #escudo 2: bloquea las peticiones de paginas externas que intentan hacerse pasar por la web 
 
 # ==========================================
-# CSRF - SOLUCIÓN SIMPLE, SIN MÓDULOS EXTERNOS
-# Habilita {{ csrf_token() }} y {{ csrf_gestion() }} en Jinja2.
+# CSRF - SOLUCIÓN SIMPLE
+# su funcion es crear token para cada boton y o formulario para asegurarse que cada click si provenga de mi pagina 
+# haciendo que cada que quieres enviar algo primero corrobore si el token es el correcto para poder aceptar el envio, si no lo rechaza 
 # ==========================================
 def csrf_token():
     token = session.get('_csrf_cuentas')
@@ -69,12 +78,13 @@ def validar_csrf_cuentas():
     if not esperado or not recibido or not hmac.compare_digest(esperado, recibido):
         abort(400, description='Token de seguridad inválido. Actualiza la página e inténtalo de nuevo.')
 
-
-# NUEVO: Configuración para guardar imágenes    
-app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'uploads')
+# ==========================================
+# BODEGA FÍSICA PARA IMÁGENES
+# ==========================================
+app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'uploads') #esta es la instruccion donde le decimos al sistema donde se guardaran las imagenes, diciendle que estara en uploads en la carpeta static
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True) # Crea la carpeta automáticamente si no existe
 
-db = SQLAlchemy(app)
+db = SQLAlchemy(app) #esto es lo que vendria siendo el traductor de la base de datos con python             
 
 # ==========================================
 # 1. MODELOS DE BASE DE DATOS
@@ -82,8 +92,8 @@ db = SQLAlchemy(app)
 class ConfigSitio(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     rol_destino = db.Column(db.String(20), unique=True, nullable=False) # 'global', 'admin', 'usuario', 'veterinario', 'rescatista', 'inicio'
-    titulo = db.Column(db.String(100), default="Nombre de pagina de prueba :D")
-    eslogan = db.Column(db.String(100), default="Texto de eslogan de prueba XDXDXD")
+    titulo = db.Column(db.String(100), default="Refugio Estelar Laika")
+    eslogan = db.Column(db.String(100), default="Ninguna estrella nace para viajar a oscuras")
     color_fondo = db.Column(db.String(20), default="#1e1b4b")
     logo = db.Column(db.String(200), nullable=True)
     logo_size = db.Column(db.Integer, default=45)
@@ -178,13 +188,12 @@ class ProgramaVoluntariado(db.Model):
     descripcion = db.Column(db.Text, nullable=False)
     fotos = db.Column(db.Text, nullable=True)
 
-# Textos iniciales: nunca reemplazan descripciones ya guardadas por el administrador.
+# Textos salvavidas: Se usan para rellenar la base de datos la primera vez que arranca el sistema
 PROGRAMAS_VOLUNTARIADO_BASE = {
     'Coexistencia': 'Ven a pasar un rato agradable con nuestros animales. Ayúdalos a socializar, dales cariño y acompáñalos. ¡Ideal para relajarte y dar amor sin llevarlos a casa!',
     'Hogar Temporal': 'Abre las puertas de tu casa temporalmente (3 a 7 días). Dale a un perrito o gatito la oportunidad de dormir en un hogar calientito mientras le encontramos su familia definitiva.',
     'Apoyo Operativo': 'Únete al equipo del refugio. Ayúdanos a bañar, alimentar, pasear y mantener limpias las áreas. Trabajo físico, pero con la mejor recompensa del mundo.',
 }
-
 
 def asegurar_programas_voluntariado():
     """Agrega únicamente programas base ausentes; respeta textos y fotografías previos."""
@@ -206,7 +215,7 @@ def asegurar_informacion_donacion():
             titulo='Apoya la Causa',
             subtitulo='Aceptamos donaciones monetarias o insumos físicos (alimentos, cobijas, juguetes).',
             info_bancaria='Banco Nacional: Cuenta Monetaria #000-123456-7',
-            nombre_de='A Nombre De: Asociación Huellitas de Amor',
+            nombre_de='A Nombre De: Asociación Refugio estelar Laika',
             sede_fisica='Sede Recepción Comida: Calle Principal 12-45 Zona 10',
         ))
         db.session.commit()
@@ -383,7 +392,6 @@ class Pedido(db.Model):
     producto_id = db.Column(db.Integer, db.ForeignKey('producto_shop.id'), nullable=False)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
 
-
 class VentaTienda(db.Model):
     id=db.Column(db.Integer,primary_key=True)
     fecha=db.Column(db.DateTime,default=datetime.utcnow,nullable=False)
@@ -407,7 +415,12 @@ class VentaTienda(db.Model):
     cancelado=db.Column(db.Boolean,default=False,nullable=False)
     es_pos=db.Column(db.Boolean,default=False,nullable=False)
 
-from modulos.tienda import registrar_tienda
+class Especie(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(30), nullable=False, unique=True)
+
+# Conectamos la tienda y le entregamos nuestras herramientas (la base de datos y los moldes) para que funcione
+from modulos.tienda import registrar_tienda #en la ruta modulos/tienda le pasamos todo lo necesario para qpueda trabjar la tienda, clases y rutas, todo lo relacionado con la tienda 
 registrar_tienda(app,db,ProductoShop,Usuario,VentaTienda)
 
 # ==========================================
@@ -473,6 +486,8 @@ def editar_apariencia():
 
 @app.before_request
 def validar_sesion_de_cuenta():
+    # Guardia de seguridad: Antes de cargar cualquier clic de la página, revisa la base de datos.
+    # Si descubre que al usuario lo acaban de despedir o desactivar, le quita la sesión y lo saca del sistema.
     usuario_id = session.get('usuario_id')
     if usuario_id is None:
         return None
@@ -487,6 +502,7 @@ def validar_sesion_de_cuenta():
 
 @app.route('/logout')
 def logout():
+    # Destruye la sesión VIP del usuario (le quita la pulsera) y lo manda al inicio.
     session.clear()
     return redirect(url_for('inicio'))
 
@@ -497,7 +513,6 @@ def inicio():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # ... (Tu código de validación de base de datos se queda igualito)
         correo_o_codigo = request.form.get('credencial')
         password = request.form.get('password')
         usuario = Usuario.query.filter((Usuario.correo == correo_o_codigo) | (Usuario.codigo_empleado == correo_o_codigo)).first()
@@ -519,7 +534,6 @@ def login():
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
     if request.method == 'POST':
-        # ... (Tu código de guardar en BD se queda igualito)
         nombre = request.form.get('nombre')
         correo = request.form.get('correo')
         password = request.form.get('password')
@@ -534,7 +548,7 @@ def registro():
 
 
 # ==========================================
-# TOMAR CASO: el primero usuario que lo toma, se queda con él; los demás reciben un mensaje de er
+# TOMAR CASO: el primero usuario que lo toma, se queda con él; los demás reciben un mensaje de error 
 # ==========================================
 MSG_TOMADO = "Este caso ya fue tomado por otro compañero."
 
@@ -580,8 +594,6 @@ def tomar_cita(cita_id):
         return redirect(url_for('veterinario', cita=cita_id))
     flash(MSG_TOMADO, 'tomado')
     return redirect(url_for('veterinario'))
-
-
 
 # ==========================================
 # 3. RUTAS DE VISUALIZACIÓN
@@ -663,11 +675,7 @@ def admin():
     user_data = Usuario.query.get(session['usuario_id']) # Inyección de datos
 
     return render_template('admin.html', empleados=empleados_db, administradores=administradores_db, personal_inactivo=personal_inactivo_db, cuentas_empleados=empleados_db, cuentas_clientes=usuarios_db, cuentas_usuarios=usuarios_db, auditoria_cuentas=auditoria_db, pacientes=pacientes_con_solicitudes, programas=programas_db, voluntariados=solicitudes_vol, info_donacion=info_don, productos=productos_db, pedidos=pedidos_db, usuario_data=user_data)
-    if 'usuario_id' not in session or session['rol'] != 'rescatista': return redirect(url_for('login'))
-    rescates_db = Rescate.query.filter_by(rescatista_id=session['usuario_id']).all()
-    alertas_db = Alerta.query.filter_by(estado='Pendiente').order_by(Alerta.id.desc()).all()
-    return render_template('rescatista.html', mis_rescates=rescates_db, alertas=alertas_db)
-
+ 
 @app.route('/enviar_voluntariado', methods=['POST'])
 def enviar_voluntariado():
     if 'usuario_id' not in session or session['rol'] != 'usuario': return redirect(url_for('login'))
@@ -872,8 +880,6 @@ def registrar_donacion():
 # 4. RUTAS POST (CONEXIONES Y LÓGICA)
 # ==========================================
 
-from flask import jsonify # <-- Asegúrate de que esto esté arriba junto a los otros imports de Flask
-
 @app.route('/vincular_mascota', methods=['POST'])
 def vincular_mascota():
     if 'usuario_id' not in session or session['rol'] != 'usuario': 
@@ -967,9 +973,6 @@ def crear_rescate():
 # ==========================================
 # CATALOGO DE ESPECIES (compartido: Rescatista y Veterinario)
 # ==========================================
-class Especie(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(30), nullable=False, unique=True)
 
 MAX_ESPECIE = 30
 ROLES_ESPECIES = ('rescatista', 'veterinario', 'admin')
@@ -1371,8 +1374,7 @@ def crear_producto():
 
 # ==========================================
 # RUTAS DE CONTROL DE INVENTARIO Y TIENDA
-# ==========================================
-
+# ==========================================+
 @app.route('/obtener_productos', methods=['GET'])
 def obtener_productos():
     """Devuelve el inventario al panel, únicamente a administradores."""
@@ -1392,7 +1394,6 @@ def obtener_productos():
             'visible': p.visible
         })
     return jsonify({'status': 'ok', 'productos': lista})
-
 
 @app.route('/editar_producto/<int:id>', methods=['POST'])
 def editar_producto(id):
@@ -1452,7 +1453,6 @@ def editar_producto(id):
         return jsonify(status='error', message='No se pudieron guardar los cambios.'), 500
     return jsonify(status='ok', message='Producto actualizado exitosamente')
 
-
 @app.route('/eliminar_producto/<int:id>', methods=['POST'])
 def eliminar_producto(id):
     """Evita que un producto con pedidos registrados provoque un error SQL."""
@@ -1475,7 +1475,6 @@ def eliminar_producto(id):
         db.session.rollback()
         return jsonify(status='error', message='No se puede borrar el producto porque tiene registros asociados.'), 409
     return jsonify(status='ok', message='Producto eliminado correctamente')
-
 
 def _descontar_items_validados(items):
     """Valida todas las líneas ANTES de modificar existencias; agrega repetidos."""
@@ -1511,7 +1510,6 @@ def _descontar_items_validados(items):
         productos[producto_id].stock -= cantidad
     return None
 
-
 @app.route('/venta_directa', methods=['POST'])
 def venta_directa():
     """Venta presencial: sin cantidades negativas ni ventas parciales."""
@@ -1529,7 +1527,6 @@ def venta_directa():
     db.session.commit()
     return jsonify(status='ok', message='Venta presencial procesada e inventario actualizado')
 
-
 @app.route('/descontar_stock', methods=['POST'])
 def descontar_stock():
     """Entrega en tienda: solo admin, con verificación completa de existencias."""
@@ -1545,7 +1542,6 @@ def descontar_stock():
         return jsonify(status='error', message=error), 400
     db.session.commit()
     return jsonify(status='ok', message='Stock rebajado correctamente')
-
 
 @app.route('/editar_mascota/<int:paciente_id>', methods=['POST'])
 def editar_mascota(paciente_id):
@@ -1577,13 +1573,18 @@ from modulos.cuentas import token_csrf
 app.jinja_env.globals['csrf_token'] = token_csrf
 app.jinja_env.globals['csrf_gestion'] = token_csrf
 
+# ==========================================
+# MOTOR PRINCIPAL Y KIT DE SUPERVIVENCIA
+# ==========================================
 if __name__ == '__main__':    
+    # El switch de encendido. Si le diste "Run" a este archivo, arranca todo el sistema.
     with app.app_context():
+        # El albañil que lee los moldes (clases) de arriba y construye los cajones de la base de datos física.
         db.create_all()
-        # Cambios no destructivos en SQLite: conservar perfiles existentes.
         asegurar_columnas_existentes(db)
         
-        # Catálogo de especies: solo la primera vez (Perro, Gato y las que ya existían en pacientes/rescates)
+        # Kit de supervivencia: si la base de datos está totalmente vacía (recién instalada), 
+        # le inyectamos los datos mínimos para que no nos quedemos bloqueados afuera.
         if not Especie.query.first():
             vistas = set()
             for nombre in ['Perro', 'Gato'] + [x.especie for x in Paciente.query.all()] + [x.especie for x in Rescate.query.all()]:
@@ -1593,16 +1594,18 @@ if __name__ == '__main__':
                     db.session.add(Especie(nombre=nombre[:1].upper() + nombre[1:].lower()))
             db.session.commit()
 
+        # Si no existe ningún administrador, crea esta cuenta maestra para poder entrar.
         if not Usuario.query.filter_by(rol='admin').first():
-            db.session.add(Usuario(nombre="Administrador Principal", correo="admin@huellitas.com", codigo_empleado="ADMIN-001", telefono="555-0000", password=generate_password_hash("123"), rol="admin"))
+            db.session.add(Usuario(nombre="Administrador aeelyn", correo="admin@gmail.com", codigo_empleado="ADMIN-001", telefono="5360-8956", password=generate_password_hash("123"), rol="admin"))
 
-        # Inicialización idempotente. No se sobrescriben ediciones existentes.
         asegurar_programas_voluntariado()
         asegurar_informacion_donacion()
 
-        # NUEVO: Crear la configuración Global por defecto
+        # Rellenamos la apariencia genérica para que la página web no nazca en blanco.
         if not ConfigSitio.query.filter_by(rol_destino='global').first():
-            db.session.add(ConfigSitio(rol_destino='global', titulo="Huellitas de Amor", eslogan="v5.0 - Entorno Python", color_fondo="#1e1b4b", logo_size=45))
+            db.session.add(ConfigSitio(rol_destino='global', titulo="Refugio Estelar Laika", eslogan="Ninguna estrella nace para vagar a oscuras", color_fondo="#1e1b4b", logo_size=45))
 
         db.session.commit()
+    
+    # Enciende la fábrica en el puerto 5000 y se queda esperando clientes.
     app.run(host='0.0.0.0', port=5000, debug=False)
